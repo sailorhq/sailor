@@ -48,7 +48,9 @@ func CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 		var metaBucket *bolt.Bucket
 		metaBucket, err = tx.CreateBucket([]byte(BUCKET_META))
 		if err == nil {
-			metaBucket.Put([]byte(KEY_RULES), []byte("{\"app\": \"required\"}"))
+			metaBucket.Put([]byte(KEY_RULES), []byte(`{
+    "app": "required"
+}`))
 		}
 
 		diffBucket, err := tx.CreateBucket([]byte(BUCKET_DIFFS))
