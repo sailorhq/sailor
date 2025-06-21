@@ -1,7 +1,7 @@
 # Sailor
 
-<p align="center" width="100%">
-    <img width="100" src="https://raw.githubusercontent.com/codekidX/sailor/refs/heads/main/assets/sailor.png?token=GHSAT0AAAAAADFWAXLKWS4EJRPTD6BSBL3Q2CWUKWQ">
+<p align="center">
+    <img width="100" src="https://github.com/codekidX/sailor/blob/main/assets/sailor.png?raw=true">
 </p>
 
 ---
@@ -15,3 +15,12 @@ and secrets.
 Sailor can be setup quickly and the [sailor client]() is responsible for
 fetching, maintaining and updating your configs, which takes most of the
 boilerplate code from your hands. It is built to be frugal in resource usage.
+
+---
+
+### Supported Clients
+
+| Language | Support |
+| -------- | ------- |
+| Go       | ✅      |
+| NodeJs   | ⚠️      |
