@@ -76,7 +76,7 @@ func patchConfig(w http.ResponseWriter, r *http.Request) {
 		var rules map[string]any
 		json.Unmarshal(ruleBytes, &rules)
 
-		if err := hasRuleForAllKeys(data, rules); err != nil {
+		if err := hasRuleForAllKeys(data, rules, "$root"); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			enc.Encode(ResponseMessage{Message: err.Error()})
 			return err
@@ -87,14 +87,7 @@ func patchConfig(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 
-		max := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
-		fmt.Println("max", string(max))
-		next, err = strconv.Atoi(string(max))
-		next += 1
-
-		var buf bytes.Buffer
-		json.Compact(&buf, b)
-		newConfigJson := buf.String()
+		newConfigJson := string(b)
 		fmt.Println("newConfigJson: ", configJson, newConfigJson)
 		// TODO :: convert it into a function
 		diff := differ.DiffMain(configJson, newConfigJson, true)
@@ -104,6 +97,11 @@ func patchConfig(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("patchh: ", patchh)
 
 		diffBucket := tx.Bucket([]byte(BUCKET_DIFFS))
+
+		max, _ := diffBucket.Cursor().Last()
+		fmt.Println("max", string(max))
+		next, err = strconv.Atoi(string(max))
+		next += 1
 
 		return diffBucket.Put(fmt.Append(nil, next), []byte(patchh))
 	})
@@ -116,12 +114,18 @@ func patchConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func hasRuleForAllKeys(mainMap, subMap map[string]any) error {
+func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
+	// OPT :: instead of throwing error one by one , we can get all the missing rule keys
+	// and then form a single error at one time
 	for key := range mainMap {
+		keyPath := fmt.Sprintf("%s.%s", parent, key)
+		fmt.Println("checking key: ", keyPath)
 		if _, ok := subMap[key]; !ok {
-			return fmt.Errorf("rule for %s not present", key)
+			return fmt.Errorf("rule for %s not present", keyPath)
 		} else if nestedMap, ok := mainMap[key].(map[string]any); ok {
-			return hasRuleForAllKeys(nestedMap, subMap[key].(map[string]any))
+			return hasRuleForAllKeys(nestedMap,
+				subMap[key].(map[string]any),
+				keyPath)
 		}
 	}
 	return nil
@@ -170,7 +174,12 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	configJson := buildConfig(db)
-	enc.Encode(configJson)
+	var builtConfig map[string]any
+	json.Unmarshal([]byte(configJson), &builtConfig)
+	jenc := json.NewEncoder(w)
+	w.Header().Set("Content-Type", "application/json")
+	jenc.Encode(builtConfig)
+
 }
 
 func buildConfig(db *bolt.DB) string {
