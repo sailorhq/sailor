@@ -1,4 +1,6 @@
-# ⛵️ Sailor
+# Sailor
+
+<img width="300" src="https://raw.githubusercontent.com/codekidX/sailor/refs/heads/main/assets/sailor.png?token=GHSAT0AAAAAADFWAXLKWS4EJRPTD6BSBL3Q2CWUKWQ">
 
 ## Why?
 
