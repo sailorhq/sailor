@@ -16,6 +16,7 @@ func main() {
 	http.HandleFunc("/deploy", sh.DeployHandler)
 	http.HandleFunc("/rules", sh.RuleHandler)
 	http.HandleFunc("/state", sh.StateHandler)
+	http.HandleFunc("/version", sh.VersionHandler)
 
 	http.ListenAndServe(":7766", nil)
 }

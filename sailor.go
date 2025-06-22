@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/codekidx/sailor/internal/types"
@@ -34,22 +35,64 @@ func (s *Sailor) Connect(ns, app string) error {
 	s.ns = ns
 	s.app = app
 
-	s.refresh()
+	s.refresh(false)
 
 	return nil
 }
 
 func (s *Sailor) sleepAndRefresh() {
 	time.Sleep(s.opts.RefreshTimeout)
-	s.refresh()
+	s.refresh(true)
 }
 
-func (s *Sailor) refresh() {
+func (s *Sailor) checkStateVersion() bool {
+	url := fmt.Sprintf("%s/version?ns=%s&app=%s&key=%s", s.addr, s.ns, s.app, s.accessKey)
+	resp, err := http.Get(url)
+	if err != nil {
+		return false
+	}
+
+	if resp.StatusCode != 200 {
+		s.sourceUnstable = true
+
+		// TODO :: log here that going to fetch from backup
+		if s.opts.BackupURL == "" {
+			return false
+		}
+
+		return false
+	}
+
+	b, err := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	if err != nil {
+		return false
+	}
+
+	// mark source as stable.. if it was set unstable before
+	s.sourceUnstable = false
+
+	fmt.Println("string(b)", s.state.Meta.Version, string(b))
+	fmt.Println("s.state.Meta.Version", s.state.Meta.Version)
+
+	return !strings.EqualFold(s.state.Meta.Version, string(b))
+}
+
+func (s *Sailor) refresh(checkVersion bool) {
 	fmt.Println("[REFRESH] trying to refresh config...")
+	if checkVersion {
+		if shouldRefresh := s.checkStateVersion(); !shouldRefresh {
+			fmt.Println("state version same, not updating config")
+			go s.sleepAndRefresh()
+			return
+		}
+	}
+
 	url := fmt.Sprintf("%s/state?ns=%s&app=%s&key=%s", s.addr, s.ns, s.app, s.accessKey)
 	resp, err := http.Get(url)
 	if err != nil {
-		go s.refresh()
+		go s.sleepAndRefresh()
 		return
 	}
 
@@ -58,7 +101,7 @@ func (s *Sailor) refresh() {
 
 		// TODO :: log here that going to fetch from backup
 		if s.opts.BackupURL == "" {
-			s.sleepAndRefresh()
+			go s.sleepAndRefresh()
 			return
 		}
 
@@ -84,6 +127,7 @@ func (s *Sailor) refresh() {
 	}
 
 	s.state.Lock()
+	s.state.Meta = state.Meta
 	s.state.Configs = state.Configs
 	s.state.Secrets = state.Secrets
 	s.state.Unlock()
