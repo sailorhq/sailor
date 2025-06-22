@@ -23,7 +23,8 @@ boilerplate code from your hands. It is built to be frugal in resource usage.
 | Feature              | Support |
 | -------------------- | ------- |
 | Validation Layer     | ✅      |
-| Client Fallback      | ⚠️      |
+| State Fallback       | ⚠️      |
+| Control Center {UI}  | ⚠️      |
 | Access-Control / IAM | ❌      |
 | Auditing             | ❌      |
 
