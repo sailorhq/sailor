@@ -15,7 +15,7 @@ type FirstConfig struct {
 	App string `json:"app"`
 }
 
-func CreateAppHandler(w http.ResponseWriter, r *http.Request) {
+func (sh *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusBadRequest)
 		return

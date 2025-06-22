@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AddSecretHandler(w http.ResponseWriter, r *http.Request) {
+func (sh *SailorCore) AddSecretHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusBadRequest)
 		return

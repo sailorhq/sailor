@@ -9,7 +9,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func UpdateAppMetaHandler(w http.ResponseWriter, r *http.Request) {
+func (sh *SailorCore) UpdateAppMetaHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return

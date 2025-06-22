@@ -10,7 +10,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func RuleHandler(w http.ResponseWriter, r *http.Request) {
+func (sh *SailorCore) RuleHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPatch {
 		w.WriteHeader(http.StatusBadRequest)
 		return

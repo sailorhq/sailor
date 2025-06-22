@@ -17,18 +17,18 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func ConfigHandler(w http.ResponseWriter, r *http.Request) {
+func (sh *SailorCore) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPatch:
-		patchConfig(w, r)
+		sh.patchConfig(w, r)
 	case http.MethodGet:
-		getConfig(w, r)
+		sh.getConfig(w, r)
 	default:
 		return
 	}
 }
 
-func patchConfig(w http.ResponseWriter, r *http.Request) {
+func (sh *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 	ns := r.URL.Query().Get("ns")
 	app := r.URL.Query().Get("app")
 	_ = r.URL.Query().Get("key")
@@ -149,7 +149,7 @@ func validateWithRules(data, rules map[string]any) error {
 	return errors.New(message)
 }
 
-func getConfig(w http.ResponseWriter, r *http.Request) {
+func (sh *SailorCore) getConfig(w http.ResponseWriter, r *http.Request) {
 	ns := r.URL.Query().Get("ns")
 	app := r.URL.Query().Get("app")
 	_ = r.URL.Query().Get("key")

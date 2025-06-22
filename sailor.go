@@ -3,8 +3,19 @@ package sailor
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"time"
 
+	"github.com/codekidx/sailor/internal/types"
 	"github.com/golang-jwt/jwt/v5"
+)
+
+const (
+	ENV_SAILOR_URL        = "SAILOR_URL"
+	ENV_SAILOR_ACCESS_KEY = "SAILOR_ACCESS_KEY"
+	ENV_SAILOR_BACKUP_URL = "SAILOR_BACKUP_URL"
 )
 
 type Sailor struct {
@@ -12,26 +23,77 @@ type Sailor struct {
 	ns        string
 	app       string
 	accessKey string
+	opts      *types.SailorOpts
 
-	secrets map[string]string
-	configs map[string][]byte
+	state types.SailorState
+
+	sourceUnstable bool
 }
 
 func (s *Sailor) Connect(ns, app string) error {
 	s.ns = ns
 	s.app = app
 
-	// TODO :: try to connect to the websocket path for this namespace and app
-	// TODO :: need to handle key set as well, via websocket
-
-	// TODO :: on fail check for S3/Redis fallback
+	s.refresh()
 
 	return nil
 }
 
-func (s *Sailor) Get(key string) (value []byte, err error) {
+func (s *Sailor) sleepAndRefresh() {
+	time.Sleep(s.opts.RefreshTimeout)
+	s.refresh()
+}
+
+func (s *Sailor) refresh() {
+	fmt.Println("[REFRESH] trying to refresh config...")
+	url := fmt.Sprintf("%s/state?ns=%s&app=%s&key=%s", s.addr, s.ns, s.app, s.accessKey)
+	resp, err := http.Get(url)
+	if err != nil {
+		go s.refresh()
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		s.sourceUnstable = true
+
+		// TODO :: log here that going to fetch from backup
+		if s.opts.BackupURL == "" {
+			s.sleepAndRefresh()
+			return
+		}
+
+		return
+	}
+
+	b, err := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	if err != nil {
+		go s.sleepAndRefresh()
+		return
+	}
+
+	// mark source as stable.. if it was set unstable before
+	s.sourceUnstable = false
+
+	var state types.SailorState
+	err = json.Unmarshal(b, &state)
+	if err != nil {
+		// TODO :: log here that the refresh object is flunked!!
+		return
+	}
+
+	s.state.Lock()
+	s.state.Configs = state.Configs
+	s.state.Secrets = state.Secrets
+	s.state.Unlock()
+
+	go s.sleepAndRefresh()
+}
+
+func (s *Sailor) Get(key string) (value any, err error) {
 	var ok bool
-	if value, ok = s.configs[key]; !ok {
+	if value, ok = s.state.Configs[key]; !ok {
 		err = fmt.Errorf("cannot find config %s", key)
 		return value, err
 	}
@@ -39,16 +101,17 @@ func (s *Sailor) Get(key string) (value []byte, err error) {
 }
 
 func (s *Sailor) GetDecode(key string, target *any) error {
-	var data []byte
-	var ok bool
-	if data, ok = s.configs[key]; !ok {
-		return fmt.Errorf("config key %s not found", key)
-	}
+	// TODO :: maybe check if we want to use mapstructure module here!
+	// var data any
+	// var ok bool
+	// if data, ok = s.configs[key]; !ok {
+	// 	return fmt.Errorf("config key %s not found", key)
+	// }
 
-	err := json.Unmarshal(data, target)
-	if err != nil {
-		return err
-	}
+	// err := json.Unmarshal(data, target)
+	// if err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -58,7 +121,7 @@ func (s *Sailor) GetSecret(key string) (value string, err error) {
 		ok   bool
 	)
 
-	if data, ok = s.secrets[key]; !ok {
+	if data, ok = s.state.Secrets[key]; !ok {
 		return "", fmt.Errorf("secret %s not found", key)
 	}
 
@@ -68,10 +131,6 @@ func (s *Sailor) GetSecret(key string) (value string, err error) {
 		return "", err
 	}
 	return claims["data"].(string), nil
-}
-
-func New(addr, key string) *Sailor {
-	return &Sailor{addr: addr, accessKey: key}
 }
 
 // Function to validate and extract map claims from the JWT string
@@ -91,4 +150,31 @@ func (s *Sailor) getClaims(secretStr string) (jwt.MapClaims, error) {
 		return claims, nil
 	}
 	return nil, fmt.Errorf("invalid token")
+}
+
+func New(addr, key string, opts ...types.SailorOpts) *Sailor {
+	if addr == "" {
+		envAddr := os.Getenv(ENV_SAILOR_URL)
+		if envAddr != "" {
+			addr = envAddr
+		}
+	}
+
+	if key == "" {
+		envKey := os.Getenv(ENV_SAILOR_ACCESS_KEY)
+		if envKey != "" {
+			key = envKey
+		}
+	}
+
+	s := Sailor{addr: addr, accessKey: key}
+	if len(opts) > 0 {
+		s.opts = &opts[0]
+	} else {
+		// defaults to 5 seconds
+		s.opts = &types.SailorOpts{
+			RefreshTimeout: 5 * time.Second,
+		}
+	}
+	return &s
 }
