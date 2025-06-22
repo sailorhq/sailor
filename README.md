@@ -20,12 +20,12 @@ boilerplate code from your hands. It is built to be frugal in resource usage.
 
 ### Roadmap
 
-| Feature      | Support |
-| ------------ | ------- |
-| Config Rules | ✅      |
-| Fallback     | ⚠️      |
-| ACL          | ❌      |
-| Auditing     | ❌      |
+| Feature              | Support |
+| -------------------- | ------- |
+| Validation Layer     | ✅      |
+| Client Fallback      | ⚠️      |
+| Access-Control / IAM | ❌      |
+| Auditing             | ❌      |
 
 ### Supported Clients
 
