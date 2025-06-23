@@ -73,9 +73,6 @@ func (s *Sailor) checkStateVersion() bool {
 	// mark source as stable.. if it was set unstable before
 	s.sourceUnstable = false
 
-	fmt.Println("string(b)", s.state.Meta.Version, string(b))
-	fmt.Println("s.state.Meta.Version", s.state.Meta.Version)
-
 	return !strings.EqualFold(s.state.Meta.Version, string(b))
 }
 
@@ -83,7 +80,7 @@ func (s *Sailor) refresh(checkVersion bool) {
 	fmt.Println("[REFRESH] trying to refresh config...")
 	if checkVersion {
 		if shouldRefresh := s.checkStateVersion(); !shouldRefresh {
-			fmt.Println("state version same, not updating config")
+			fmt.Println("[REFRESH] state version same, not updating config")
 			go s.sleepAndRefresh()
 			return
 		}
