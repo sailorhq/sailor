@@ -2,37 +2,29 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/codekidx/sailor/internal/types"
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sh *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
-	ns := r.URL.Query().Get("ns")
-	app := r.URL.Query().Get("app")
-	_ = r.URL.Query().Get("key")
-
+func (sc *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
-	if ns == "" || app == "" {
-		enc.Encode(ResponseMessage{Message: "namespace or app is empty"})
-		return
-	}
-
-	dbpath := fmt.Sprintf("./configs/%s-%s.db", ns, app)
-	if f, _ := os.Stat(dbpath); f == nil {
-		enc.Encode(ResponseMessage{Message: "no such app in this namespace"})
-		return
-	}
-
-	db, err := bolt.Open(dbpath, 0600, nil)
+	params, err := sc.extractSailorParams(r)
 	if err != nil {
-		panic(err)
+		// TODO: log here!
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	defer db.Close()
+
+	db, err := sc.getDBConn(params)
+	if err != nil {
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	configStr := buildConfig(db)
 	var builtConfig map[string]any
@@ -62,5 +54,5 @@ func (sh *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp.Secrets = secrets
 
-	enc.Encode(resp)
+	enc.Encode(&resp)
 }

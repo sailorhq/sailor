@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 
 	bolt "go.etcd.io/bbolt"
@@ -17,47 +16,41 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func (sh *SailorCore) ConfigHandler(w http.ResponseWriter, r *http.Request) {
+func (sc *SailorCore) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPatch:
-		sh.patchConfig(w, r)
+		sc.patchConfig(w, r)
 	case http.MethodGet:
-		sh.getConfig(w, r)
+		sc.getConfig(w, r)
 	default:
 		return
 	}
 }
 
-func (sh *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
-	ns := r.URL.Query().Get("ns")
-	app := r.URL.Query().Get("app")
-	_ = r.URL.Query().Get("key")
-
+func (sc *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
-	if ns == "" || app == "" {
-		enc.Encode(ResponseMessage{Message: "namespace or app is empty"})
-		return
-	}
-
-	dbpath := fmt.Sprintf("./configs/%s-%s.db", ns, app)
-	if f, _ := os.Stat(dbpath); f == nil {
-		enc.Encode(ResponseMessage{Message: "no such app in this namespace"})
-		return
-	}
-
-	db, err := bolt.Open(dbpath, 0600, nil)
+	params, err := sc.extractSailorParams(r)
 	if err != nil {
-		panic(err)
+		// TODO: log here!
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	defer db.Close()
+
+	db, err := sc.getDBConn(params)
+	if err != nil {
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	b, _ := io.ReadAll(r.Body)
 	defer r.Body.Close()
 
 	if validJson := json.Valid(b); !validJson {
 		w.WriteHeader(http.StatusInternalServerError)
-		enc.Encode(ResponseMessage{Message: err.Error()})
+		enc.Encode(ResponseMessage{Message: "not a valid json!"})
 		return
 	}
 
@@ -100,7 +93,8 @@ func (sh *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 
 		max, _ := diffBucket.Cursor().Last()
 		fmt.Println("max", string(max))
-		next, err = strconv.Atoi(string(max))
+
+		next, _ = strconv.Atoi(string(max))
 		next += 1
 
 		return diffBucket.Put(fmt.Append(nil, next), []byte(patchh))
@@ -149,36 +143,29 @@ func validateWithRules(data, rules map[string]any) error {
 	return errors.New(message)
 }
 
-func (sh *SailorCore) getConfig(w http.ResponseWriter, r *http.Request) {
-	ns := r.URL.Query().Get("ns")
-	app := r.URL.Query().Get("app")
-	_ = r.URL.Query().Get("key")
-
+func (sc *SailorCore) getConfig(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
-	if ns == "" || app == "" {
-		enc.Encode(ResponseMessage{Message: "namespace or app is empty"})
-		return
-	}
-
-	dbpath := fmt.Sprintf("./configs/%s-%s.db", ns, app)
-	if f, _ := os.Stat(dbpath); f == nil {
-		enc.Encode(ResponseMessage{Message: "no such app in this namespace"})
-		return
-	}
-
-	db, err := bolt.Open(dbpath, 0600, nil)
+	params, err := sc.extractSailorParams(r)
 	if err != nil {
-		panic(err)
+		// TODO: log here!
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	defer db.Close()
+
+	db, err := sc.getDBConn(params)
+	if err != nil {
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	configJson := buildConfig(db)
 	var builtConfig map[string]any
 	json.Unmarshal([]byte(configJson), &builtConfig)
-	jenc := json.NewEncoder(w)
 	w.Header().Set("Content-Type", "application/json")
-	jenc.Encode(builtConfig)
+	enc.Encode(builtConfig)
 
 }
 
