@@ -175,19 +175,16 @@ func buildConfig(db *bolt.DB) string {
 		diffBuck := tx.Bucket([]byte(BUCKET_DIFFS))
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 
-		// TODO ::
 		min := []byte("0")
 		max := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
 		cur := diffBuck.Cursor()
 
 		differ := diffmod.New()
-		var applied []bool
 
 		for diff_ver, diff := cur.Seek(min); diff_ver != nil && bytes.Compare(diff_ver, max) <= 0; diff_ver, diff = cur.Next() {
-			fmt.Println("diff_ver", string(diff_ver), string(max))
+			// fmt.Println("diff_ver", string(diff_ver), string(max))
 			p, _ := differ.PatchFromText(string(diff))
-			configJson, applied = differ.PatchApply(p, configJson)
-			fmt.Println("applied: ", applied, "patch: ", string(diff))
+			configJson, _ = differ.PatchApply(p, configJson)
 		}
 
 		return nil
