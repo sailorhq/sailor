@@ -1,20 +1,37 @@
-# Sailor
+# 🐧 Sailor – Configuration Management for Cloud Native Workloads
 
 <p align="center">
-    <img width="100" src="https://github.com/codekidX/sailor/blob/main/assets/sailor.png?raw=true">
+    <img width="200" src="https://github.com/codekidX/sailor/blob/main/assets/sailor.png?raw=true">
 </p>
 
----
+Modern cloud-native applications often drown in configuration sprawl. **Sailor**
+helps you take the helm with a developer-friendly service to manage, audit, and
+apply configurations for your containerized applications — effortlessly.
 
-Sailor is an open source system for managing application configs and secrets for
-your backend applications. It acts as a single source of truth for all your
-configs and maintains it under a single umbrella for ease of management. It
-helps you validate (using rules), deploy, hot-reload and rollback your configs
-and secrets.
+**Sailor** is a configuration management service built for developers running
+containerized applications inside Kubernetes. It simplifies, secures, and
+streamlines how configuration is handled across environments and teams.
 
-Sailor can be setup quickly and the [sailor client]() is responsible for
-fetching, maintaining and updating your configs, which takes most of the
-boilerplate code from your hands. It is built to be frugal in resource usage.
+## 🚀 Features
+
+- 🌊 Centralized config management
+- 🔐 Secure secrets and policy enforcement
+- 🔁 Versioning & rollback
+- ⚙️ Easy integration with your CI/CD or GitOps setup
+- 🧠 Developer-friendly UI & API
+
+## 🧭 Quick Start
+
+```bash
+# Download Sailor Binary
+curl -sL https://getsailor.sh | bash
+
+# Run Sailor
+./sailor
+
+[🐧] Running on port :7766
+admin: http://localhost:7766/_admin
+```
 
 ---
 
