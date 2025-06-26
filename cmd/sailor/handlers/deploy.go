@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	bolt "go.etcd.io/bbolt"
@@ -32,7 +33,11 @@ func (sc *SailorCore) DeployHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
-		return metaBucket.Put([]byte("deploy_ver"), []byte(params.DeployVersion))
+		if err = metaBucket.Put([]byte("deploy_ver"), []byte(params.DeployVersion)); err == nil {
+			sc.versions[fmt.Sprintf("%s-%s", params.Ns, params.App)] = params.DeployVersion
+		}
+
+		return err
 	})
 
 	if err != nil {
