@@ -1,4 +1,6 @@
-# 🐧 Sailor – Configuration Management for Cloud Native Workloads
+# 🐧 Sailor
+
+> Configuration Management for Cloud Native Workloads
 
 <p align="center">
     <img width="200" src="https://github.com/codekidX/sailor/blob/main/assets/sailor.png?raw=true">
