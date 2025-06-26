@@ -15,6 +15,12 @@ func (sc *SailorCore) VersionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	key := fmt.Sprintf("%s-%s", params.Ns, params.App)
+	if version, ok := sc.versions[key]; ok {
+		fmt.Fprint(w, version)
+		return
+	}
+
 	db, err := sc.getDBConn(params)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

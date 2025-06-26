@@ -27,11 +27,14 @@ const (
 type SailorCore struct {
 	// TODO :: change value to socket type
 	dbconns map[string]*bolt.DB
+
+	versions map[string]string
 }
 
 func NewSailorCore() *SailorCore {
 	sc := SailorCore{
-		dbconns: make(map[string]*bolt.DB),
+		dbconns:  make(map[string]*bolt.DB),
+		versions: make(map[string]string),
 	}
 
 	err := filepath.Walk("./configs", func(path string, info fs.FileInfo, e error) error {
@@ -49,6 +52,13 @@ func NewSailorCore() *SailorCore {
 
 		sc.dbconns[projectKey] = db
 
+		db.View(func(tx *bolt.Tx) error {
+			metaBucket := tx.Bucket([]byte(BUCKET_META))
+			version := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
+			sc.versions[projectKey] = string(version)
+			return nil
+		})
+
 		return nil
 	})
 
@@ -57,11 +67,6 @@ func NewSailorCore() *SailorCore {
 	}
 
 	return &sc
-}
-
-func (sc *SailorCore) SetDBConnection(ns, app string, conn *bolt.DB) {
-	key := fmt.Sprintf("%s-%s", ns, app)
-	sc.dbconns[key] = conn
 }
 
 func (sc *SailorCore) extractSailorParams(r *http.Request) (*SailorParams, error) {
