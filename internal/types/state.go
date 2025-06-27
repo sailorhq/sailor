@@ -1,7 +1,6 @@
 package types
 
 import (
-	"sync"
 	"time"
 )
 
@@ -13,10 +12,10 @@ type SailorOpts struct {
 	Logging        bool
 	RefreshTimeout time.Duration
 	BackupURL      string
+	AccessKey      string
 }
 
 type SailorState struct {
-	sync.Mutex
 	Meta    SailorMeta        `json:"meta"`
 	Configs map[string]any    `json:"configs"`
 	Secrets map[string]string `json:"secrets"`

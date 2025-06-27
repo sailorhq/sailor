@@ -8,11 +8,13 @@ import (
 )
 
 func main() {
-	s := sailor.New("http://localhost:7766", "")
-	err := s.Connect("payment", "gateway")
+	err := sailor.Connect("http://localhost:7766", "payment", "gateway")
 	if err != nil {
 		panic(err)
 	}
+
+	s := sailor.Instance()
+	defer s.Release()
 
 	v, _ := s.Get("name")
 	fmt.Println("some value: ", v)
