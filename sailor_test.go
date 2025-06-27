@@ -1,10 +1,11 @@
 package sailor
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestConnect(t *testing.T) {
-	s := New("http://localhost:7766", "")
-	err := s.Connect("payment", "gateway")
+	err := Connect("http://localhost:7766", "payment", "gateway")
 	if err != nil {
 		t.Error(err)
 	}

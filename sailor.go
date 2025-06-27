@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/codekidx/sailor/internal/types"
@@ -19,44 +20,91 @@ const (
 	ENV_SAILOR_BACKUP_URL = "SAILOR_BACKUP_URL"
 )
 
+type internalState struct {
+	sync.RWMutex
+	meta    types.SailorMeta
+	configs map[string]any
+	secrets map[string]string
+}
+
 type Sailor struct {
-	addr      string
-	ns        string
-	app       string
-	accessKey string
-	opts      *types.SailorOpts
+	addr string
+	ns   string
+	app  string
+	opts *types.SailorOpts
 
-	state types.SailorState
+	state internalState
 
+	isConnected    bool
 	sourceUnstable bool
 }
 
-func (s *Sailor) Connect(ns, app string) error {
-	s.ns = ns
-	s.app = app
+var sailor = Sailor{
+	addr: "",
+	ns:   "",
+	app:  "",
+	opts: &types.SailorOpts{
+		RefreshTimeout: 5 * time.Second,
+	},
+	state:       internalState{},
+	isConnected: false,
+}
 
-	s.refresh(false)
+func Connect(addr, ns, app string, opts ...types.SailorOpts) error {
+	sailor.ns = ns
+	sailor.app = app
+
+	// check if opts are present
+	if len(opts) > 0 {
+		sailor.opts = &opts[0]
+	} else {
+		// defaults to 5 seconds
+		sailor.opts = &types.SailorOpts{
+			RefreshTimeout: 5 * time.Second,
+		}
+	}
+
+	if addr == "" {
+		envAddr := os.Getenv(ENV_SAILOR_URL)
+		if envAddr != "" {
+			sailor.addr = envAddr
+		}
+	} else {
+		sailor.addr = addr
+	}
+
+	if sailor.opts.AccessKey == "" {
+		envKey := os.Getenv(ENV_SAILOR_ACCESS_KEY)
+		if envKey != "" {
+			sailor.opts.AccessKey = envKey
+		}
+	}
+
+	refresh(false)
+
+	sailor.isConnected = true
 
 	return nil
 }
 
-func (s *Sailor) sleepAndRefresh() {
-	time.Sleep(s.opts.RefreshTimeout)
-	s.refresh(true)
+func sleepAndRefresh() {
+	time.Sleep(sailor.opts.RefreshTimeout)
+	refresh(true)
 }
 
-func (s *Sailor) checkStateVersion() bool {
-	url := fmt.Sprintf("%s/version?ns=%s&app=%s&key=%s", s.addr, s.ns, s.app, s.accessKey)
+func checkStateVersion() bool {
+	url := fmt.Sprintf("%s/version?ns=%s&app=%s&key=%s", sailor.addr, sailor.ns, sailor.app, sailor.opts.AccessKey)
+	fmt.Println("url: ", url)
 	resp, err := http.Get(url)
 	if err != nil {
 		return false
 	}
 
 	if resp.StatusCode != 200 {
-		s.sourceUnstable = true
+		sailor.sourceUnstable = true
 
 		// TODO :: log here that going to fetch from backup
-		if s.opts.BackupURL == "" {
+		if sailor.opts.BackupURL == "" {
 			return false
 		}
 
@@ -71,34 +119,36 @@ func (s *Sailor) checkStateVersion() bool {
 	}
 
 	// mark source as stable.. if it was set unstable before
-	s.sourceUnstable = false
+	sailor.sourceUnstable = false
 
-	return !strings.EqualFold(s.state.Meta.Version, string(b))
+	fmt.Println("string(b): ", string(b))
+
+	return !strings.EqualFold(sailor.state.meta.Version, string(b))
 }
 
-func (s *Sailor) refresh(checkVersion bool) {
+func refresh(checkVersion bool) {
 	fmt.Println("[REFRESH] trying to refresh config...")
 	if checkVersion {
-		if shouldRefresh := s.checkStateVersion(); !shouldRefresh {
+		if shouldRefresh := checkStateVersion(); !shouldRefresh {
 			fmt.Println("[REFRESH] state version same, not updating config")
-			go s.sleepAndRefresh()
+			go sleepAndRefresh()
 			return
 		}
 	}
 
-	url := fmt.Sprintf("%s/state?ns=%s&app=%s&key=%s", s.addr, s.ns, s.app, s.accessKey)
+	url := fmt.Sprintf("%s/state?ns=%s&app=%s&key=%s", sailor.addr, sailor.ns, sailor.app, sailor.opts.AccessKey)
 	resp, err := http.Get(url)
 	if err != nil {
-		go s.sleepAndRefresh()
+		go sleepAndRefresh()
 		return
 	}
 
 	if resp.StatusCode != 200 {
-		s.sourceUnstable = true
+		sailor.sourceUnstable = true
 
 		// TODO :: log here that going to fetch from backup
-		if s.opts.BackupURL == "" {
-			go s.sleepAndRefresh()
+		if sailor.opts.BackupURL == "" {
+			go sleepAndRefresh()
 			return
 		}
 
@@ -109,12 +159,12 @@ func (s *Sailor) refresh(checkVersion bool) {
 	defer resp.Body.Close()
 
 	if err != nil {
-		go s.sleepAndRefresh()
+		go sleepAndRefresh()
 		return
 	}
 
 	// mark source as stable.. if it was set unstable before
-	s.sourceUnstable = false
+	sailor.sourceUnstable = false
 
 	var state types.SailorState
 	err = json.Unmarshal(b, &state)
@@ -123,25 +173,25 @@ func (s *Sailor) refresh(checkVersion bool) {
 		return
 	}
 
-	s.state.Lock()
-	s.state.Meta = state.Meta
-	s.state.Configs = state.Configs
-	s.state.Secrets = state.Secrets
-	s.state.Unlock()
+	sailor.state.Lock()
+	sailor.state.meta = state.Meta
+	sailor.state.configs = state.Configs
+	sailor.state.secrets = state.Secrets
+	sailor.state.Unlock()
 
-	go s.sleepAndRefresh()
+	go sleepAndRefresh()
 }
 
-func (s *Sailor) Get(key string) (value any, err error) {
+func (is *internalState) Get(key string) (value any, err error) {
 	var ok bool
-	if value, ok = s.state.Configs[key]; !ok {
+	if value, ok = is.configs[key]; !ok {
 		err = fmt.Errorf("cannot find config %s", key)
 		return value, err
 	}
 	return
 }
 
-func (s *Sailor) GetDecode(key string, target *any) error {
+func (is *internalState) GetDecode(key string, target *any) error {
 	// TODO :: maybe check if we want to use mapstructure module here!
 	// var data any
 	// var ok bool
@@ -156,17 +206,18 @@ func (s *Sailor) GetDecode(key string, target *any) error {
 	return nil
 }
 
-func (s *Sailor) GetSecret(key string) (value string, err error) {
+func (is *internalState) GetSecret(key string) (value string, err error) {
 	var (
 		data string
 		ok   bool
 	)
 
-	if data, ok = s.state.Secrets[key]; !ok {
+	if data, ok = is.secrets[key]; !ok {
 		return "", fmt.Errorf("secret %s not found", key)
 	}
 
-	claims, err := s.getClaims(string(data))
+	// TODO :: get access key from sailor instance
+	claims, err := getClaims(string(data), "")
 	if err != nil {
 		// TODO :: user friendly bug
 		return "", err
@@ -175,13 +226,13 @@ func (s *Sailor) GetSecret(key string) (value string, err error) {
 }
 
 // Function to validate and extract map claims from the JWT string
-func (s *Sailor) getClaims(secretStr string) (jwt.MapClaims, error) {
+func getClaims(secretStr string, accessKey string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(secretStr, func(token *jwt.Token) (any, error) {
 		// Verify the signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("invalid signing method")
 		}
-		return []byte(s.accessKey), nil
+		return []byte(accessKey), nil
 	})
 	if err != nil {
 		return nil, err
@@ -193,29 +244,11 @@ func (s *Sailor) getClaims(secretStr string) (jwt.MapClaims, error) {
 	return nil, fmt.Errorf("invalid token")
 }
 
-func New(addr, key string, opts ...types.SailorOpts) *Sailor {
-	if addr == "" {
-		envAddr := os.Getenv(ENV_SAILOR_URL)
-		if envAddr != "" {
-			addr = envAddr
-		}
-	}
+func (is *internalState) Release() {
+	is.RUnlock()
+}
 
-	if key == "" {
-		envKey := os.Getenv(ENV_SAILOR_ACCESS_KEY)
-		if envKey != "" {
-			key = envKey
-		}
-	}
-
-	s := Sailor{addr: addr, accessKey: key}
-	if len(opts) > 0 {
-		s.opts = &opts[0]
-	} else {
-		// defaults to 5 seconds
-		s.opts = &types.SailorOpts{
-			RefreshTimeout: 5 * time.Second,
-		}
-	}
-	return &s
+func Instance() *internalState {
+	sailor.state.RLock()
+	return &sailor.state
 }
