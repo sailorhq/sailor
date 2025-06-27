@@ -22,6 +22,8 @@ const (
 	KEY_ACCESS_KEY       = "access_key"
 	KEY_DEPLOYED_VERSION = "deploy_ver"
 	KEY_RULES            = "rules"
+
+	DB_EXT = "sail"
 )
 
 type SailorCore struct {
@@ -94,7 +96,7 @@ func (sc *SailorCore) getDBConn(params *SailorParams) (*bolt.DB, error) {
 		return conn, nil
 	}
 
-	dbpath := fmt.Sprintf("./configs/%s-%s.sail", params.Ns, params.App)
+	dbpath := fmt.Sprintf("./configs/%s-%s.%s", params.Ns, params.App, DB_EXT)
 	if f, _ := os.Stat(dbpath); f == nil {
 		return nil, errors.New("app not present in this namespace")
 	}
