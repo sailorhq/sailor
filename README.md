@@ -6,17 +6,18 @@
     <img width="200" src="https://github.com/codekidX/sailor/blob/main/assets/sailor.png?raw=true">
 </p>
 
+**Sailor** is a configuration management service built for cloud workloads. It
+simplifies, secures, and streamlines how configuration is handled across
+environments and teams.
+
 Modern cloud-native applications often drown in configuration sprawl. **Sailor**
 helps you take the helm with a developer-friendly service to manage, audit, and
 apply configurations for your containerized applications — effortlessly.
 
-**Sailor** is a configuration management service built for developers running
-containerized applications inside Kubernetes. It simplifies, secures, and
-streamlines how configuration is handled across environments and teams.
-
 ## 🚀 Features
 
 - 🌊 Centralized config management
+- 🗿 Strict config validations
 - 🔐 Secure secrets and policy enforcement
 - 🔁 Versioning & rollback
 - ⚙️ Easy integration with your CI/CD or GitOps setup
