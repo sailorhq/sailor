@@ -33,7 +33,7 @@ func (sc *SailorCore) DeployHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
-		if err = metaBucket.Put([]byte("deploy_ver"), []byte(params.DeployVersion)); err == nil {
+		if err = metaBucket.Put([]byte(KEY_DEPLOYED_VERSION), []byte(params.DeployVersion)); err == nil {
 			sc.versions[fmt.Sprintf("%s-%s", params.Ns, params.App)] = params.DeployVersion
 		}
 
