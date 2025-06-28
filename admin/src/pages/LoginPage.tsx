@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -7,31 +9,30 @@ const LoginPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const { login } = useAuth();
+    const navigate = useNavigate();
+
+    // Get the page user was trying to access
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
         try {
-            const response = await fetch('/api/login', {
+            const response = await fetch('http://localhost:7766/api/v1/auth', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'x-username': username,
+                    'x-password': password
                 },
-                body: JSON.stringify({
-                    username,
-                    password
-                })
             });
 
             if (response.ok) {
                 const data = await response.json();
-                // Handle successful login
-                console.log('Login successful:', data);
-                // You can store the token in localStorage or use your state management
-                localStorage.setItem('token', data.token);
-                // Redirect to dashboard or home page
-                window.location.href = '/dashboard';
+                login(data);
+                navigate("/dashboard/apps", { replace: true });
             } else {
                 const errorData = await response.json();
                 setError(errorData.message || 'Login failed. Please check your credentials.');

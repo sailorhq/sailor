@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Tabs, Tab, Form, Button, Accordion, ListGroup, Modal } from 'react-bootstrap';
 import Editor from '@monaco-editor/react';
+import { useAuth } from '../contexts/AuthContext';
 
 const ApplicationInfoPage: React.FC = () => {
     const [jsonConfig, setJsonConfig] = useState('{\n  "example": "configuration",\n  "settings": {\n    "enabled": true,\n    "timeout": 5000\n  }\n}');
@@ -16,6 +17,9 @@ const ApplicationInfoPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
     const [savingRules, setSavingRules] = useState(false);
+    const [deploymentDesc, setDeploymentDesc] = useState('');
+
+    const { hasRole, hasPermission } = useAuth();
 
     const handleCheckS3 = () => {
         setCheckingS3(true);
@@ -68,9 +72,11 @@ const ApplicationInfoPage: React.FC = () => {
         }
     };
 
+    const canEditPodUrl = hasRole('admin') || (hasRole('user') && hasPermission('update_pod_url'));
+
     return (
-        <Card className="border-0 shadow-sm" style={{ background: '#FEF8EE', minHeight: '80vh' }}>
-            <Card.Body style={{ background: '#FEF8EE' }}>
+        <Card className="border-0 shadow-sm" style={{ minHeight: '80vh', borderRadius: 10 }}>
+            <Card.Body>
                 <h4 className="mb-4">Application State</h4>
 
                 <Tabs defaultActiveKey="configure" className="mb-3">
@@ -78,7 +84,7 @@ const ApplicationInfoPage: React.FC = () => {
                         <Card className="border-0 shadow-sm">
                             <Card.Body>
                                 <div className="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 className="mb-0">Configuration</h5>
+                                    <h5 className="mb-0">Edit Configuration</h5>
                                     <Button
                                         variant="outline-primary"
                                         size="sm"
@@ -118,6 +124,26 @@ const ApplicationInfoPage: React.FC = () => {
                                         />
                                     </div>
                                 </Form.Group>
+
+                                {hasRole('user') && hasPermission('create_configs') ? <div>
+                                    <Form>
+                                        <Form.Group className="mb-3 mt-2" controlId="formsDeploymentDesc">
+                                            {/* <Form.Label>Deployment Description</Form.Label> */}
+                                            <Form.Control
+                                                minLength={20}
+                                                type="text"
+                                                placeholder="Enter deployment description"
+                                                value={deploymentDesc}
+                                                onChange={e => setDeploymentDesc(e.target.value)}
+                                            />
+                                        </Form.Group>
+                                    </Form>
+                                    <div className="d-flex justify-content-end">
+                                        <Button style={{ backgroundColor: '#1C608C', border: 'none', marginTop: 10 }} >
+                                            Create Deployment
+                                        </Button>
+                                    </div>
+                                </div> : <></>}
                             </Card.Body>
                         </Card>
                     </Tab>
@@ -165,41 +191,55 @@ const ApplicationInfoPage: React.FC = () => {
                                         />
                                     </div>
                                 </Form.Group>
+
+                                {hasRole('user') && hasPermission('create_secrets') ? <div>
+                                    <Form>
+                                        <Form.Group className="mb-3 mt-2" controlId="formsDeploymentDesc">
+                                            {/* <Form.Label>Deployment Description</Form.Label> */}
+                                            <Form.Control
+                                                minLength={20}
+                                                type="text"
+                                                placeholder="Enter deployment description"
+                                                value={deploymentDesc}
+                                                onChange={e => setDeploymentDesc(e.target.value)}
+                                            />
+                                        </Form.Group>
+                                    </Form>
+                                    <div className="d-flex justify-content-end">
+                                        <Button style={{ backgroundColor: '#1C608C', border: 'none', marginTop: 10 }} >
+                                            Create Deployment
+                                        </Button>
+                                    </div>
+                                </div> : <></>}
                             </Card.Body>
+
+
                         </Card>
                     </Tab>
 
-                    <Tab eventKey="settings" title="App Settings">
+                    <Tab eventKey="settings" title="Status">
                         <Accordion defaultActiveKey="0">
                             <Accordion.Item eventKey="0">
-                                <Accordion.Header>S3 Backup & Fallback</Accordion.Header>
+                                <Accordion.Header>Deployment Healthcheck</Accordion.Header>
+                                <Accordion.Body>
+                                    <div>
+                                        Status: Cool
+                                    </div>
+                                </Accordion.Body>
+                            </Accordion.Item>
+
+                            {canEditPodUrl ? <Accordion.Item eventKey="1">
+                                <Accordion.Header>Pod Details</Accordion.Header>
                                 <Accordion.Body>
                                     <Form>
                                         <Form.Group className="mb-3" controlId="formS3Host">
-                                            <Form.Label>S3 Host</Form.Label>
+                                            <Form.Label>Pod URL</Form.Label>
                                             <Form.Control
+                                                disabled={!canEditPodUrl}
                                                 type="text"
-                                                placeholder="Enter S3 Host"
+                                                placeholder="Enter your application host URL"
                                                 value={bucketHost}
                                                 onChange={e => setBucketHost(e.target.value)}
-                                            />
-                                        </Form.Group>
-                                        <Form.Group className="mb-3" controlId="formS3AccessKey">
-                                            <Form.Label>S3 Access Key</Form.Label>
-                                            <Form.Control
-                                                type="text"
-                                                placeholder="Enter S3 Access Key"
-                                                value={s3AccessKey}
-                                                onChange={e => setS3AccessKey(e.target.value)}
-                                            />
-                                        </Form.Group>
-                                        <Form.Group className="mb-3" controlId="formS3SecretKey">
-                                            <Form.Label>S3 Secret Key</Form.Label>
-                                            <Form.Control
-                                                type="password"
-                                                placeholder="Enter S3 Secret Key"
-                                                value={s3SecretKey}
-                                                onChange={e => setS3SecretKey(e.target.value)}
                                             />
                                         </Form.Group>
                                         <div className="d-flex gap-2">
@@ -208,7 +248,7 @@ const ApplicationInfoPage: React.FC = () => {
                                                 onClick={handleCheckS3}
                                                 disabled={checkingS3}
                                             >
-                                                {checkingS3 ? 'Checking...' : 'Check'}
+                                                {checkingS3 ? 'Verifying...' : 'Verify'}
                                             </Button>
                                             <Button
                                                 style={{ backgroundColor: '#1C608C', border: 'none' }}
@@ -220,27 +260,67 @@ const ApplicationInfoPage: React.FC = () => {
                                         </div>
                                     </Form>
                                 </Accordion.Body>
-                            </Accordion.Item>
-                            <Accordion.Item eventKey="1">
-                                <Accordion.Header>Logging</Accordion.Header>
+                            </Accordion.Item> : <></>}
+                        </Accordion>
+                    </Tab>
+
+                    <Tab eventKey="deployments" title="Deployments">
+                        <Accordion defaultActiveKey="0">
+                            <Accordion.Item eventKey="0">
+                                <Accordion.Header>Configs</Accordion.Header>
                                 <Accordion.Body>
-                                    <Form>
-                                        <Form.Check
-                                            type="switch"
-                                            id="custom-switch"
-                                            label="Enable Deployment Logging"
-                                            checked={switchOn}
-                                            onChange={() => setSwitchOn(!switchOn)}
-                                        />
-                                    </Form>
+                                    <ListGroup>
+                                        <ListGroup.Item className="d-flex justify-content-between align-items-center">
+                                            <div className="flex-grow-1">
+                                                <div className="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 className="mb-0">Deployment 1</h6>
+                                                        <div className="text-muted small">
+                                                            this is a description of the deployment
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {(hasRole('admin') || hasRole('user')) && hasPermission('deploy_configs') ? <Button
+                                                style={{ backgroundColor: '#1C608C', border: 'none' }}
+                                                size="sm"
+                                            // onClick={() => handleRevokeUser(user.id)}
+                                            // style={{ marginLeft: '1rem' }}
+                                            >
+                                                Deploy
+                                            </Button> : <></>}
+
+                                        </ListGroup.Item>
+                                    </ListGroup>
                                 </Accordion.Body>
                             </Accordion.Item>
-                            <Accordion.Item eventKey="2">
-                                <Accordion.Header>Panel</Accordion.Header>
+
+                            <Accordion.Item eventKey="1">
+                                <Accordion.Header>Secrets</Accordion.Header>
                                 <Accordion.Body>
-                                    <ListGroup variant="flush">
-                                        <ListGroup.Item action onClick={() => handleChangePassword()}>
-                                            Change Default Password
+                                    <ListGroup>
+                                        <ListGroup.Item className="d-flex justify-content-between align-items-center">
+                                            <div className="flex-grow-1">
+                                                <div className="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 className="mb-0">Deployment 1</h6>
+                                                        <div className="text-muted small">
+                                                            this is a description of the deployment
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {(hasRole('admin') || hasRole('user')) && hasPermission('deploy_secrets') ? <Button
+                                                style={{ backgroundColor: '#1C608C', border: 'none' }}
+                                                size="sm"
+                                            // onClick={() => handleRevokeUser(user.id)}
+                                            // style={{ marginLeft: '1rem' }}
+                                            >
+                                                Deploy
+                                            </Button> : <></>}
+
                                         </ListGroup.Item>
                                     </ListGroup>
                                 </Accordion.Body>
@@ -250,7 +330,7 @@ const ApplicationInfoPage: React.FC = () => {
                 </Tabs>
 
                 {/* Rules Modal */}
-                <Modal show={showRulesModal} onHide={() => setShowRulesModal(false)} centered size="lg">
+                <Modal style={{ fontFamily: 'Quicksand' }} show={showRulesModal} onHide={() => setShowRulesModal(false)} centered size="lg">
                     <Modal.Header closeButton>
                         <Modal.Title>Rules Configuration</Modal.Title>
                     </Modal.Header>
@@ -302,7 +382,7 @@ const ApplicationInfoPage: React.FC = () => {
                 </Modal>
 
                 {/* Change Password Modal */}
-                <Modal show={showChangePasswordModal} onHide={() => setShowChangePasswordModal(false)} centered>
+                <Modal style={{ fontFamily: 'Quicksand' }} show={showChangePasswordModal} onHide={() => setShowChangePasswordModal(false)} centered>
                     <Modal.Header closeButton>
                         <Modal.Title>Change Default Password</Modal.Title>
                     </Modal.Header>

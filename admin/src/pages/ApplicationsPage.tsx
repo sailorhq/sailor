@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Dropdown, Row, Col, Card, Modal, Form, FormSelect } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const mockApps = [
     { id: 1, name: 'App One' },
@@ -22,6 +23,8 @@ const ApplicationsPage: React.FC = () => {
     const [secretKey, setSecretKey] = useState('');
     const [loading, setLoading] = useState(false);
     const [selectedNamespace, setSelectedNamespace] = useState(namespaces[0]);
+
+    const { hasRole } = useAuth();
 
     const handleDelete = (id: number) => {
         setApps(apps.filter(app => app.id !== id));
@@ -46,14 +49,14 @@ const ApplicationsPage: React.FC = () => {
     return (
         <Card className="border-0 shadow-sm" style={{ minHeight: '80vh', borderRadius: 10 }}>
             <Card.Body>
-                <Row className="align-items-center mb-4">
+                {hasRole('admin') ? <Row className="align-items-center mb-4">
                     <Col><h4 className="mb-0">Your Applications</h4></Col>
                     <Col xs="auto">
                         <Button style={{ backgroundColor: '#1C608C', border: 'none' }} onClick={() => setShowModal(true)}>
                             Create App
                         </Button>
                     </Col>
-                </Row>
+                </Row> : <></>}
                 <Row className="mb-4">
                     <Col md={3} sm={6} xs={12}>
                         <FormSelect
@@ -78,26 +81,14 @@ const ApplicationsPage: React.FC = () => {
                                 <Card.Body className="d-flex flex-column justify-content-between">
                                     <div className="d-flex justify-content-between align-items-start">
                                         <Card.Title>{app.name}</Card.Title>
-                                        <Dropdown align="end" onClick={e => e.stopPropagation()}>
-                                            <Dropdown.Toggle as="span" style={{ cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}>
-                                                <svg width="24" height="24" fill="#1C608C" viewBox="0 0 24 24">
-                                                    <circle cx="5" cy="12" r="2" />
-                                                    <circle cx="12" cy="12" r="2" />
-                                                    <circle cx="19" cy="12" r="2" />
-                                                </svg>
-                                            </Dropdown.Toggle>
-                                            <Dropdown.Menu >
-                                                <Dropdown.Item onClick={() => handleDelete(app.id)}>Delete</Dropdown.Item>
-                                            </Dropdown.Menu>
-                                        </Dropdown>
                                     </div>
-                                    <Card.Text className="text-muted mt-2">Namespace: {selectedNamespace}</Card.Text>
+                                    <Card.Text className="text-muted small">version: {selectedNamespace}</Card.Text>
                                 </Card.Body>
                             </Card>
                         </Col>
                     ))}
                 </Row>
-                <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+                <Modal style={{ fontFamily: 'Quicksand' }} show={showModal} onHide={() => setShowModal(false)} centered>
                     <Modal.Header closeButton>
                         <Modal.Title>Create App</Modal.Title>
                     </Modal.Header>
