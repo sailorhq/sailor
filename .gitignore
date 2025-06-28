@@ -2,3 +2,7 @@ configs/
 
 
 .DS_STORE*
+
+# --- firebase stuffs --- 
+.firebase/
+firebase.json
