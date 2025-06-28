@@ -13,7 +13,7 @@ func (sc *SailorCore) AddSecretHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func jwtfyit(data string, accessKey string) (string, error) {
+func jwtfyit(data string, accessKey string, expiry string) (string, error) {
 	// Create a new token
 	token := jwt.New(jwt.SigningMethodHS256)
 	// Set claims

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -13,11 +14,13 @@ import (
 )
 
 const (
+	BUCKET_ADMIN      = "_admin"
 	BUCKET_META       = "_meta"
 	BUCKET_CONFIGS    = "configs"
 	BUCKET_SECRETS    = "secrets"
 	BUCKET_DIFFS      = "_diffs"
 	BUCKET_DEPLOYMENT = "deployments"
+	BUCKET_USERS      = "users"
 
 	KEY_ACCESS_KEY       = "access_key"
 	KEY_DEPLOYED_VERSION = "deploy_ver"
@@ -25,6 +28,14 @@ const (
 
 	DB_EXT = "sail"
 )
+
+type User struct {
+	Email       string   `json:"email"`
+	Username    string   `json:"username"`
+	Password    string   `json:"password"`
+	Permissions []string `json:"permissions"`
+	Roles       []string `json:"roles"`
+}
 
 type SailorCore struct {
 	// TODO :: change value to socket type
@@ -45,6 +56,12 @@ func NewSailorCore() *SailorCore {
 		}
 
 		fileName := filepath.Base(path)
+
+		// ignore internal buckets used by sailor
+		if strings.HasPrefix(fileName, "_") {
+			return nil
+		}
+
 		projectKey := strings.ReplaceAll(fileName, filepath.Ext(fileName), "")
 
 		db, err := bolt.Open(path, 0600, nil)
@@ -65,7 +82,50 @@ func NewSailorCore() *SailorCore {
 	})
 
 	if err != nil {
+		// TODO :: log error
 		return nil
+	}
+
+	adminPath := fmt.Sprintf("./configs/%s.%s", BUCKET_ADMIN, DB_EXT)
+	if f, _ := os.Stat(adminPath); f == nil {
+		adminDB, err := bolt.Open(adminPath, 0600, nil)
+		if err != nil {
+			// TODO :: log error
+			return nil
+		}
+
+		sc.dbconns[BUCKET_ADMIN] = adminDB
+
+		adminDB.Update(func(tx *bolt.Tx) error {
+			usersBucket, err := tx.CreateBucket([]byte(BUCKET_USERS))
+			if err != nil {
+				return err
+			}
+
+			user := User{
+				Email:       "admin@sailor.com",
+				Username:    "admin",
+				Password:    "admin", // TODO :: hash password
+				Permissions: []string{"admin"},
+				Roles:       []string{"admin"},
+			}
+			json, err := json.Marshal(user)
+			if err != nil {
+				return err
+			}
+
+			return usersBucket.Put([]byte("admin"), json)
+		})
+
+		return nil
+	} else {
+		adminDB, err := bolt.Open(adminPath, 0600, nil)
+		if err != nil {
+			// TODO :: log error
+			return nil
+		}
+
+		sc.dbconns[BUCKET_ADMIN] = adminDB
 	}
 
 	return &sc
@@ -81,11 +141,16 @@ func (sc *SailorCore) extractSailorParams(r *http.Request) (*SailorParams, error
 		return nil, errors.New("namespace or app is empty")
 	}
 
+	username := r.Header.Get("x-username")
+	password := r.Header.Get("x-password")
+
 	return &SailorParams{
 		Ns:            ns,
 		App:           app,
 		AccessKey:     accessKey,
 		DeployVersion: deployVer,
+		Username:      username,
+		Password:      password,
 	}, nil
 }
 
@@ -116,6 +181,10 @@ type SailorParams struct {
 	AccessKey     string
 	Body          []byte
 	DeployVersion string
+
+	// auth params
+	Username string
+	Password string
 }
 
 type ResponseMessage struct {

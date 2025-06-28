@@ -5,6 +5,7 @@ go 1.23.1
 require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/rs/cors v1.11.1
 	github.com/sergi/go-diff v1.4.0
 	go.etcd.io/bbolt v1.4.1
 )

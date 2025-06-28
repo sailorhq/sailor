@@ -27,6 +27,52 @@ func (sc *SailorCore) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// TODO :: this can be a feature !! maybe ...
+// Define a recursive function to traverse the JSON structure
+func traverse(value any, path string, result *map[string]any) {
+	switch v := value.(type) {
+	case map[string]any:
+		for key, val := range v {
+			newKey := path
+			if path != "" {
+				newKey += "."
+			}
+			newKey += key
+			traverse(val, newKey, result)
+		}
+	// case []interface{}:
+	// 	index := 0
+	// 	for _, item := range v {
+	// 		newKey := path
+	// 		if path != "" {
+	// 			newKey += "["
+	// 		} else {
+	// 			newKey = fmt.Sprintf("%v[%d]", key, index)
+	// 		}
+	// 		traverse(item, newKey)
+	// 		index++
+	// 	}
+	default:
+		if path != "" {
+			(*result)[path] = fmt.Sprintf("%v", value)
+		}
+	}
+}
+
+func flattenJSON(jsonData []byte) (map[string]any, error) {
+	var input map[string]any
+	var result = make(map[string]any)
+
+	if err := json.Unmarshal(jsonData, &input); err != nil {
+		return nil, err
+	}
+
+	// Start the traversal with an empty path
+	traverse(input, "", &result)
+
+	return result, nil
+}
+
 func (sc *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
@@ -108,6 +154,7 @@ func (sc *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// TODO :: we need to move rules checking to the frontend
 func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
 	// OPT :: instead of throwing error one by one , we can get all the missing rule keys
 	// and then form a single error at one time
