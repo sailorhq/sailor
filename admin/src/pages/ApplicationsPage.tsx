@@ -44,7 +44,7 @@ const ApplicationsPage: React.FC = () => {
     };
 
     return (
-        <Card className="border-0 shadow-sm" style={{ background: '#FEF8EE', minHeight: '80vh' }}>
+        <Card className="border-0 shadow-sm" style={{ minHeight: '80vh', borderRadius: 10 }}>
             <Card.Body>
                 <Row className="align-items-center mb-4">
                     <Col><h4 className="mb-0">Your Applications</h4></Col>
@@ -71,8 +71,8 @@ const ApplicationsPage: React.FC = () => {
                     {apps.map(app => (
                         <Col key={app.id}>
                             <Card
-                                className="h-100 shadow-sm"
-                                style={{ cursor: 'pointer', background: '#fff' }}
+                                className="h-100"
+                                style={{ cursor: 'pointer', background: '#fff', }}
                                 onClick={() => navigate(`/dashboard/apps/${app.name}`)}
                             >
                                 <Card.Body className="d-flex flex-column justify-content-between">
@@ -86,7 +86,7 @@ const ApplicationsPage: React.FC = () => {
                                                     <circle cx="19" cy="12" r="2" />
                                                 </svg>
                                             </Dropdown.Toggle>
-                                            <Dropdown.Menu>
+                                            <Dropdown.Menu >
                                                 <Dropdown.Item onClick={() => handleDelete(app.id)}>Delete</Dropdown.Item>
                                             </Dropdown.Menu>
                                         </Dropdown>

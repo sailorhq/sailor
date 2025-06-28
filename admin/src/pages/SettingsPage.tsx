@@ -44,8 +44,8 @@ const SettingsPage: React.FC = () => {
     };
 
     return (
-        <Card className="border-0 shadow-sm" style={{ background: '#FEF8EE', minHeight: '80vh' }}>
-            <Card.Body style={{ background: '#FEF8EE' }}>
+        <Card className="border-0 shadow-sm" style={{ minHeight: '80vh', borderRadius: 10 }}>
+            <Card.Body>
                 <h4 className="mb-4">Settings</h4>
                 <Accordion defaultActiveKey="0">
                     <Accordion.Item eventKey="0">
