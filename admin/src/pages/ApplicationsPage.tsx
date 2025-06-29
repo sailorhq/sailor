@@ -1,49 +1,51 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Dropdown, Row, Col, Card, Modal, Form, FormSelect } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const mockApps = [
-    { id: 1, name: 'App One' },
-    { id: 2, name: 'App Two' },
-    { id: 3, name: 'App Three' },
-    { id: 4, name: 'App Four' },
-    { id: 5, name: 'App Five' },
-    { id: 6, name: 'App Six' },
-];
 
-const namespaces = ['default', 'production', 'staging'];
 
 const ApplicationsPage: React.FC = () => {
     const navigate = useNavigate();
-    const [apps, setApps] = useState(mockApps);
+    const [nsAppMap, setNsAppMap] = useState<Record<string, string[]>>({ default: [] });
     const [showModal, setShowModal] = useState(false);
-    const [namespace, setNamespace] = useState('default');
+    const [namespaceToCreate, setNamespaceToCreate] = useState('');
+    const [namespaces, setNamespaces] = useState(['default']);
     const [app, setApp] = useState('');
     const [secretKey, setSecretKey] = useState('');
     const [loading, setLoading] = useState(false);
-    const [selectedNamespace, setSelectedNamespace] = useState(namespaces[0]);
+    const [selectedNamespace, setSelectedNamespace] = useState('default');
 
     const { hasRole } = useAuth();
 
-    const handleDelete = (id: number) => {
-        setApps(apps.filter(app => app.id !== id));
-    };
+    useEffect(() => {
+        fetchApps();
+    }, [])
+
+    const fetchApps = async () => {
+        const res = await fetch('http://localhost:7766/api/v1/admin.list.apps');
+        if (!res.ok) {
+        }
+        const data = await res.json() as Record<string, string[]>;
+        const nsList = Object.keys(data);
+        setNamespaces([...namespaces, ...nsList]);
+        setNsAppMap(data);
+    }
 
     const handleCreateApp = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        try {
-            const payload = { ns: namespace, key: secretKey, app };
-            await new Promise(res => setTimeout(res, 1000));
-            setApps([...apps, { id: Date.now(), name: app }]);
-            setShowModal(false);
-            setNamespace('default');
-            setApp('');
-            setSecretKey('');
-        } finally {
-            setLoading(false);
-        }
+        setLoading(false);
+        // try {
+        //     const payload = { ns: namespace, key: secretKey, app };
+        //     await new Promise(res => setTimeout(res, 1000));
+        //     setApps([...apps, { id: Date.now(), name: app }]);
+        //     setShowModal(false);
+        //     setNamespace('default');
+        //     setApp('');
+        //     setSecretKey('');
+        // } finally {
+        //     setLoading(false);
+        // }
     };
 
     return (
@@ -71,18 +73,18 @@ const ApplicationsPage: React.FC = () => {
                     </Col>
                 </Row>
                 <Row xs={1} md={3} className="g-4">
-                    {apps.map(app => (
-                        <Col key={app.id}>
+                    {nsAppMap[selectedNamespace]?.map(app => (
+                        <Col key={app}>
                             <Card
                                 className="h-100"
                                 style={{ cursor: 'pointer', background: '#fff', }}
-                                onClick={() => navigate(`/dashboard/apps/${app.name}`)}
+                                onClick={() => navigate(`/dashboard/apps/${app}`)}
                             >
                                 <Card.Body className="d-flex flex-column justify-content-between">
                                     <div className="d-flex justify-content-between align-items-start">
-                                        <Card.Title>{app.name}</Card.Title>
+                                        <Card.Title>{app}</Card.Title>
                                     </div>
-                                    <Card.Text className="text-muted small">version: {selectedNamespace}</Card.Text>
+                                    {/* <Card.Text className="text-muted small">version: {selectedNamespace}</Card.Text> */}
                                 </Card.Body>
                             </Card>
                         </Col>
@@ -98,8 +100,8 @@ const ApplicationsPage: React.FC = () => {
                                 <Form.Label>Namespace</Form.Label>
                                 <Form.Control
                                     type="text"
-                                    value={namespace}
-                                    onChange={e => setNamespace(e.target.value)}
+                                    value={namespaceToCreate}
+                                    onChange={e => setNamespaceToCreate(e.target.value)}
                                     required
                                     placeholder="Enter namespace"
                                 />
