@@ -25,6 +25,8 @@ func main() {
 
 	mux.HandleFunc("/api/v1/admin.create.user", sh.CreateUserHandler)
 
+	mux.HandleFunc("/api/v1/audit.trail", sh.AuditHandler)
+
 	handler := cors.AllowAll().Handler(mux)
 	http.ListenAndServe(":7766", handler)
 }
