@@ -14,18 +14,24 @@ import (
 )
 
 const (
-	BUCKET_ADMIN      = "_admin"
-	BUCKET_META       = "_meta"
+	// buckets used by sailor
+	BUCKET_ADMIN = "_admin"
+	BUCKET_META  = "_meta"
+	BUCKET_AUDIT = "_audit"
+
+	// buckets used by sailor apps
 	BUCKET_CONFIGS    = "configs"
 	BUCKET_SECRETS    = "secrets"
 	BUCKET_DIFFS      = "_diffs"
 	BUCKET_DEPLOYMENT = "deployments"
 	BUCKET_USERS      = "users"
 
+	// keys used by sailor
 	KEY_ACCESS_KEY       = "access_key"
 	KEY_DEPLOYED_VERSION = "deploy_ver"
 	KEY_RULES            = "rules"
 
+	// db extension used by sailor
 	DB_EXT = "sail"
 )
 
@@ -86,49 +92,64 @@ func NewSailorCore() *SailorCore {
 		return nil
 	}
 
-	adminPath := fmt.Sprintf("./configs/%s.%s", BUCKET_ADMIN, DB_EXT)
-	if f, _ := os.Stat(adminPath); f == nil {
-		adminDB, err := bolt.Open(adminPath, 0600, nil)
-		if err != nil {
-			// TODO :: log error
-			return nil
-		}
-
-		sc.dbconns[BUCKET_ADMIN] = adminDB
-
-		adminDB.Update(func(tx *bolt.Tx) error {
-			usersBucket, err := tx.CreateBucket([]byte(BUCKET_USERS))
-			if err != nil {
-				return err
-			}
-
-			user := User{
-				Email:       "admin@sailor.com",
-				Username:    "admin",
-				Password:    "admin", // TODO :: hash password
-				Permissions: []string{"admin"},
-				Roles:       []string{"admin"},
-			}
-			json, err := json.Marshal(user)
-			if err != nil {
-				return err
-			}
-
-			return usersBucket.Put([]byte("admin"), json)
-		})
-
+	if err = sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
 		return nil
-	} else {
-		adminDB, err := bolt.Open(adminPath, 0600, nil)
-		if err != nil {
-			// TODO :: log error
-			return nil
-		}
+	}
 
-		sc.dbconns[BUCKET_ADMIN] = adminDB
+	if err = sc.initInternalDatabase(BUCKET_AUDIT); err != nil {
+		return nil
 	}
 
 	return &sc
+}
+
+func (sc *SailorCore) initInternalDatabase(dbName string) error {
+	dbPath := fmt.Sprintf("./configs/%s.%s", dbName, DB_EXT)
+	if f, _ := os.Stat(dbPath); f == nil {
+		db, err := bolt.Open(dbPath, 0600, nil)
+		if err != nil {
+			// TODO :: log error
+			return nil
+		}
+
+		sc.dbconns[dbName] = db
+
+		// custom handling for admin db
+		if dbName == BUCKET_ADMIN {
+			db.Update(func(tx *bolt.Tx) error {
+				usersBucket, err := tx.CreateBucket([]byte(BUCKET_USERS))
+				if err != nil {
+					return err
+				}
+
+				user := User{
+					Email:       "admin@sailor.com",
+					Username:    "admin",
+					Password:    "admin", // TODO :: hash password
+					Permissions: []string{"admin"},
+					Roles:       []string{"admin"},
+				}
+				json, err := json.Marshal(user)
+				if err != nil {
+					return err
+				}
+
+				return usersBucket.Put([]byte("admin"), json)
+			})
+		}
+
+		return nil
+	} else {
+		db, err := bolt.Open(dbPath, 0600, nil)
+		if err != nil {
+			// TODO :: log error
+			return nil
+		}
+
+		sc.dbconns[dbName] = db
+	}
+
+	return nil
 }
 
 func (sc *SailorCore) extractSailorParams(r *http.Request) (*SailorParams, error) {
