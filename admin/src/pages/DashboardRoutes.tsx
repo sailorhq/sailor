@@ -4,6 +4,7 @@ import ProtectedRoute from '../components/ProtectedRoute';
 import ApplicationsPage from './ApplicationsPage';
 import SettingsPage from './SettingsPage';
 import ApplicationInfoPage from './ApplicationInfoPage';
+import AuditPage from './AuditPage';
 
 const DashboardRoutes: React.FC = () => (
     <Routes>
@@ -29,6 +30,12 @@ const DashboardRoutes: React.FC = () => (
                 </ProtectedRoute>
             }
         />
+
+        <Route path="audit" element={
+            <ProtectedRoute requiredRoles={['admin']}>
+                <AuditPage />
+            </ProtectedRoute>
+        } />
 
         <Route path="*" element={<Navigate to="apps" replace />} />
     </Routes>

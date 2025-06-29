@@ -62,6 +62,16 @@ const Dashboard: React.FC = () => {
                                     </span>
                                     Settings
                                 </ListGroup.Item> : <></>}
+
+                                {hasRole('admin') ? <ListGroup.Item className="border-0" onClick={() => navigate('/dashboard/audit')}>
+                                    <span style={{ marginRight: 8, verticalAlign: 'middle' }}>
+                                        <svg width="18" height="18" fill="#1C608C" viewBox="0 0 16 16" style={{ marginBottom: 2 }}>
+                                            <path d="M4 4h8v8H4z" />
+                                            <rect width="16" height="16" fill="none" />
+                                        </svg>
+                                    </span>
+                                    Audit
+                                </ListGroup.Item> : <></>}
                             </ListGroup>
                         </Card.Body>
                     </Card>
