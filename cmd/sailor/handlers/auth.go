@@ -51,15 +51,15 @@ func (sc *SailorCore) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		enc.Encode(ResponseMessage{Message: err.Error()})
 		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
 
 	token, err := jwtfyit(user.Password, "TODO :: access key", time.Now().Add(time.Hour*24).Format(time.RFC3339))
 	if err != nil {
-		enc.Encode(ResponseMessage{Message: err.Error()})
 		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
 
