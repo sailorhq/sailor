@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Card, Accordion, Form, Button, Modal, ListGroup } from 'react-bootstrap';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store';
+import { useAuth } from '../contexts/AuthContext';
 
 const SettingsPage: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
@@ -19,6 +22,9 @@ const SettingsPage: React.FC = () => {
     const [passwordToCreate, setPasswordToCreate] = useState('');
     const [roleToCreate, setRoleToCreate] = useState('');
     const [permissionsToCreate, setPermissionsToCreate] = useState<Set<string>>(new Set());
+    const [allowedApps, setAllowedApps] = useState<Set<string>>(new Set());
+
+    const { hasRole } = useAuth();
 
     const apps = useSelector((state: RootState) => state.apps.values);
 
@@ -66,7 +72,8 @@ const SettingsPage: React.FC = () => {
     const handleUserCreation = async () => {
         // Implementation of handleUserCreation
         const permissions = Array.from(permissionsToCreate).join('|');
-        const url = `http://localhost:7766/api/v1/admin.create.user?username=${usernameToCreate}&password=${passwordToCreate}&role=${roleToCreate}&permissions=${permissions}`;
+        const joinedAllowedApps = Array.from(allowedApps).join('|');
+        const url = `http://localhost:7766/api/v1/admin.create.user?username=${usernameToCreate}&password=${passwordToCreate}&role=${roleToCreate}&permissions=${permissions}&allowed_apps=${joinedAllowedApps}`;
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -74,8 +81,13 @@ const SettingsPage: React.FC = () => {
             }
         });
 
-        if (response.status != 200) {
-            alert('Failed to create user');
+        if (response.ok) {
+            setShowUsersModal(false);
+            setUsernameToCreate('');
+            setPasswordToCreate('');
+            setRoleToCreate('');
+            setPermissionsToCreate(new Set());
+            setAllowedApps(new Set());
         }
     };
 
@@ -159,16 +171,14 @@ const SettingsPage: React.FC = () => {
                             </Form>
                         </Accordion.Body>
                     </Accordion.Item>
+
                     <Accordion.Item eventKey="2">
-                        <Accordion.Header>Panel</Accordion.Header>
+                        <Accordion.Header>Security</Accordion.Header>
                         <Accordion.Body>
                             <ListGroup variant="flush">
                                 <ListGroup.Item action onClick={() => handleChangePassword()}>
                                     Change Default Password
                                 </ListGroup.Item>
-                                {/* <ListGroup.Item action onClick={() => handleOpenModal('Advanced Setting 2')}>
-                                    Advanced Setting 2
-                                </ListGroup.Item> */}
                             </ListGroup>
                         </Accordion.Body>
                     </Accordion.Item>
@@ -199,6 +209,7 @@ const SettingsPage: React.FC = () => {
                                 <Form.Group className="mb-3" controlId="formS3AccessKey">
                                     <Form.Label>Username</Form.Label>
                                     <Form.Control
+                                        required
                                         type="text"
                                         placeholder="Enter username"
                                         value={usernameToCreate}
@@ -209,7 +220,8 @@ const SettingsPage: React.FC = () => {
                                 <Form.Group className="mb-3" controlId="formS3AccessKey">
                                     <Form.Label>Password</Form.Label>
                                     <Form.Control
-                                        type="text"
+                                        required
+                                        type="password"
                                         placeholder="Enter password"
                                         value={passwordToCreate}
                                         onChange={e => setPasswordToCreate(e.target.value)}
@@ -218,6 +230,7 @@ const SettingsPage: React.FC = () => {
                                 <Form.Group className="mb-3" controlId="formS3AccessKey">
                                     <Form.Label>Role</Form.Label>
                                     <Form.Select
+                                        required
                                         value={roleToCreate}
                                         onChange={e => setRoleToCreate(e.target.value)}
                                     >
@@ -231,30 +244,35 @@ const SettingsPage: React.FC = () => {
                                     <Form.Label>Permissions</Form.Label>
                                     <div className="d-flex flex-row gap-4">
                                         <Form.Check
+                                            checked={permissionsToCreate.has('create_configs')}
                                             type="checkbox"
                                             id="perm-create-configs"
                                             label="create_configs"
                                             onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'create_configs']))}
                                         />
                                         <Form.Check
+                                            checked={permissionsToCreate.has('create_secrets')}
                                             type="checkbox"
                                             id="perm-create-secrets"
                                             label="create_secrets"
                                             onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'create_secrets']))}
                                         />
                                         <Form.Check
+                                            checked={permissionsToCreate.has('deploy_configs')}
                                             type="checkbox"
                                             id="perm-deploy-configs"
                                             label="deploy_configs"
                                             onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'deploy_configs']))}
                                         />
                                         <Form.Check
+                                            checked={permissionsToCreate.has('deploy_secrets')}
                                             type="checkbox"
                                             id="perm-deploy-secrets"
                                             label="deploy_secrets"
                                             onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'deploy_secrets']))}
                                         />
                                         <Form.Check
+                                            checked={permissionsToCreate.has('update_pod_url')}
                                             type="checkbox"
                                             id="perm-update-pod-url"
                                             label="update_pod_url"

@@ -39,6 +39,7 @@ type User struct {
 	Password    string   `json:"password"`
 	Permissions []string `json:"permissions"`
 	Roles       []string `json:"roles"`
+	AllowedApps []string `json:"allowed_apps"`
 }
 
 type SailorCore struct {
@@ -55,8 +56,8 @@ func NewSailorCore() *SailorCore {
 	}
 
 	if err := sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
-			return nil
-		}
+		return nil
+	}
 
 	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		projectsBucket, err := tx.CreateBucketIfNotExists([]byte(BUCKET_PROJECTS))
@@ -68,23 +69,23 @@ func NewSailorCore() *SailorCore {
 			var project Project
 			if err := json.Unmarshal(v, &project); err != nil {
 				return err
-		}
+			}
 
 			projectKey := fmt.Sprintf("%s-%s", project.Ns, project.App)
 			projectDbPath := fmt.Sprintf("./configs/%s-%s.%s", project.Ns, project.App, DB_EXT)
 			db, err := bolt.Open(projectDbPath, 0600, nil)
-		if err != nil {
-			return err
-		}
+			if err != nil {
+				return err
+			}
 
-		sc.dbconns[projectKey] = db
+			sc.dbconns[projectKey] = db
 
-		db.View(func(tx *bolt.Tx) error {
-			metaBucket := tx.Bucket([]byte(BUCKET_META))
-			version := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
-			sc.versions[projectKey] = string(version)
-			return nil
-		})
+			db.View(func(tx *bolt.Tx) error {
+				metaBucket := tx.Bucket([]byte(BUCKET_META))
+				version := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
+				sc.versions[projectKey] = string(version)
+				return nil
+			})
 
 			return nil
 		})

@@ -35,6 +35,7 @@ func (sh *SailorCore) CreateUserHandler(w http.ResponseWriter, r *http.Request) 
 			Password:    r.URL.Query().Get("password"),
 			Roles:       []string{r.URL.Query().Get("role")},
 			Permissions: strings.Split(r.URL.Query().Get("permissions"), "|"),
+			AllowedApps: strings.Split(r.URL.Query().Get("allowed_apps"), "|"),
 		}
 
 		userBytes, err := json.Marshal(user)
