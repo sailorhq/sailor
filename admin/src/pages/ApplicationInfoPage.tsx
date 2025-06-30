@@ -85,12 +85,8 @@ const ApplicationInfoPage: React.FC = () => {
                             <Card.Body>
                                 <div className="d-flex justify-content-between align-items-start mb-3">
                                     <h5 className="mb-0">Edit Configuration</h5>
-                                    <Button
-                                        variant="outline-primary"
-                                        size="sm"
+                                    {hasPermission('edit_config_rule') ? <Button
                                         style={{
-                                            width: '40px',
-                                            height: '40px',
                                             borderRadius: '8px',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -101,8 +97,8 @@ const ApplicationInfoPage: React.FC = () => {
                                         }}
                                         onClick={() => setShowRulesModal(true)}
                                     >
-                                        ⚙️
-                                    </Button>
+                                        🔒 Edit Rules
+                                    </Button> : <></>}
                                 </div>
                                 <Form.Group controlId="jsonConfig">
                                     {/* <Form.Label>JSON Configuration</Form.Label> */}
@@ -152,12 +148,8 @@ const ApplicationInfoPage: React.FC = () => {
                             <Card.Body>
                                 <div className="d-flex justify-content-between align-items-start mb-3">
                                     <h5 className="mb-0">Edit Secrets</h5>
-                                    <Button
-                                        variant="outline-primary"
-                                        size="sm"
+                                    {hasPermission('edit_secret_policy') ? <Button
                                         style={{
-                                            width: '40px',
-                                            height: '40px',
                                             borderRadius: '8px',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -168,8 +160,8 @@ const ApplicationInfoPage: React.FC = () => {
                                         }}
                                         onClick={() => setShowRulesModal(true)}
                                     >
-                                        ⚙️
-                                    </Button>
+                                        🔑 Edit Policy
+                                    </Button> : <></>}
                                 </div>
                                 <Form.Group controlId="jsonConfig">
                                     {/* <Form.Label>JSON Configuration</Form.Label> */}
@@ -336,7 +328,6 @@ const ApplicationInfoPage: React.FC = () => {
                     </Modal.Header>
                     <Modal.Body>
                         <Form.Group controlId="rulesEditor">
-                            <Form.Label>Config Rules</Form.Label>
                             <div style={{ height: '400px', border: '1px solid #ced4da', borderRadius: '4px' }}>
                                 <Editor
                                     height="100%"
@@ -365,12 +356,6 @@ const ApplicationInfoPage: React.FC = () => {
                         </Form.Group>
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button
-                            variant="secondary"
-                            onClick={() => setShowRulesModal(false)}
-                        >
-                            Close
-                        </Button>
                         <Button
                             style={{ backgroundColor: '#1C608C', border: 'none' }}
                             onClick={handleSaveRules}

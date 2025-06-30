@@ -91,6 +91,16 @@ const SettingsPage: React.FC = () => {
         }
     };
 
+    const handlePermissionChange = (permission: string, checked: boolean) => {
+        if (checked) {
+            setPermissionsToCreate(prev => new Set([...prev, permission]))
+        } else {
+            const updated = new Set([...permissionsToCreate])
+            updated.delete(permission);
+            setPermissionsToCreate(updated);
+        }
+    }
+
     return (
         <Card className="border-0 shadow-sm" style={{ minHeight: '80vh', borderRadius: 10 }}>
             <Card.Body>
@@ -242,48 +252,64 @@ const SettingsPage: React.FC = () => {
                                 </Form.Group>
                                 <Form.Group className="mb-3" controlId="formS3SecretKey">
                                     <Form.Label>Permissions</Form.Label>
-                                    <div className="d-flex flex-row gap-4">
+                                    <div style={{ width: 'inherit' }} className="d-flex flex-column gap-2">
                                         <Form.Check
                                             checked={permissionsToCreate.has('create_configs')}
                                             type="checkbox"
                                             id="perm-create-configs"
                                             label="create_configs"
-                                            onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'create_configs']))}
+                                            onChange={e => handlePermissionChange('create_configs', e.target.checked)}
                                         />
                                         <Form.Check
-                                            checked={permissionsToCreate.has('create_secrets')}
+                                            checked={permissionsToCreate.has('edit_config_rule')}
                                             type="checkbox"
-                                            id="perm-create-secrets"
-                                            label="create_secrets"
-                                            onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'create_secrets']))}
+                                            id="perm-update-pod-url"
+                                            label="edit_config_rule"
+                                            onChange={e => handlePermissionChange('edit_config_rule', e.target.checked)}
                                         />
                                         <Form.Check
                                             checked={permissionsToCreate.has('deploy_configs')}
                                             type="checkbox"
                                             id="perm-deploy-configs"
                                             label="deploy_configs"
-                                            onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'deploy_configs']))}
+                                            onChange={e => handlePermissionChange('deploy_configs', e.target.checked)}
+                                        />
+                                        <Form.Check
+                                            checked={permissionsToCreate.has('create_secrets')}
+                                            type="checkbox"
+                                            id="perm-create-secrets"
+                                            label="create_secrets"
+                                            onChange={e => handlePermissionChange('create_secrets', e.target.checked)}
+                                        />
+                                        <Form.Check
+                                            checked={permissionsToCreate.has('edit_secret_policy')}
+                                            type="checkbox"
+                                            id="perm-update-pod-url"
+                                            label="edit_secret_policy"
+                                            onChange={e => handlePermissionChange('edit_secret_policy', e.target.checked)}
                                         />
                                         <Form.Check
                                             checked={permissionsToCreate.has('deploy_secrets')}
                                             type="checkbox"
                                             id="perm-deploy-secrets"
                                             label="deploy_secrets"
-                                            onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'deploy_secrets']))}
+                                            onChange={e => handlePermissionChange('deploy_secrets', e.target.checked)}
                                         />
                                         <Form.Check
                                             checked={permissionsToCreate.has('update_pod_url')}
                                             type="checkbox"
                                             id="perm-update-pod-url"
                                             label="update_pod_url"
-                                            onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'update_pod_url']))}
+                                            onChange={e => handlePermissionChange('update_pod_url', e.target.checked)}
                                         />
+
+
                                     </div>
                                 </Form.Group>
 
                                 <Form.Group className="mb-3" controlId="formS3SecretKey">
                                     <Form.Label>Allowed Apps</Form.Label>
-                                    <div className="d-flex flex-row gap-4">
+                                    <div className="d-flex flex-column gap-2">
                                         {Object.values(apps).flat().map(app => <Form.Check
                                             checked={allowedApps.has(app)}
                                             type="checkbox"
