@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Dropdown, Row, Col, Card, Modal, Form, FormSelect } from 'react-bootstrap';
+import { Button, Row, Col, Card, Modal, Form, FormSelect } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDispatch } from 'react-redux';
@@ -11,7 +11,6 @@ import type { RootState } from '../store';
 
 const ApplicationsPage: React.FC = () => {
     const navigate = useNavigate();
-    const [nsAppMap, setNsAppMap] = useState<Record<string, string[]>>({ default: [] });
     const [showModal, setShowModal] = useState(false);
     const [namespaceToCreate, setNamespaceToCreate] = useState('');
     const [namespaces, setNamespaces] = useState(['default']);
@@ -47,17 +46,20 @@ const ApplicationsPage: React.FC = () => {
     const handleCreateApp = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(false);
-        // try {
-        //     const payload = { ns: namespace, key: secretKey, app };
-        //     await new Promise(res => setTimeout(res, 1000));
-        //     setApps([...apps, { id: Date.now(), name: app }]);
-        //     setShowModal(false);
-        //     setNamespace('default');
-        //     setApp('');
-        //     setSecretKey('');
-        // } finally {
-        //     setLoading(false);
-        // }
+        const payload = { ns: namespaceToCreate, key: secretKey, app };
+        const res = await fetch(`http://localhost:7766/api/v1/create?${new URLSearchParams(payload).toString()}`, {
+            method: 'PUT',
+        });
+
+        if (res.ok) {
+            setShowModal(false);
+            setNamespaceToCreate('');
+            setApp('');
+            setSecretKey('');
+
+
+            fetchApps();
+        }
     };
 
     return (
@@ -90,7 +92,7 @@ const ApplicationsPage: React.FC = () => {
                             <Card
                                 className="h-100"
                                 style={{ cursor: 'pointer', background: '#fff', }}
-                                onClick={() => navigate(`/dashboard/apps/${app}`)}
+                                onClick={hasRole('admin') ? undefined : () => navigate(`/dashboard/apps/${app}`)}
                             >
                                 <Card.Body className="d-flex flex-column justify-content-between">
                                     <div className="d-flex justify-content-between align-items-start">
@@ -134,7 +136,6 @@ const ApplicationsPage: React.FC = () => {
                                     type="text"
                                     value={secretKey}
                                     onChange={e => setSecretKey(e.target.value)}
-                                    required
                                     placeholder="Enter secret key"
                                 />
                             </Form.Group>
