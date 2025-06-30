@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 
 	bolt "go.etcd.io/bbolt"
@@ -87,11 +88,10 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = tx.CreateBucket([]byte(BUCKET_SECRETS))
-
-		if params.AccessKey != "" {
-			err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(params.AccessKey))
+		if err != nil {
+			return err
 		}
-		return err
+		return metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(generateAccessKey(16)))
 	})
 
 	adminDB := sc.dbconns[BUCKET_ADMIN]
@@ -113,4 +113,14 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 		Message: fmt.Sprintf("created namespace: %s | app: %s | access_key: %v",
 			params.Ns, params.App, params.AccessKey != ""),
 	})
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func generateAccessKey(length int) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return fmt.Sprintf("sailor-%s", string(b))
 }

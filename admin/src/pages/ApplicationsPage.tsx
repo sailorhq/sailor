@@ -92,7 +92,7 @@ const ApplicationsPage: React.FC = () => {
                             <Card
                                 className="h-100"
                                 style={{ cursor: 'pointer', background: '#fff', }}
-                                onClick={hasRole('admin') ? undefined : () => navigate(`/dashboard/apps/${app}`)}
+                                onClick={hasRole('admin') ? undefined : () => navigate(`/dashboard/apps/${app}`, { state: { ns: selectedNamespace, app: app } })}
                             >
                                 <Card.Body className="d-flex flex-column justify-content-between">
                                     <div className="d-flex justify-content-between align-items-start">
@@ -128,15 +128,6 @@ const ApplicationsPage: React.FC = () => {
                                     onChange={e => setApp(e.target.value)}
                                     required
                                     placeholder="Enter app name"
-                                />
-                            </Form.Group>
-                            <Form.Group className="mb-3" controlId="formSecretKey">
-                                <Form.Label>Secret Key</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    value={secretKey}
-                                    onChange={e => setSecretKey(e.target.value)}
-                                    placeholder="Enter secret key"
                                 />
                             </Form.Group>
                         </Modal.Body>
