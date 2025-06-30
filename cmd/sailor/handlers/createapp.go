@@ -10,6 +10,19 @@ import (
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 )
 
+type ProjectStatus string
+
+const (
+	Alive    ProjectStatus = "alive"
+	Archived ProjectStatus = "archived"
+)
+
+type Project struct {
+	Ns     string        `json:"ns"`
+	App    string        `json:"app"`
+	Status ProjectStatus `json:"status"`
+}
+
 type FirstConfig struct {
 	App string `json:"app"`
 }
@@ -30,12 +43,20 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := sc.getDBConn(params)
-	if err != nil {
-		enc.Encode(ResponseMessage{Message: err.Error()})
-		w.WriteHeader(http.StatusInternalServerError)
+	projectKey := fmt.Sprintf("%s-%s", params.Ns, params.App)
+	if _, ok := sc.dbconns[projectKey]; ok {
+		enc.Encode(ResponseMessage{Message: "app already exists"})
 		return
 	}
+
+	db, err := bolt.Open(fmt.Sprintf("./configs/%s-%s.%s", params.Ns, params.App, DB_EXT), 0600, nil)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		return
+	}
+
+	sc.dbconns[projectKey] = db
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		var metaBucket *bolt.Bucket
@@ -71,6 +92,16 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 			err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(params.AccessKey))
 		}
 		return err
+	})
+
+	adminDB := sc.dbconns[BUCKET_ADMIN]
+	adminDB.Update(func(tx *bolt.Tx) error {
+		projectBucket := tx.Bucket([]byte(BUCKET_PROJECTS))
+		projectBytes, err := json.Marshal(Project{Ns: params.Ns, App: params.App, Status: Alive})
+		if err != nil {
+			return err
+		}
+		return projectBucket.Put([]byte(params.Ns+"-"+params.App), projectBytes)
 	})
 
 	if err != nil {

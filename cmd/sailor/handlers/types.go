@@ -4,27 +4,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 
 	bolt "go.etcd.io/bbolt"
 )
 
 const (
 	// buckets used by sailor
-	BUCKET_ADMIN = "_admin"
-	BUCKET_META  = "_meta"
-	BUCKET_AUDIT = "_audit"
+	BUCKET_ADMIN    = "_admin"
+	BUCKET_META     = "_meta"
+	BUCKET_AUDIT    = "_audit"
+	BUCKET_USERS    = "users"
+	BUCKET_PROJECTS = "projects"
 
 	// buckets used by sailor apps
 	BUCKET_CONFIGS    = "configs"
 	BUCKET_SECRETS    = "secrets"
 	BUCKET_DIFFS      = "_diffs"
 	BUCKET_DEPLOYMENT = "deployments"
-	BUCKET_USERS      = "users"
 
 	// keys used by sailor
 	KEY_ACCESS_KEY       = "access_key"
@@ -56,21 +54,25 @@ func NewSailorCore() *SailorCore {
 		versions: make(map[string]string),
 	}
 
-	err := filepath.Walk("./configs", func(path string, info fs.FileInfo, e error) error {
-		if info.IsDir() || e != nil {
+	if err := sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
 			return nil
 		}
 
-		fileName := filepath.Base(path)
-
-		// ignore internal buckets used by sailor
-		if strings.HasPrefix(fileName, "_") {
-			return nil
+	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
+		projectsBucket, err := tx.CreateBucketIfNotExists([]byte(BUCKET_PROJECTS))
+		if err != nil {
+			return err
 		}
 
-		projectKey := strings.ReplaceAll(fileName, filepath.Ext(fileName), "")
+		projectsBucket.ForEach(func(k []byte, v []byte) error {
+			var project Project
+			if err := json.Unmarshal(v, &project); err != nil {
+				return err
+		}
 
-		db, err := bolt.Open(path, 0600, nil)
+			projectKey := fmt.Sprintf("%s-%s", project.Ns, project.App)
+			projectDbPath := fmt.Sprintf("./configs/%s-%s.%s", project.Ns, project.App, DB_EXT)
+			db, err := bolt.Open(projectDbPath, 0600, nil)
 		if err != nil {
 			return err
 		}
@@ -84,18 +86,16 @@ func NewSailorCore() *SailorCore {
 			return nil
 		})
 
+			return nil
+		})
 		return nil
 	})
 
 	if err != nil {
-		// TODO :: log error
 		return nil
 	}
 
-	if err = sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
-		return nil
-	}
-
+	// load audit bucket
 	if err = sc.initInternalDatabase(BUCKET_AUDIT); err != nil {
 		return nil
 	}
