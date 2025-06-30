@@ -20,6 +20,8 @@ const SettingsPage: React.FC = () => {
     const [roleToCreate, setRoleToCreate] = useState('');
     const [permissionsToCreate, setPermissionsToCreate] = useState<Set<string>>(new Set());
 
+    const apps = useSelector((state: RootState) => state.apps.values);
+
     // Sample users data - in a real app, this would come from an API
     const [users, setUsers] = useState([
         { id: 1, username: 'admin', role: 'Admin', permissions: ['read', 'write', 'delete', 'admin'] },
@@ -258,6 +260,19 @@ const SettingsPage: React.FC = () => {
                                             label="update_pod_url"
                                             onChange={() => setPermissionsToCreate(prev => new Set([...prev, 'update_pod_url']))}
                                         />
+                                    </div>
+                                </Form.Group>
+
+                                <Form.Group className="mb-3" controlId="formS3SecretKey">
+                                    <Form.Label>Allowed Apps</Form.Label>
+                                    <div className="d-flex flex-row gap-4">
+                                        {Object.values(apps).flat().map(app => <Form.Check
+                                            checked={allowedApps.has(app)}
+                                            type="checkbox"
+                                            id={app}
+                                            label={app}
+                                            onChange={() => setAllowedApps(prev => new Set([...prev, app]))}
+                                        />)}
                                     </div>
                                 </Form.Group>
                                 <div className="d-flex gap-2">

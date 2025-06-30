@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Button, Dropdown, Row, Col, Card, Modal, Form, FormSelect } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useDispatch } from 'react-redux';
+import { setApps as setAppsAction } from '../appsSlice';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store';
 
 
 
@@ -16,20 +20,28 @@ const ApplicationsPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [selectedNamespace, setSelectedNamespace] = useState('default');
 
-    const { hasRole } = useAuth();
+    const { user, hasRole } = useAuth();
+
+    const dispatch = useDispatch();
 
     useEffect(() => {
         fetchApps();
     }, [])
 
     const fetchApps = async () => {
-        const res = await fetch('http://localhost:7766/api/v1/admin.list.apps');
+        const res = await fetch('http://localhost:7766/api/v1/admin.list.apps', {
+            headers: {
+                'x-token': user?.token || '',
+                'x-username': user?.username || '',
+            },
+        });
         if (!res.ok) {
         }
-        const data = await res.json() as Record<string, string[]>;
-        const nsList = Object.keys(data);
-        setNamespaces([...namespaces, ...nsList]);
-        setNsAppMap(data);
+        const data = await res.json() as string[];
+        const nsListSet = new Set([...namespaces, ...data.map(project => project.split('-')[0])]);
+        setNamespaces(Array.from(nsListSet));
+
+        dispatch(setAppsAction(data));
     }
 
     const handleCreateApp = async (e: React.FormEvent) => {
@@ -73,7 +85,7 @@ const ApplicationsPage: React.FC = () => {
                     </Col>
                 </Row>
                 <Row xs={1} md={3} className="g-4">
-                    {nsAppMap[selectedNamespace]?.map(app => (
+                    {useSelector((state: RootState) => state.apps.values.filter(app => app.startsWith(selectedNamespace))).map((app: string) => (
                         <Col key={app}>
                             <Card
                                 className="h-100"
