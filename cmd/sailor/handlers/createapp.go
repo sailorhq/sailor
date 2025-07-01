@@ -8,6 +8,7 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
+	"github.com/codekidx/sailor/internal/types"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -68,7 +69,7 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 }`))
 		}
 
-		diffBucket, err := tx.CreateBucket([]byte(BUCKET_DIFFS))
+		deploymentBucket, err := tx.CreateBucket([]byte(BUCKET_DEPLOYMENT))
 		if err == nil {
 			differ := diffmod.New()
 			firstConfBytes, err := json.Marshal(FirstConfig{App: params.App})
@@ -79,8 +80,19 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 			diff := differ.DiffMain("", string(firstConfBytes), true)
 			patchList := differ.PatchMake("", string(firstConfBytes), diff)
 			patchh := differ.PatchToText(patchList)
-			fmt.Println("pa: ", patchh)
-			if err = diffBucket.Put([]byte("1"), []byte(patchh)); err != nil {
+
+			deployment := types.Deployment{
+				Description: "very first deployment",
+				Version:     "1",
+				Deployed:    true,
+				Diff:        patchh,
+			}
+			dbytes, err := json.Marshal(deployment)
+			if err != nil {
+				return err
+			}
+
+			if err = deploymentBucket.Put([]byte("1"), dbytes); err != nil {
 				return err
 			} else {
 				metaBucket.Put([]byte(KEY_DEPLOYED_VERSION), []byte("1"))
@@ -123,6 +135,7 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 func generateAccessKey(length int) string {
+
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[rand.Intn(len(charset))]

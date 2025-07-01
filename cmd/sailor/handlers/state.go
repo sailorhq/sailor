@@ -32,27 +32,44 @@ func (sc *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	resp := types.SailorState{
-		Configs: builtConfig,
+		Configs:     builtConfig,
+		Secrets:     []types.Secret{},
+		Deployments: []types.Deployment{},
 	}
 
-	var secrets = make(map[string]string)
 	db.View(func(tx *bolt.Tx) error {
 		// fetch current deployed version ...
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 		resp.Meta.Version = string(metaBucket.Get([]byte(KEY_DEPLOYED_VERSION)))
+		resp.AccessKey = string(metaBucket.Get([]byte(KEY_ACCESS_KEY)))
+		resp.SecretKey = string(metaBucket.Get([]byte(KEY_SECRET_KEY)))
 
 		// fetch secrets...
 		secretsBucket := tx.Bucket([]byte(BUCKET_SECRETS))
 		cur := secretsBucket.Cursor()
 
 		for k, v := cur.First(); k != nil; k, v = cur.Next() {
-			secrets[string(k)] = string(v)
+			resp.Secrets = append(resp.Secrets, types.Secret{
+				Name:  string(k),
+				Value: string(v),
+			})
+		}
+
+		deploymentsBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
+		cur = deploymentsBucket.Cursor()
+		for k, v := cur.First(); k != nil; k, v = cur.Next() {
+			var deployment types.Deployment
+			json.Unmarshal(v, &deployment)
+
+			if resp.Meta.Version == deployment.Version {
+				deployment.Deployed = true
+			}
+
+			resp.Deployments = append(resp.Deployments, deployment)
 		}
 
 		return nil
 	})
-
-	resp.Secrets = secrets
 
 	enc.Encode(&resp)
 }

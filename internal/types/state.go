@@ -15,8 +15,25 @@ type SailorOpts struct {
 	AccessKey      string
 }
 
+type Deployment struct {
+	Description string `json:"description"`
+	Version     string `json:"version"`
+	Deployed    bool   `json:"deployed"`
+	Diff        string `json:"diff"`
+}
+
+type Secret struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 type SailorState struct {
-	Meta    SailorMeta        `json:"meta"`
-	Configs map[string]any    `json:"configs"`
-	Secrets map[string]string `json:"secrets"`
+	Meta        SailorMeta     `json:"meta"`
+	Configs     map[string]any `json:"configs"`
+	Secrets     []Secret       `json:"secrets"`
+	AccessKey   string         `json:"access_key"`
+	SecretKey   string         `json:"secret_key"`
+	Rules       string         `json:"rules"`
+	Policy      string         `json:"policy"`
+	Deployments []Deployment   `json:"deployments"`
 }
