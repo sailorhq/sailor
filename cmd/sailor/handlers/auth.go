@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"time"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -56,7 +55,8 @@ func (sc *SailorCore) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := jwtfyit(user.Password, "TODO :: access key", time.Now().Add(time.Hour*24).Format(time.RFC3339))
+	// expiry := time.Now().Add(time.Hour * 24)
+	token, err := jwtfyit(user.Password, "TODO :: access key", nil)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})

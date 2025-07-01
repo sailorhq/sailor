@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/codekidx/sailor/internal/types"
+	"github.com/golang-jwt/jwt/v5"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -49,9 +50,16 @@ func (sc *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
 		cur := secretsBucket.Cursor()
 
 		for k, v := cur.First(); k != nil; k, v = cur.Next() {
+			decoded, err := jwt.Parse(string(v), func(token *jwt.Token) (interface{}, error) {
+				return []byte(resp.SecretKey), nil
+			})
+			if err != nil {
+				return err
+			}
+
 			resp.Secrets = append(resp.Secrets, types.Secret{
 				Name:  string(k),
-				Value: string(v),
+				Value: decoded.Claims.(jwt.MapClaims)["data"].(string),
 			})
 		}
 

@@ -35,6 +35,7 @@ const ApplicationInfoPage: React.FC = () => {
     const [accessKey, setAccessKey] = useState('');
     const [secretKey, setSecretKey] = useState('');
     const [secrets, setSecrets] = useState<Secret[]>([]);
+    const [deletedSecrets, setDeletedSecrets] = useState<Secret[]>([]);
     const [deployments, setDeployments] = useState<Deployment[]>([]);
 
     const { hasRole, hasPermission } = useAuth();
@@ -52,6 +53,7 @@ const ApplicationInfoPage: React.FC = () => {
         setAccessKey(data.access_key);
         setSecretKey(data.secret_key);
 
+        setSecrets(data.secrets);
         setDeployments(data.deployments);
     }
 
@@ -109,6 +111,25 @@ const ApplicationInfoPage: React.FC = () => {
     const handleCreateDeployment = async () => {
         // we need to first validate with the schema
     };
+
+    const handleSaveSecrets = async () => {
+        if (secrets.length === 0 && deletedSecrets.length === 0) {
+            return;
+        }
+
+        const payload = {
+            secrets: secrets,
+            deleted_secrets: deletedSecrets
+        }
+
+        await fetch(`http://localhost:7766/api/v1/admin.secrets?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') }).toString()}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        })
+    }
 
     const canEditPodUrl = hasRole('admin') || (hasRole('user') && hasPermission('update_pod_url'));
 
@@ -266,7 +287,7 @@ const ApplicationInfoPage: React.FC = () => {
                                     No secrets here!
                                 </ListGroup.Item> : <></>}
 
-                                {secrets.map((secret) => (
+                                {secrets.map((secret, index) => (
                                     <Form>
                                         <Form.Group className="d-flex col mb-3 gap-2" controlId="formsDeploymentDesc">
                                             {/* <Form.Label>Deployment Description</Form.Label> */}
@@ -275,7 +296,9 @@ const ApplicationInfoPage: React.FC = () => {
                                                 type="text"
                                                 placeholder="Enter secret"
                                                 value={secret.name}
-                                            // onChange={e => setDeploymentDesc(e.target.value)}
+                                                onChange={e => {
+                                                    setSecrets(secrets.map((s, i) => i === index ? { ...s, name: e.target.value } : s));
+                                                }}
                                             />
 
                                             <Form.Control
@@ -283,7 +306,9 @@ const ApplicationInfoPage: React.FC = () => {
                                                 type="text"
                                                 placeholder="Enter value"
                                                 value={secret.value}
-                                            // onChange={e => setDeploymentDesc(e.target.value)}
+                                                onChange={e => {
+                                                    setSecrets(secrets.map((s, i) => i === index ? { ...s, value: e.target.value } : s));
+                                                }}
                                             />
 
                                             {hasPermission('edit_schema') ? <Button
@@ -309,7 +334,15 @@ const ApplicationInfoPage: React.FC = () => {
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                 }}
-                                                onClick={() => setShowRulesModal(true)}
+                                                onClick={() => {
+                                                    // add to deleted secrets if the name and value are not empty
+                                                    if (secrets[index].name !== '' || secrets[index].value !== '') {
+                                                        setDeletedSecrets([...deletedSecrets, secrets[index]]);
+                                                    }
+
+                                                    // remove from main secrets list
+                                                    setSecrets(secrets.filter((_, i) => i !== index));
+                                                }}
                                             >
                                                 Delete
                                             </Button> : <></>}
@@ -323,9 +356,7 @@ const ApplicationInfoPage: React.FC = () => {
                                         setSecrets([...secrets, { name: '', value: '' }]);
                                     }} style={{ backgroundColor: '#1C608C', border: 'none' }}>+ Add</Button>
 
-                                    <Button onClick={() => {
-                                        setSecrets([...secrets, { name: '', value: '' }]);
-                                    }} style={{ backgroundColor: '#1C608C', border: 'none' }}>Save</Button>
+                                    <Button onClick={handleSaveSecrets} style={{ backgroundColor: '#1C608C', border: 'none' }}>Save</Button>
                                 </div>
 
 

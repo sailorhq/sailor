@@ -25,6 +25,7 @@ func main() {
 
 	mux.HandleFunc("/api/v1/admin.create.user", sh.CreateUserHandler)
 	mux.HandleFunc("/api/v1/admin.list.apps", sh.ListAppsHandler)
+	mux.HandleFunc("/api/v1/admin.secrets", sh.AddSecretHandler)
 
 	mux.HandleFunc("/api/v1/audit.trail", sh.AuditHandler)
 

@@ -154,6 +154,9 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 	return nil
 }
 
+// extractSailorParams extracts the sailor params from the request
+// TODO ::it should not ideally give back errors, it should be a function
+// which blindly extracts the params and returns a sailor params object
 func (sc *SailorCore) extractSailorParams(r *http.Request) (*SailorParams, error) {
 	ns := r.URL.Query().Get("ns")
 	app := r.URL.Query().Get("app")
@@ -168,6 +171,7 @@ func (sc *SailorCore) extractSailorParams(r *http.Request) (*SailorParams, error
 	password := r.Header.Get("x-password")
 
 	return &SailorParams{
+		ProjectKey:    fmt.Sprintf("%s-%s", ns, app),
 		Ns:            ns,
 		App:           app,
 		AccessKey:     accessKey,
@@ -199,6 +203,7 @@ func (sc *SailorCore) getDBConn(params *SailorParams) (*bolt.DB, error) {
 }
 
 type SailorParams struct {
+	ProjectKey    string
 	Ns            string
 	App           string
 	AccessKey     string
