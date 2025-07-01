@@ -261,11 +261,11 @@ const SettingsPage: React.FC = () => {
                                             onChange={e => handlePermissionChange('create_configs', e.target.checked)}
                                         />
                                         <Form.Check
-                                            checked={permissionsToCreate.has('edit_config_rule')}
+                                            checked={permissionsToCreate.has('edit_schema')}
                                             type="checkbox"
                                             id="perm-update-pod-url"
-                                            label="edit_config_rule"
-                                            onChange={e => handlePermissionChange('edit_config_rule', e.target.checked)}
+                                            label="edit_schema"
+                                            onChange={e => handlePermissionChange('edit_schema', e.target.checked)}
                                         />
                                         <Form.Check
                                             checked={permissionsToCreate.has('deploy_configs')}
@@ -282,11 +282,11 @@ const SettingsPage: React.FC = () => {
                                             onChange={e => handlePermissionChange('create_secrets', e.target.checked)}
                                         />
                                         <Form.Check
-                                            checked={permissionsToCreate.has('edit_secret_policy')}
+                                            checked={permissionsToCreate.has('edit_policy')}
                                             type="checkbox"
                                             id="perm-update-pod-url"
-                                            label="edit_secret_policy"
-                                            onChange={e => handlePermissionChange('edit_secret_policy', e.target.checked)}
+                                            label="edit_policy"
+                                            onChange={e => handlePermissionChange('edit_policy', e.target.checked)}
                                         />
                                         <Form.Check
                                             checked={permissionsToCreate.has('deploy_secrets')}
