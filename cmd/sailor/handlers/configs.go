@@ -11,6 +11,7 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
+	"github.com/codekidx/sailor/internal/types"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 
 	"github.com/go-playground/validator/v10"
@@ -25,52 +26,6 @@ func (sc *SailorCore) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		return
 	}
-}
-
-// TODO :: this can be a feature !! maybe ...
-// Define a recursive function to traverse the JSON structure
-func traverse(value any, path string, result *map[string]any) {
-	switch v := value.(type) {
-	case map[string]any:
-		for key, val := range v {
-			newKey := path
-			if path != "" {
-				newKey += "."
-			}
-			newKey += key
-			traverse(val, newKey, result)
-		}
-	// case []interface{}:
-	// 	index := 0
-	// 	for _, item := range v {
-	// 		newKey := path
-	// 		if path != "" {
-	// 			newKey += "["
-	// 		} else {
-	// 			newKey = fmt.Sprintf("%v[%d]", key, index)
-	// 		}
-	// 		traverse(item, newKey)
-	// 		index++
-	// 	}
-	default:
-		if path != "" {
-			(*result)[path] = fmt.Sprintf("%v", value)
-		}
-	}
-}
-
-func flattenJSON(jsonData []byte) (map[string]any, error) {
-	var input map[string]any
-	var result = make(map[string]any)
-
-	if err := json.Unmarshal(jsonData, &input); err != nil {
-		return nil, err
-	}
-
-	// Start the traversal with an empty path
-	traverse(input, "", &result)
-
-	return result, nil
 }
 
 func (sc *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
@@ -219,18 +174,20 @@ func (sc *SailorCore) getConfig(w http.ResponseWriter, r *http.Request) {
 func buildConfig(db *bolt.DB) string {
 	var configJson string
 	db.View(func(tx *bolt.Tx) error {
-		diffBuck := tx.Bucket([]byte(BUCKET_DIFFS))
+		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 
 		min := []byte("0")
 		max := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
-		cur := diffBuck.Cursor()
+		cur := deploymentBucket.Cursor()
 
 		differ := diffmod.New()
 
-		for diff_ver, diff := cur.Seek(min); diff_ver != nil && bytes.Compare(diff_ver, max) <= 0; diff_ver, diff = cur.Next() {
+		for depVer, depBytes := cur.Seek(min); depVer != nil && bytes.Compare(depVer, max) <= 0; depVer, depBytes = cur.Next() {
+			var deployment types.Deployment
+			json.Unmarshal(depBytes, &deployment)
 			// fmt.Println("diff_ver", string(diff_ver), string(max))
-			p, _ := differ.PatchFromText(string(diff))
+			p, _ := differ.PatchFromText(string(deployment.Diff))
 			configJson, _ = differ.PatchApply(p, configJson)
 		}
 
