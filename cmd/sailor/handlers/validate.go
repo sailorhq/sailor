@@ -76,5 +76,4 @@ func (sc *SailorCore) ValidateHandler(w http.ResponseWriter, r *http.Request) {
 		Roles:       user.Roles,
 		Token:       tokenHeader,
 	})
-	w.WriteHeader(http.StatusOK)
 }
