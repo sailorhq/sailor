@@ -91,7 +91,12 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		return metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(generateAccessKey(16)))
+
+		if err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(generateAccessKey(16))); err != nil {
+			return err
+		}
+
+		return metaBucket.Put([]byte(KEY_SECRET_KEY), []byte(generateAccessKey(32)))
 	})
 
 	adminDB := sc.dbconns[BUCKET_ADMIN]

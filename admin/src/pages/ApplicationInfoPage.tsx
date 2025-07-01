@@ -20,6 +20,20 @@ const ApplicationInfoPage: React.FC = () => {
     const [deploymentDesc, setDeploymentDesc] = useState('');
 
     const { hasRole, hasPermission } = useAuth();
+    useEffect(() => {
+        fetchConfig();
+    }, []);
+
+    const fetchConfig = async () => {
+        const payload = { ns, app: app.replace(ns + '-', '') };
+        const response = await fetch(`http://localhost:7766/api/v1/state?${new URLSearchParams(payload).toString()}`);
+        const data = await response.json();
+        setJsonConfig(JSON.stringify(data.configs, null, 2));
+        setAccessKey(data.access_key);
+        setSecretKey(data.secret_key);
+
+        setDeployments(data.deployments);
+    }
 
     const handleCheckS3 = () => {
         setCheckingS3(true);
@@ -77,9 +91,82 @@ const ApplicationInfoPage: React.FC = () => {
     return (
         <Card className="border-0 shadow-sm" style={{ minHeight: '80vh', borderRadius: 10 }}>
             <Card.Body>
-                <h4 className="mb-4">Application State</h4>
+                <h4 className="mb-4">{app}</h4>
 
-                <Tabs defaultActiveKey="configure" className="mb-3">
+                <Tabs defaultActiveKey="info" className="mb-3">
+                    <Tab eventKey="info" title="Info">
+                        <Accordion defaultActiveKey="0">
+                            <Accordion.Item eventKey="0">
+                                <Accordion.Header>Access Key</Accordion.Header>
+                                <Accordion.Body>
+                                    <div style={{ backgroundColor: '#FEFBF0', padding: 10, borderRadius: 10 }} className="d-flex justify-content-between align-items-center">
+                                        {accessKey}
+
+                                        <Button style={{ backgroundColor: '#1C608C', border: 'none' }}>
+                                            Copy
+                                        </Button>
+                                    </div>
+                                </Accordion.Body>
+                            </Accordion.Item>
+
+                            <Accordion.Item eventKey="1">
+                                <Accordion.Header>Secret Key</Accordion.Header>
+                                <Accordion.Body>
+                                    <div style={{ backgroundColor: '#FEFBF0', padding: 10, borderRadius: 10 }} className="d-flex justify-content-between align-items-center">
+                                        {secretKey}
+
+                                        <Button style={{ backgroundColor: '#1C608C', border: 'none' }}>
+                                            Copy
+                                        </Button>
+                                    </div>
+                                </Accordion.Body>
+                            </Accordion.Item>
+
+                            <Accordion.Item eventKey="2">
+                                <Accordion.Header>Deployment Healthcheck</Accordion.Header>
+                                <Accordion.Body>
+                                    <div>
+                                        Status: Cool
+                                    </div>
+                                </Accordion.Body>
+                            </Accordion.Item>
+
+                            {canEditPodUrl ? <Accordion.Item eventKey="2">
+                                <Accordion.Header>Pod Details</Accordion.Header>
+                                <Accordion.Body>
+                                    <Form>
+                                        <Form.Group className="mb-3" controlId="formS3Host">
+                                            <Form.Label>Pod URL</Form.Label>
+                                            <Form.Control
+                                                disabled={!canEditPodUrl}
+                                                type="text"
+                                                placeholder="Enter your application host URL"
+                                                value={bucketHost}
+                                                onChange={e => setBucketHost(e.target.value)}
+                                            />
+                                        </Form.Group>
+                                        <div className="d-flex gap-2">
+                                            <Button
+                                                style={{ border: '1px solid #1C608C', backgroundColor: '#FEFBF0', color: 'black' }}
+                                                onClick={handleCheckS3}
+                                                disabled={checkingS3}
+                                            >
+                                                {checkingS3 ? 'Verifying...' : 'Verify'}
+                                            </Button>
+                                            <Button
+                                                style={{ backgroundColor: '#1C608C', border: 'none' }}
+                                                onClick={handleSaveS3}
+                                                disabled={savingS3}
+                                            >
+                                                {savingS3 ? 'Saving...' : 'Save'}
+                                            </Button>
+                                        </div>
+                                    </Form>
+                                </Accordion.Body>
+                            </Accordion.Item> : <></>}
+                        </Accordion>
+                    </Tab>
+
                     <Tab eventKey="configure" title="Configs">
                         <Card className="border-0 shadow-sm">
                             <Card.Body>

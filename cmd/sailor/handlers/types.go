@@ -26,6 +26,7 @@ const (
 
 	// keys used by sailor
 	KEY_ACCESS_KEY       = "access_key"
+	KEY_SECRET_KEY       = "secret_key"
 	KEY_DEPLOYED_VERSION = "deploy_ver"
 	KEY_RULES            = "rules"
 
