@@ -21,7 +21,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <Container fluid className="p-0">
-            <Navbar style={{ backgroundColor: '#FEF8EE' }} className="px-3">
+            <Navbar style={{ backgroundColor: '#FEFBF0' }} className="px-3">
                 <Navbar.Brand style={{ fontWeight: 700, fontSize: 24 }}>
                     <img src={logo} alt="Sailor" style={{ width: 72, height: 72, marginRight: 8 }} />
                     Sailor
@@ -32,13 +32,13 @@ const Dashboard: React.FC = () => {
                             <Image src={logo} roundedCircle width={32} height={32} />
                             <span style={{ marginLeft: 8 }}>{user?.username}</span>
                         </Dropdown.Toggle>
-                        <Dropdown.Menu style={{ backgroundColor: '#FEF8EE' }}>
+                        <Dropdown.Menu style={{ backgroundColor: '#FEFBF0' }}>
                             <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item>
                         </Dropdown.Menu>
                     </Dropdown>
                 </Nav>
             </Navbar>
-            <Row className="g-0" style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: '#FEF8EE' }}>
+            <Row className="g-0" style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: '#FEFBF0' }}>
                 <Col md={2} className="p-2 mt-3">
                     <Card className="border-0 shadow-sm" style={{ borderRadius: 10 }}>
                         <Card.Body>

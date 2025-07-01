@@ -92,7 +92,7 @@ const ApplicationInfoPage: React.FC = () => {
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             border: '1px solid #1C608C',
-                                            backgroundColor: '#FEF8EE',
+                                            backgroundColor: '#FEFBF0',
                                             color: '#1C608C'
                                         }}
                                         onClick={() => setShowRulesModal(true)}

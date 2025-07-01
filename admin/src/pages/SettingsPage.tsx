@@ -157,7 +157,7 @@ const SettingsPage: React.FC = () => {
                                     />
                                 </Form.Group>
                                 <div className="d-flex gap-2">
-                                    <Button style={{ border: '1px solid#1C608C', backgroundColor: '#FEF8EE', color: 'black' }} onClick={handleCheckS3} disabled={checkingS3}>
+                                    <Button style={{ border: '1px solid#1C608C', backgroundColor: '#FEFBF0', color: 'black' }} onClick={handleCheckS3} disabled={checkingS3}>
                                         {checkingS3 ? 'Checking...' : 'Check'}
                                     </Button>
                                     <Button style={{ backgroundColor: '#1C608C', border: 'none' }} onClick={handleSaveS3} disabled={savingS3}>
