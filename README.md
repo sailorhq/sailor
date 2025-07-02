@@ -20,7 +20,6 @@ apply configurations for your containerized applications — effortlessly.
 - 🗿 Strict config validations
 - 🔐 Secure secrets and policy enforcement
 - 🔁 Versioning & rollback
-- ⚙️ Easy integration with your CI/CD or GitOps setup
 - 🧠 Developer-friendly UI & API
 
 ## 🧭 Quick Start
@@ -37,16 +36,6 @@ admin: http://localhost:7766/_admin
 ```
 
 ---
-
-### Roadmap
-
-| Feature              | Support |
-| -------------------- | ------- |
-| Validation Layer     | ✅      |
-| State Fallback       | ⚠️      |
-| Control Center {UI}  | ⚠️      |
-| Access-Control / IAM | ❌      |
-| Auditing             | ❌      |
 
 ### Supported Clients
 
