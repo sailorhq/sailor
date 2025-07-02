@@ -4,6 +4,7 @@ import DashboardRoutes from './DashboardRoutes';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/sailor-logo.png';
+import avatar from '../assets/sailor-avatar.png';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -29,8 +30,8 @@ const Dashboard: React.FC = () => {
                 <Nav className="ms-auto">
                     <Dropdown align="end">
                         <Dropdown.Toggle style={{ backgroundColor: '#1C608C', border: 'none' }} id="dropdown-avatar">
-                            <Image src={logo} roundedCircle width={32} height={32} />
-                            <span style={{ marginLeft: 8 }}>{user?.username}</span>
+                            <Image src={avatar} width={32} height={32} />
+                            <span style={{ marginLeft: 4, marginRight: 4 }}>{user?.username}</span>
                         </Dropdown.Toggle>
                         <Dropdown.Menu style={{ backgroundColor: '#FEFBF0' }}>
                             <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item>
