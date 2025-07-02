@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Tabs, Tab, Form, Button, Accordion, ListGroup, Modal, ButtonGroup, Badge } from 'react-bootstrap';
+import React, { useEffect, useState, type FormEvent } from 'react';
+import { Card, Tabs, Tab, Form, Button, Accordion, ListGroup, Modal, ButtonGroup, Badge, Alert } from 'react-bootstrap';
 import Editor from '@monaco-editor/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
+import { showToast } from '../utils/toastUtils';
 
 interface Secret {
     name: string;
@@ -37,6 +38,7 @@ const ApplicationInfoPage: React.FC = () => {
     const [secrets, setSecrets] = useState<Secret[]>([]);
     const [deletedSecrets, setDeletedSecrets] = useState<Secret[]>([]);
     const [deployments, setDeployments] = useState<Deployment[]>([]);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     const { hasRole, hasPermission } = useAuth();
     const { ns, app } = useLocation().state;
@@ -55,6 +57,7 @@ const ApplicationInfoPage: React.FC = () => {
 
         setSecrets(data.secrets);
         setDeployments(data.deployments);
+        setRulesContent(data.rules);
     }
 
     const handleCheckS3 = () => {
@@ -82,21 +85,17 @@ const ApplicationInfoPage: React.FC = () => {
         setSavingRules(true);
         try {
             // API call to save rules
-            const response = await fetch('/api/rules', {
+            const response = await fetch(`http://localhost:7766/api/v1/rules?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') })}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    rules: rulesContent,
-                    language: 'javascript'
-                })
+                body: rulesContent
             });
 
             if (response.ok) {
-                // Success handling
-                console.log('Rules saved successfully');
                 setShowRulesModal(false);
+                showToast('Rules saved successfully', 3000);
             } else {
                 // Error handling
                 console.error('Failed to save rules');
@@ -108,8 +107,25 @@ const ApplicationInfoPage: React.FC = () => {
         }
     };
 
-    const handleCreateDeployment = async () => {
+    const handleCreateDeployment = async (e: FormEvent<any>) => {
+        e.preventDefault
         // we need to first validate with the schema
+        const response = await fetch(`http://localhost:7766/api/v1/config?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') }).toString()}`, {
+            method: 'POST',
+            body: jsonConfig,
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+
+        if (!response.ok) {
+            // Success handling
+            const data = await response.json();
+            setValidationErrors(data.messages);
+        } else {
+            setValidationErrors([]);
+            showToast('Deployment created successfully', 3000);
+        };
     };
 
     const handleSaveSecrets = async () => {
@@ -232,6 +248,14 @@ const ApplicationInfoPage: React.FC = () => {
                                         🔒 Edit Schema
                                     </Button> : <></>}
                                 </div>
+
+                                {validationErrors.length > 0 && <Alert variant="danger">
+                                    <h6>Validation Errors</h6>
+                                    <ul>
+                                        {validationErrors.map(err => <li>{err}</li>)}
+                                    </ul>
+                                </Alert>}
+
                                 <Form.Group controlId="jsonConfig">
                                     {/* <Form.Label>JSON Configuration</Form.Label> */}
                                     <div style={{ height: '400px', border: '1px solid #ced4da', borderRadius: '4px' }}>
@@ -254,24 +278,25 @@ const ApplicationInfoPage: React.FC = () => {
                                 </Form.Group>
 
                                 {hasRole('user') && hasPermission('create_configs') ? <div>
-                                    <Form onSubmit={handleCreateDeployment}>
+                                    <Form>
                                         <Form.Group className="mb-3 mt-2" controlId="formsDeploymentDesc">
                                             {/* <Form.Label>Deployment Description</Form.Label> */}
                                             <Form.Control
                                                 minLength={20}
-                                                required
                                                 type="text"
                                                 placeholder="Enter deployment description"
                                                 value={deploymentDesc}
                                                 onChange={e => setDeploymentDesc(e.target.value)}
                                             />
                                         </Form.Group>
+
+                                        <div className="d-flex justify-content-end">
+                                            <Button onClick={handleCreateDeployment} className='mt-2' style={{ backgroundColor: '#1C608C', border: 'none' }} >
+                                                Create Deployment
+                                            </Button>
+                                        </div>
                                     </Form>
-                                    <div className="d-flex justify-content-end">
-                                        <Button type='submit' className='mt-2' style={{ backgroundColor: '#1C608C', border: 'none' }} >
-                                            Create Deployment
-                                        </Button>
-                                    </div>
+
                                 </div> : <></>}
                             </Card.Body>
                         </Card>
@@ -424,7 +449,7 @@ const ApplicationInfoPage: React.FC = () => {
                             <div style={{ height: '400px', border: '1px solid #ced4da', borderRadius: '4px' }}>
                                 <Editor
                                     height="100%"
-                                    language="javascript"
+                                    language="json"
                                     theme="vs"
                                     value={rulesContent}
                                     onChange={(value) => setRulesContent(value || '')}
@@ -488,6 +513,8 @@ const ApplicationInfoPage: React.FC = () => {
                         </Modal.Footer>
                     </Form>
                 </Modal>
+
+
             </Card.Body>
         </Card>
     );

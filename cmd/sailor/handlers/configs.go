@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,9 +16,13 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+type ConfigValidationResponse struct {
+	Messages []string `json:"messages"`
+}
+
 func (sc *SailorCore) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case http.MethodPatch:
+	case http.MethodPost:
 		sc.patchConfig(w, r)
 	case http.MethodGet:
 		sc.getConfig(w, r)
@@ -65,20 +68,22 @@ func (sc *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 		ruleBytes := metaBucket.Get([]byte(KEY_RULES))
 
 		var data map[string]any
-		json.Unmarshal(b, &data)
+		if err := json.Unmarshal(b, &data); err != nil {
+			return err
+		}
 
 		var rules map[string]any
 		json.Unmarshal(ruleBytes, &rules)
 
 		if err := hasRuleForAllKeys(data, rules, "$root"); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			enc.Encode(ResponseMessage{Message: err.Error()})
-			return err
+			enc.Encode(ConfigValidationResponse{Messages: []string{err.Error()}})
+			return nil
 		}
-		if err := validateWithRules(data, rules); err != nil {
+		if errs := validateWithRules(data, rules); len(errs) > 0 {
 			w.WriteHeader(http.StatusInternalServerError)
-			enc.Encode(ResponseMessage{Message: err.Error()})
-			return err
+			enc.Encode(ConfigValidationResponse{Messages: errs})
+			return nil
 		}
 
 		newConfigJson := string(b)
@@ -102,10 +107,7 @@ func (sc *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		enc.Encode(err.Error())
-	} else {
-		enc.Encode(fmt.Sprintf("new deployment: %d created", next))
-
+		enc.Encode(ResponseMessage{Message: err.Error()})
 	}
 }
 
@@ -117,7 +119,7 @@ func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
 		keyPath := fmt.Sprintf("%s.%s", parent, key)
 		fmt.Println("checking key: ", keyPath)
 		if _, ok := subMap[key]; !ok {
-			return fmt.Errorf("rule for %s not present", keyPath)
+			return fmt.Errorf("rule for %s not present in schema", keyPath)
 		} else if nestedMap, ok := mainMap[key].(map[string]any); ok {
 			return hasRuleForAllKeys(nestedMap,
 				subMap[key].(map[string]any),
@@ -127,7 +129,7 @@ func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
 	return nil
 }
 
-func validateWithRules(data, rules map[string]any) error {
+func validateWithRules(data, rules map[string]any) []string {
 	validate := validator.New()
 
 	fmt.Println("rules: ", rules)
@@ -137,12 +139,23 @@ func validateWithRules(data, rules map[string]any) error {
 		return nil
 	}
 
-	var message string
-	for _, v := range errMap {
-		message += fmt.Sprintf("%s\n", v)
+	fmt.Println("errMap: ", errMap)
+
+	var messages = []string{}
+	for field, verr := range errMap {
+		if validationErrors, ok := verr.(validator.ValidationErrors); ok {
+			for _, fieldErr := range validationErrors {
+				// Default error message
+				message := fmt.Sprintf("Schema validation for '%s' failed on the '%s' rule\n", field, fieldErr.Tag())
+				messages = append(messages, message)
+			}
+		} else {
+			// Other error
+			messages = append(messages, fmt.Sprintf("%s\n", verr))
+		}
 	}
 
-	return errors.New(message)
+	return messages
 }
 
 func (sc *SailorCore) getConfig(w http.ResponseWriter, r *http.Request) {

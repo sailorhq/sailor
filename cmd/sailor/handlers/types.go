@@ -216,5 +216,5 @@ type SailorParams struct {
 }
 
 type ResponseMessage struct {
-	Message string
+	Message string `json:"message"`
 }
