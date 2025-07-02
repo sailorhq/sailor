@@ -21,7 +21,6 @@ const (
 	// buckets used by sailor apps
 	BUCKET_CONFIGS    = "configs"
 	BUCKET_SECRETS    = "secrets"
-	BUCKET_DIFFS      = "_diffs"
 	BUCKET_DEPLOYMENT = "deployments"
 
 	// keys used by sailor
@@ -162,6 +161,7 @@ func (sc *SailorCore) extractSailorParams(r *http.Request) (*SailorParams, error
 	app := r.URL.Query().Get("app")
 	deployVer := r.URL.Query().Get("deploy_ver")
 	accessKey := r.URL.Query().Get("key")
+	deploymentDescription := r.URL.Query().Get("d_desc")
 
 	if ns == "" || app == "" {
 		return nil, errors.New("namespace or app is empty")
@@ -171,13 +171,14 @@ func (sc *SailorCore) extractSailorParams(r *http.Request) (*SailorParams, error
 	password := r.Header.Get("x-password")
 
 	return &SailorParams{
-		ProjectKey:    fmt.Sprintf("%s-%s", ns, app),
-		Ns:            ns,
-		App:           app,
-		AccessKey:     accessKey,
-		DeployVersion: deployVer,
-		Username:      username,
-		Password:      password,
+		ProjectKey:            fmt.Sprintf("%s-%s", ns, app),
+		Ns:                    ns,
+		App:                   app,
+		AccessKey:             accessKey,
+		DeployVersion:         deployVer,
+		Username:              username,
+		Password:              password,
+		DeploymentDescription: deploymentDescription,
 	}, nil
 }
 
@@ -209,6 +210,8 @@ type SailorParams struct {
 	AccessKey     string
 	Body          []byte
 	DeployVersion string
+
+	DeploymentDescription string
 
 	// auth params
 	Username string

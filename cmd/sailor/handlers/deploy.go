@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/codekidx/sailor/internal/types"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -37,7 +39,25 @@ func (sc *SailorCore) DeployHandler(w http.ResponseWriter, r *http.Request) {
 			sc.versions[fmt.Sprintf("%s-%s", params.Ns, params.App)] = params.DeployVersion
 		}
 
-		return err
+		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
+		depBytes := deploymentBucket.Get([]byte(params.DeployVersion))
+		if err != nil {
+			return err
+		}
+
+		var deployment types.Deployment
+		err = json.Unmarshal(depBytes, &deployment)
+
+		deployment.Deployed = true
+		deployment.DeployedAt = time.Now().Format(time.RFC3339)
+		deployment.DeployedBy = params.Username
+
+		depBytes, err = json.Marshal(deployment)
+		if err != nil {
+			return err
+		}
+
+		return deploymentBucket.Put([]byte(params.DeployVersion), depBytes)
 	})
 
 	if err != nil {

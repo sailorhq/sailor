@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	bolt "go.etcd.io/bbolt"
 
@@ -95,15 +96,26 @@ func (sc *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println("patchh: ", patchh)
 
-		diffBucket := tx.Bucket([]byte(BUCKET_DIFFS))
+		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
 
-		max, _ := diffBucket.Cursor().Last()
+		max, _ := deploymentBucket.Cursor().Last()
 		fmt.Println("max", string(max))
 
 		next, _ = strconv.Atoi(string(max))
 		next += 1
 
-		return diffBucket.Put(fmt.Append(nil, next), []byte(patchh))
+		depBytes, err := json.Marshal(types.Deployment{
+			Description: params.DeploymentDescription,
+			Version:     strconv.Itoa(next),
+			Deployed:    false,
+			Diff:        patchh,
+			CreatedAt:   time.Now().Format(time.RFC3339),
+			CreatedBy:   params.Username,
+		})
+		if err != nil {
+			return err
+		}
+		return deploymentBucket.Put(fmt.Append(nil, next), depBytes)
 	})
 
 	if err != nil {
@@ -146,7 +158,7 @@ func validateWithRules(data, rules map[string]any) []string {
 		if validationErrors, ok := verr.(validator.ValidationErrors); ok {
 			for _, fieldErr := range validationErrors {
 				// Default error message
-				message := fmt.Sprintf("Schema validation for '%s' failed on the '%s' rule\n", field, fieldErr.Tag())
+				message := fmt.Sprintf("validation for '%s' failed on the '%s' rule\n", field, fieldErr.Tag())
 				messages = append(messages, message)
 			}
 		} else {

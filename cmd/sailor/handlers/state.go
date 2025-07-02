@@ -66,12 +66,14 @@ func (sc *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
 
 		deploymentsBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
 		cur = deploymentsBucket.Cursor()
-		for k, v := cur.First(); k != nil; k, v = cur.Next() {
+		for k, v := cur.Last(); k != nil; k, v = cur.Prev() {
 			var deployment types.Deployment
 			json.Unmarshal(v, &deployment)
 
 			if resp.Meta.Version == deployment.Version {
 				deployment.Deployed = true
+			} else {
+				deployment.Deployed = false
 			}
 
 			resp.Deployments = append(resp.Deployments, deployment)

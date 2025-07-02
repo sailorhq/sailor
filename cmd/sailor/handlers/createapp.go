@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"time"
 
 	bolt "go.etcd.io/bbolt"
 
@@ -86,6 +87,10 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 				Version:     "1",
 				Deployed:    true,
 				Diff:        patchh,
+				CreatedAt:   time.Now().Format(time.RFC3339),
+				CreatedBy:   params.Username,
+				DeployedAt:  time.Now().Format(time.RFC3339),
+				DeployedBy:  params.Username,
 			}
 			dbytes, err := json.Marshal(deployment)
 			if err != nil {
@@ -104,11 +109,11 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 
-		if err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(generateAccessKey(16))); err != nil {
+		if err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(generateAccessKey("sailor", 16))); err != nil {
 			return err
 		}
 
-		return metaBucket.Put([]byte(KEY_SECRET_KEY), []byte(generateAccessKey(32)))
+		return metaBucket.Put([]byte(KEY_SECRET_KEY), []byte(generateAccessKey("secret", 32)))
 	})
 
 	adminDB := sc.dbconns[BUCKET_ADMIN]
@@ -134,11 +139,11 @@ func (sc *SailorCore) CreateAppHandler(w http.ResponseWriter, r *http.Request) {
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-func generateAccessKey(length int) string {
+func generateAccessKey(prefix string, length int) string {
 
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
-	return fmt.Sprintf("sailor-%s", string(b))
+	return fmt.Sprintf("%s-%s", prefix, string(b))
 }

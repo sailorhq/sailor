@@ -15,6 +15,10 @@ interface Deployment {
     version: string;
     deployed: boolean;
     diff: string;
+    deployed_at: string;
+    deployed_by: string;
+    created_at: string;
+    created_by: string;
 }
 
 const ApplicationInfoPage: React.FC = () => {
@@ -40,7 +44,7 @@ const ApplicationInfoPage: React.FC = () => {
     const [deployments, setDeployments] = useState<Deployment[]>([]);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-    const { hasRole, hasPermission } = useAuth();
+    const { hasRole, hasPermission, user } = useAuth();
     const { ns, app } = useLocation().state;
 
     useEffect(() => {
@@ -108,13 +112,20 @@ const ApplicationInfoPage: React.FC = () => {
     };
 
     const handleCreateDeployment = async (e: FormEvent<any>) => {
-        e.preventDefault
+        e.preventDefault();
+
+        if (deploymentDesc === '') {
+            showToast('Deployment description is required', 3000);
+            return;
+        }
+
         // we need to first validate with the schema
-        const response = await fetch(`http://localhost:7766/api/v1/config?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') }).toString()}`, {
+        const response = await fetch(`http://localhost:7766/api/v1/config?${new URLSearchParams({ ns, app: app.replace(ns + '-', ''), d_desc: deploymentDesc }).toString()}`, {
             method: 'POST',
             body: jsonConfig,
             headers: {
                 'Content-Type': 'application/json',
+                'x-username': user?.username || '',
             }
         })
 
@@ -124,6 +135,9 @@ const ApplicationInfoPage: React.FC = () => {
             setValidationErrors(data.messages);
         } else {
             setValidationErrors([]);
+            setDeploymentDesc('');
+
+            fetchConfig();
             showToast('Deployment created successfully', 3000);
         };
     };
@@ -145,6 +159,22 @@ const ApplicationInfoPage: React.FC = () => {
             },
             body: JSON.stringify(payload)
         })
+    }
+
+    const handleDeploy = async (version: string) => {
+        const response = await fetch(`http://localhost:7766/api/v1/deploy?${new URLSearchParams({ ns, app: app.replace(ns + '-', ''), deploy_ver: version }).toString()}`, {
+            method: 'PUT',
+            headers: {
+                'x-username': user?.username || '',
+            }
+        })
+
+        if (response.ok) {
+            fetchConfig();
+            showToast('Deployed successfully', 3000);
+        } else {
+            showToast('Failed to deploy', 3000);
+        }
     }
 
     const canEditPodUrl = hasRole('admin') || (hasRole('user') && hasPermission('update_pod_url'));
@@ -277,11 +307,16 @@ const ApplicationInfoPage: React.FC = () => {
                                     </div>
                                 </Form.Group>
 
+                                <Alert variant="info" className='mt-2'>
+                                    This will reset to the last deployed version as soon as a new deployment is created. You need to deploy the new version manually to make it active.
+                                </Alert>
+
                                 {hasRole('user') && hasPermission('create_configs') ? <div>
-                                    <Form>
+                                    <Form onSubmit={handleCreateDeployment}>
                                         <Form.Group className="mb-3 mt-2" controlId="formsDeploymentDesc">
                                             {/* <Form.Label>Deployment Description</Form.Label> */}
                                             <Form.Control
+                                                required
                                                 minLength={20}
                                                 type="text"
                                                 placeholder="Enter deployment description"
@@ -291,7 +326,7 @@ const ApplicationInfoPage: React.FC = () => {
                                         </Form.Group>
 
                                         <div className="d-flex justify-content-end">
-                                            <Button onClick={handleCreateDeployment} className='mt-2' style={{ backgroundColor: '#1C608C', border: 'none' }} >
+                                            <Button type='submit' className='mt-2' style={{ backgroundColor: '#1C608C', border: 'none' }} >
                                                 Create Deployment
                                             </Button>
                                         </div>
@@ -418,8 +453,14 @@ const ApplicationInfoPage: React.FC = () => {
                                     <div className="d-flex justify-content-between align-items-center">
                                         <div>
                                             <h6 className="mb-0">ver. {d.version}</h6>
-                                            <div className="text-muted small">
+                                            <div className="small" style={{ color: '#1C608C' }}>
                                                 {d.description}
+                                            </div>
+                                            <div className="text-muted small">
+                                                {d.created_at !== '' && d.created_by !== '' ? <span>created by {d.created_by} on {new Date(d.created_at).toLocaleString()}</span> : <></>}
+                                            </div>
+                                            <div className="text-muted small">
+                                                {d.deployed_at !== '' && d.deployed_by ? <span>deployed by {d.created_by} on {new Date(d.created_at).toLocaleString()}</span> : <></>}
                                             </div>
                                         </div>
                                     </div>
@@ -428,8 +469,7 @@ const ApplicationInfoPage: React.FC = () => {
                                 {hasRole('user') && hasPermission('deploy_configs') && !d.deployed ? <Button
                                     style={{ backgroundColor: '#1C608C', border: 'none' }}
                                     size="sm"
-                                // onClick={() => handleRevokeUser(user.id)}
-                                // style={{ marginLeft: '1rem' }}
+                                    onClick={() => handleDeploy(d.version)}
                                 >
                                     Deploy
                                 </Button> : <Badge bg="success">Deployed</Badge>}
@@ -479,7 +519,7 @@ const ApplicationInfoPage: React.FC = () => {
                             onClick={handleSaveRules}
                             disabled={savingRules}
                         >
-                            {savingRules ? 'Saving...' : 'Save Rules'}
+                            {savingRules ? 'Saving...' : 'Save Schema'}
                         </Button>
                     </Modal.Footer>
                 </Modal>

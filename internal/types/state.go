@@ -20,6 +20,10 @@ type Deployment struct {
 	Version     string `json:"version"`
 	Deployed    bool   `json:"deployed"`
 	Diff        string `json:"diff"`
+	CreatedAt   string `json:"created_at"`
+	CreatedBy   string `json:"created_by"`
+	DeployedAt  string `json:"deployed_at"`
+	DeployedBy  string `json:"deployed_by"`
 }
 
 type Secret struct {

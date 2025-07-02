@@ -49,6 +49,9 @@ const ApplicationsPage: React.FC = () => {
         const payload = { ns: namespaceToCreate, key: secretKey, app };
         const res = await fetch(`http://localhost:7766/api/v1/create?${new URLSearchParams(payload).toString()}`, {
             method: 'PUT',
+            headers: {
+                'x-username': user?.username || '',
+            },
         });
 
         if (res.ok) {
