@@ -9,7 +9,7 @@ import (
 )
 
 func (sc *SailorCore) RuleHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPatch {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -43,6 +43,7 @@ func (sc *SailorCore) RuleHandler(w http.ResponseWriter, r *http.Request) {
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 		return metaBucket.Put([]byte(KEY_RULES), b)
 	}); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
