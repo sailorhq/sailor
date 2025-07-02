@@ -44,6 +44,7 @@ func (sc *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Meta.Version = string(metaBucket.Get([]byte(KEY_DEPLOYED_VERSION)))
 		resp.AccessKey = string(metaBucket.Get([]byte(KEY_ACCESS_KEY)))
 		resp.SecretKey = string(metaBucket.Get([]byte(KEY_SECRET_KEY)))
+		resp.Rules = string(metaBucket.Get([]byte(KEY_RULES)))
 
 		// fetch secrets...
 		secretsBucket := tx.Bucket([]byte(BUCKET_SECRETS))
