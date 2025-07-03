@@ -462,7 +462,7 @@ const ApplicationInfoPage: React.FC = () => {
                                                 {d.created_at !== '' && d.created_by !== '' ? <span>created by {d.created_by} on {new Date(d.created_at).toLocaleString()}</span> : <></>}
                                             </div>
                                             <div className="text-muted small">
-                                                {d.deployed_at !== '' && d.deployed_by ? <span>deployed by {d.created_by} on {new Date(d.created_at).toLocaleString()}</span> : <></>}
+                                                {d.deployed_at !== '' && d.deployed_by ? <span>deployed by {d.deployed_by} on {new Date(d.deployed_at).toLocaleString()}</span> : <></>}
                                             </div>
                                         </div>
                                     </div>
