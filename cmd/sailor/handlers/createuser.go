@@ -30,7 +30,7 @@ func (sh *SailorCore) CreateUserHandler(w http.ResponseWriter, r *http.Request) 
 			return fmt.Errorf("user already exists")
 		}
 
-		user := User{
+		user := DBUser{
 			Username:    r.URL.Query().Get("username"),
 			Password:    r.URL.Query().Get("password"),
 			Roles:       []string{r.URL.Query().Get("role")},

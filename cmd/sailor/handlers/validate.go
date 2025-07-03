@@ -43,7 +43,7 @@ func (sc *SailorCore) ValidateHandler(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 
-	var user User
+	var user DBUser
 	err = db.View(func(tx *bolt.Tx) error {
 		usersBucket := tx.Bucket([]byte(BUCKET_USERS))
 		userBytes := usersBucket.Get([]byte(r.Header.Get("x-username")))

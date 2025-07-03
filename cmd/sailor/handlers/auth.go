@@ -28,7 +28,7 @@ func (sc *SailorCore) AuthHandler(w http.ResponseWriter, r *http.Request) {
 
 	db := sc.dbconns[BUCKET_ADMIN]
 
-	var user User
+	var user DBUser
 	err := db.View(func(tx *bolt.Tx) error {
 		usersBucket := tx.Bucket([]byte(BUCKET_USERS))
 		userBytes := usersBucket.Get([]byte(username))

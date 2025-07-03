@@ -33,10 +33,19 @@ const (
 	DB_EXT = "sail"
 )
 
-type User struct {
+// DBUser is the user object stored in the database
+type DBUser struct {
 	Email       string   `json:"email"`
 	Username    string   `json:"username"`
 	Password    string   `json:"password"`
+	Permissions []string `json:"permissions"`
+	Roles       []string `json:"roles"`
+	AllowedApps []string `json:"allowed_apps"`
+}
+
+// User is the user object returned to the client
+type User struct {
+	Username    string   `json:"username"`
 	Permissions []string `json:"permissions"`
 	Roles       []string `json:"roles"`
 	AllowedApps []string `json:"allowed_apps"`
@@ -123,7 +132,7 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 					return err
 				}
 
-				user := User{
+				user := DBUser{
 					Email:       "admin@sailor.com",
 					Username:    "admin",
 					Password:    "admin", // TODO :: hash password

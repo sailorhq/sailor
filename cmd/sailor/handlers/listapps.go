@@ -36,7 +36,7 @@ func (sc *SailorCore) ListAppsHandler(w http.ResponseWriter, r *http.Request) {
 
 	db := sc.dbconns[BUCKET_ADMIN]
 
-	var user User
+	var user DBUser
 	err = db.View(func(tx *bolt.Tx) error {
 		usersBucket := tx.Bucket([]byte(BUCKET_USERS))
 		username := r.Header.Get("x-username")
