@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Accordion, Form, Button, Modal, ListGroup } from 'react-bootstrap';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../store';
-import { useAuth, type User } from '../contexts/AuthContext';
+import { type User } from '../contexts/AuthContext';
 import RBACFragment from '../fragments/RBACFragment';
 
 const SettingsPage: React.FC = () => {
