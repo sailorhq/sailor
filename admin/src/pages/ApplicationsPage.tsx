@@ -94,7 +94,7 @@ const ApplicationsPage: React.FC = () => {
                         <Col key={app}>
                             <Card
                                 className="h-100"
-                                style={{ cursor: 'pointer', background: '#fff', }}
+                                style={{ cursor: hasRole('admin') ? 'default' : 'pointer', background: '#fff', }}
                                 onClick={hasRole('admin') ? undefined : () => navigate(`/dashboard/apps/${app}`, { state: { ns: selectedNamespace, app: app } })}
                             >
                                 <Card.Body className="d-flex flex-column justify-content-between">

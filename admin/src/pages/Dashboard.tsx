@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
                     <Card className="border-0 shadow-sm" style={{ borderRadius: 10 }}>
                         <Card.Body>
                             <ListGroup variant="flush">
-                                {hasRole('admin') || hasRole('user') ? <ListGroup.Item className="border-0" onClick={() => navigate('/dashboard/apps')}>
+                                {hasRole('admin') || hasRole('user') ? <ListGroup.Item style={{ cursor: 'pointer' }} className="border-0" onClick={() => navigate('/dashboard/apps')}>
                                     <span style={{ marginRight: 8, verticalAlign: 'middle' }}>
                                         <svg width="18" height="18" fill="#1C608C" viewBox="0 0 16 16" style={{ marginBottom: 2 }}>
                                             <path d="M4 4h8v8H4z" />
@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
                                     Applications
                                 </ListGroup.Item> : <></>}
 
-                                {hasRole('admin') ? <ListGroup.Item className="border-0" onClick={() => navigate('/dashboard/settings')}>
+                                {hasRole('admin') ? <ListGroup.Item style={{ cursor: 'pointer' }} className="border-0" onClick={() => navigate('/dashboard/settings')}>
                                     <span style={{ marginRight: 8, verticalAlign: 'middle' }}>
                                         <svg width="18" height="18" fill="#1C608C" viewBox="0 0 16 16" style={{ marginBottom: 2 }}>
                                             <path d="M4 4h8v8H4z" />
@@ -64,7 +64,7 @@ const Dashboard: React.FC = () => {
                                     Settings
                                 </ListGroup.Item> : <></>}
 
-                                {hasRole('admin') ? <ListGroup.Item className="border-0" onClick={() => navigate('/dashboard/audit')}>
+                                {hasRole('admin') ? <ListGroup.Item style={{ cursor: 'pointer' }} className="border-0" onClick={() => navigate('/dashboard/audit')}>
                                     <span style={{ marginRight: 8, verticalAlign: 'middle' }}>
                                         <svg width="18" height="18" fill="#1C608C" viewBox="0 0 16 16" style={{ marginBottom: 2 }}>
                                             <path d="M4 4h8v8H4z" />
