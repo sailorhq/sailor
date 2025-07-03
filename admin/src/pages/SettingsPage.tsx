@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Card, Accordion, Form, Button, Modal, ListGroup } from 'react-bootstrap';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, type User } from '../contexts/AuthContext';
+import RBACFragment from '../fragments/RBACFragment';
 
 const SettingsPage: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
@@ -10,7 +11,6 @@ const SettingsPage: React.FC = () => {
     const [showUsersModal, setShowUsersModal] = useState(false);
     const [selectedSetting, setSelectedSetting] = useState('');
     const [pwd, setPwd] = useState('');
-    const [radioValue, setRadioValue] = useState('option1');
     const [switchOn, setSwitchOn] = useState(false);
     const [bucketHost, setBucketHost] = useState('');
     const [s3AccessKey, setS3AccessKey] = useState('');
@@ -18,28 +18,12 @@ const SettingsPage: React.FC = () => {
     const [checkingS3, setCheckingS3] = useState(false);
     const [savingS3, setSavingS3] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [usernameToCreate, setUsernameToCreate] = useState('');
-    const [passwordToCreate, setPasswordToCreate] = useState('');
-    const [roleToCreate, setRoleToCreate] = useState('');
-    const [permissionsToCreate, setPermissionsToCreate] = useState<Set<string>>(new Set());
-    const [allowedApps, setAllowedApps] = useState<Set<string>>(new Set());
-
-    const { hasRole } = useAuth();
-
-    const apps = useSelector((state: RootState) => state.apps.values);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [showEditUserModal, setShowEditUserModal] = useState(false);
 
     // Sample users data - in a real app, this would come from an API
-    const [users, setUsers] = useState([
-        { id: 1, username: 'admin', role: 'Admin', permissions: ['read', 'write', 'delete', 'admin'] },
-        { id: 2, username: 'john_doe', role: 'User', permissions: ['read', 'write'] },
-        { id: 3, username: 'jane_smith', role: 'Viewer', permissions: ['read'] },
-        { id: 4, username: 'bob_wilson', role: 'User', permissions: ['read', 'write'] },
-    ]);
+    const [users, setUsers] = useState<User[]>([]);
 
-    const handleOpenModal = (setting: string) => {
-        setSelectedSetting(setting);
-        setShowModal(true);
-    };
 
     const handleCloseModal = () => {
         setShowModal(false);
@@ -65,40 +49,20 @@ const SettingsPage: React.FC = () => {
 
     const handleRevokeUser = (userId: number) => {
         // Remove user from the list
-        setUsers(users.filter(user => user.id !== userId));
+        // setUsers(users.filter(user => user.id !== userId));
         // In a real app, you would make an API call here to revoke the user
     };
 
-    const handleUserCreation = async () => {
-        // Implementation of handleUserCreation
-        const permissions = Array.from(permissionsToCreate).join('|');
-        const joinedAllowedApps = Array.from(allowedApps).join('|');
-        const url = `http://localhost:7766/api/v1/admin.create.user?username=${usernameToCreate}&password=${passwordToCreate}&role=${roleToCreate}&permissions=${permissions}&allowed_apps=${joinedAllowedApps}`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
 
-        if (response.ok) {
-            setShowUsersModal(false);
-            setUsernameToCreate('');
-            setPasswordToCreate('');
-            setRoleToCreate('');
-            setPermissionsToCreate(new Set());
-            setAllowedApps(new Set());
-        }
-    };
+    const fetchUsers = async () => {
+        const response = await fetch('http://localhost:7766/api/v1/admin.list.users');
+        const data = await response.json();
+        setUsers(data);
+    }
 
-    const handlePermissionChange = (permission: string, checked: boolean) => {
-        if (checked) {
-            setPermissionsToCreate(prev => new Set([...prev, permission]))
-        } else {
-            const updated = new Set([...permissionsToCreate])
-            updated.delete(permission);
-            setPermissionsToCreate(updated);
-        }
+    const handleOpenUsersModal = async () => {
+        await fetchUsers();
+        setShowUsersModal(true);
     }
 
     return (
@@ -196,139 +160,12 @@ const SettingsPage: React.FC = () => {
                     <Accordion.Item eventKey="4">
                         <Accordion.Header>Users & Roles</Accordion.Header>
                         <Accordion.Body>
-                            <Form>
-                                {/* <Form.Check
-                                    type="radio"
-                                    label="Light"
-                                    name="themeRadios"
-                                    id="theme-light"
-                                    value="option1"
-                                    checked={radioValue === 'option1'}
-                                    onChange={() => setRadioValue('option1')}
-                                />
-                                <Form.Check
-                                    type="radio"
-                                    label="Dark"
-                                    name="themeRadios"
-                                    id="theme-dark"
-                                    value="option2"
-                                    checked={radioValue === 'option2'}
-                                    onChange={() => setRadioValue('option2')}
-                                />
-                                <hr className="my-4" /> */}
-                                <Form.Group className="mb-3" controlId="formS3AccessKey">
-                                    <Form.Label>Username</Form.Label>
-                                    <Form.Control
-                                        required
-                                        type="text"
-                                        placeholder="Enter username"
-                                        value={usernameToCreate}
-                                        onChange={e => setUsernameToCreate(e.target.value)}
-                                    />
-                                </Form.Group>
-
-                                <Form.Group className="mb-3" controlId="formS3AccessKey">
-                                    <Form.Label>Password</Form.Label>
-                                    <Form.Control
-                                        required
-                                        type="password"
-                                        placeholder="Enter password"
-                                        value={passwordToCreate}
-                                        onChange={e => setPasswordToCreate(e.target.value)}
-                                    />
-                                </Form.Group>
-                                <Form.Group className="mb-3" controlId="formS3AccessKey">
-                                    <Form.Label>Role</Form.Label>
-                                    <Form.Select
-                                        required
-                                        value={roleToCreate}
-                                        onChange={e => setRoleToCreate(e.target.value)}
-                                    >
-                                        <option value="">Select role</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="user">User</option>
-                                        <option value="viewer">Viewer</option>
-                                    </Form.Select>
-                                </Form.Group>
-                                <Form.Group className="mb-3" controlId="formS3SecretKey">
-                                    <Form.Label>Permissions</Form.Label>
-                                    <div style={{ width: 'inherit' }} className="d-flex flex-column gap-2">
-                                        <Form.Check
-                                            checked={permissionsToCreate.has('create_configs')}
-                                            type="checkbox"
-                                            id="perm-create-configs"
-                                            label="create_configs"
-                                            onChange={e => handlePermissionChange('create_configs', e.target.checked)}
-                                        />
-                                        <Form.Check
-                                            checked={permissionsToCreate.has('edit_schema')}
-                                            type="checkbox"
-                                            id="perm-update-pod-url"
-                                            label="edit_schema"
-                                            onChange={e => handlePermissionChange('edit_schema', e.target.checked)}
-                                        />
-                                        <Form.Check
-                                            checked={permissionsToCreate.has('deploy_configs')}
-                                            type="checkbox"
-                                            id="perm-deploy-configs"
-                                            label="deploy_configs"
-                                            onChange={e => handlePermissionChange('deploy_configs', e.target.checked)}
-                                        />
-                                        <Form.Check
-                                            checked={permissionsToCreate.has('create_secrets')}
-                                            type="checkbox"
-                                            id="perm-create-secrets"
-                                            label="create_secrets"
-                                            onChange={e => handlePermissionChange('create_secrets', e.target.checked)}
-                                        />
-                                        <Form.Check
-                                            checked={permissionsToCreate.has('edit_policy')}
-                                            type="checkbox"
-                                            id="perm-update-pod-url"
-                                            label="edit_policy"
-                                            onChange={e => handlePermissionChange('edit_policy', e.target.checked)}
-                                        />
-                                        <Form.Check
-                                            checked={permissionsToCreate.has('deploy_secrets')}
-                                            type="checkbox"
-                                            id="perm-deploy-secrets"
-                                            label="deploy_secrets"
-                                            onChange={e => handlePermissionChange('deploy_secrets', e.target.checked)}
-                                        />
-                                        <Form.Check
-                                            checked={permissionsToCreate.has('update_pod_url')}
-                                            type="checkbox"
-                                            id="perm-update-pod-url"
-                                            label="update_pod_url"
-                                            onChange={e => handlePermissionChange('update_pod_url', e.target.checked)}
-                                        />
-
-
-                                    </div>
-                                </Form.Group>
-
-                                <Form.Group className="mb-3" controlId="formS3SecretKey">
-                                    <Form.Label>Allowed Apps</Form.Label>
-                                    <div className="d-flex flex-column gap-2">
-                                        {Object.values(apps).flat().map(app => <Form.Check
-                                            checked={allowedApps.has(app)}
-                                            type="checkbox"
-                                            id={app}
-                                            label={app}
-                                            onChange={() => setAllowedApps(prev => new Set([...prev, app]))}
-                                        />)}
-                                    </div>
-                                </Form.Group>
-                                <div className="d-flex gap-2">
-                                    <Button style={{ backgroundColor: '#1C608C', border: 'none' }} onClick={handleUserCreation} disabled={savingS3}>
-                                        {savingS3 ? 'Saving...' : 'Save'}
-                                    </Button>
-
-                                    <Button style={{ backgroundColor: '#1C608C', border: 'none' }} onClick={() => setShowUsersModal(true)}>
-                                        View/Edit Roles & Permissions
-                                    </Button>
-                                </div>
-                            </Form>
+                            <div className="d-flex justify-content-end">
+                                <Button style={{ backgroundColor: '#1C608C', border: 'none' }} onClick={handleOpenUsersModal}>
+                                    View/Edit Users & Roles
+                                </Button>
+                            </div>
+                            <RBACFragment user={null} onUserCreated={null} />
                         </Accordion.Body>
                     </Accordion.Item>
                 </Accordion>
@@ -374,26 +211,18 @@ const SettingsPage: React.FC = () => {
                     <Modal.Body>
                         <ListGroup>
                             {users.map((user) => (
-                                <ListGroup.Item key={user.id} className="d-flex justify-content-between align-items-center">
+                                <ListGroup.Item onClick={() => {
+                                    setSelectedUser(user);
+                                    setShowEditUserModal(true);
+                                }} style={{ cursor: 'pointer' }} key={user.id} className="d-flex justify-content-between align-items-center">
                                     <div className="flex-grow-1">
                                         <div className="d-flex justify-content-between align-items-start mb-2">
                                             <h6 className="mb-0">{user.username}</h6>
-                                            <span className={`badge ${user.role === 'Admin' ? 'bg-danger' : user.role === 'User' ? 'bg-primary' : 'bg-secondary'}`}>
-                                                {user.role}
-                                            </span>
-                                        </div>
-                                        <div className="text-muted small">
-                                            <strong>Permissions:</strong> {user.permissions.join(', ')}
+                                            <div className="text-muted small">
+                                                {user.roles.join(', ')}
+                                            </div>
                                         </div>
                                     </div>
-                                    <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        onClick={() => handleRevokeUser(user.id)}
-                                        style={{ marginLeft: '1rem' }}
-                                    >
-                                        Revoke
-                                    </Button>
                                 </ListGroup.Item>
                             ))}
                         </ListGroup>
@@ -408,6 +237,19 @@ const SettingsPage: React.FC = () => {
                             Close
                         </Button>
                     </Modal.Footer>
+                </Modal>
+
+                <Modal backdrop="static" style={{ fontFamily: 'Quicksand' }} show={showEditUserModal} onHide={() => setShowEditUserModal(false)} centered size="lg">
+                    <Modal.Header closeButton>
+                        <Modal.Title>User Details</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <RBACFragment user={selectedUser} onUserCreated={() => {
+                            fetchUsers();
+                            setShowEditUserModal(false);
+                            setSelectedUser(null);
+                        }} />
+                    </Modal.Body>
                 </Modal>
             </Card.Body>
         </Card>

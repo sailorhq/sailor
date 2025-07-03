@@ -3,13 +3,14 @@ import type { ReactNode } from 'react';
 
 export type Role = 'admin' | 'user' | 'viewer';
 
-interface User {
+export interface User {
     id: string;
     username: string;
     email: string;
     roles: Role[];
     permissions: string[];
     token: string;
+    allowed_apps: string[];
 }
 
 interface AuthContextType {
