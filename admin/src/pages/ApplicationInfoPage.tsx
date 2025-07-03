@@ -4,6 +4,7 @@ import Editor from '@monaco-editor/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { showToast } from '../utils/toastUtils';
+import validatorList from '../utils/validator-list';
 
 interface Secret {
     name: string;
@@ -43,6 +44,7 @@ const ApplicationInfoPage: React.FC = () => {
     const [deletedSecrets, setDeletedSecrets] = useState<Secret[]>([]);
     const [deployments, setDeployments] = useState<Deployment[]>([]);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [showValidatorListModal, setShowValidatorListModal] = useState(false);
 
     const { hasRole, hasPermission, user } = useAuth();
     const { ns, app } = useLocation().state;
@@ -213,14 +215,14 @@ const ApplicationInfoPage: React.FC = () => {
                                 </Accordion.Body>
                             </Accordion.Item>
 
-                            <Accordion.Item eventKey="2">
+                            {/* <Accordion.Item eventKey="2">
                                 <Accordion.Header>Deployment Healthcheck</Accordion.Header>
                                 <Accordion.Body>
                                     <div>
                                         Status: Cool
                                     </div>
                                 </Accordion.Body>
-                            </Accordion.Item>
+                            </Accordion.Item> */}
 
                             {canEditPodUrl ? <Accordion.Item eventKey="2">
                                 <Accordion.Header>Pod Details</Accordion.Header>
@@ -482,10 +484,23 @@ const ApplicationInfoPage: React.FC = () => {
                 {/* Rules Modal */}
                 <Modal style={{ fontFamily: 'Quicksand' }} show={showRulesModal} onHide={() => setShowRulesModal(false)} centered size="lg">
                     <Modal.Header closeButton>
-                        <Modal.Title>Schema</Modal.Title>
+                        <div className="d-flex gap-2">
+                            <Button style={{
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid #1C608C',
+                                backgroundColor: '#FEFBF0',
+                                color: '#1C608C'
+                            }} onClick={() => setShowValidatorListModal(true)}>ℹ️</Button>
+                            <Modal.Title>Schema</Modal.Title>
+                        </div>
+
                     </Modal.Header>
                     <Modal.Body>
                         <Form.Group controlId="rulesEditor">
+
                             <div style={{ height: '400px', border: '1px solid #ced4da', borderRadius: '4px' }}>
                                 <Editor
                                     height="100%"
@@ -552,6 +567,23 @@ const ApplicationInfoPage: React.FC = () => {
                             </Button>
                         </Modal.Footer>
                     </Form>
+                </Modal>
+
+
+                {/* Validator List Modal */}
+                <Modal style={{ fontFamily: 'Quicksand' }} show={showValidatorListModal} onHide={() => setShowValidatorListModal(false)} centered>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Validators</Modal.Title>
+                    </Modal.Header>
+
+                    <Modal.Body>
+                        <ListGroup>
+                            {validatorList.map(v => <ListGroup.Item>
+                                {v.name}
+                                <div className='text-muted small'>{v.desc}</div>
+                            </ListGroup.Item>)}
+                        </ListGroup>
+                    </Modal.Body>
                 </Modal>
 
 
