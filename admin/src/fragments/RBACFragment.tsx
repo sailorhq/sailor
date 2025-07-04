@@ -93,17 +93,16 @@ const RBACFragment: React.FC<RBACFragmentProps> = (props: RBACFragmentProps) => 
                     />
                 </Form.Group>
 
-                <Form.Group className="mb-3" controlId="formS3AccessKey">
+                {props.user === null && <Form.Group className="mb-3" controlId="formS3AccessKey">
                     <Form.Label>Password</Form.Label>
                     <Form.Control
-                        disabled={props.user !== null}
                         required
                         type="password"
                         placeholder="Enter password"
                         value={passwordToCreate}
                         onChange={e => setPasswordToCreate(e.target.value)}
                     />
-                </Form.Group>
+                </Form.Group>}
                 <Form.Group className="mb-3" controlId="formS3AccessKey">
                     <Form.Label>Role</Form.Label>
                     <Form.Select
