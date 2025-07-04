@@ -65,8 +65,8 @@ func (sc *SailorCore) ValidateHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		enc.Encode(ResponseMessage{Message: err.Error()})
 		w.WriteHeader(http.StatusUnauthorized)
+		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
 
