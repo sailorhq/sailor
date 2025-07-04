@@ -45,7 +45,7 @@ func (sc *SailorCore) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 			return err
 		}
 
-		return userBucket.Put([]byte("admin"), adminBytes)
+		return userBucket.Put([]byte(username), adminBytes)
 	})
 
 	if err != nil {
