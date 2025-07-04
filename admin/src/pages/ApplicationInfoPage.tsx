@@ -179,6 +179,11 @@ const ApplicationInfoPage: React.FC = () => {
         }
     }
 
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        showToast('copied!', 3000);
+    }
+
     const canEditPodUrl = hasRole('admin') || (hasRole('user') && hasPermission('update_pod_url'));
 
     return (
@@ -195,7 +200,7 @@ const ApplicationInfoPage: React.FC = () => {
                                     <div style={{ backgroundColor: '#FEFBF0', padding: 10, borderRadius: 10 }} className="d-flex justify-content-between align-items-center">
                                         {accessKey}
 
-                                        <Button style={{ backgroundColor: '#1C608C', border: 'none' }}>
+                                        <Button onClick={() => copyToClipboard(accessKey)} style={{ backgroundColor: '#1C608C', border: 'none' }}>
                                             Copy
                                         </Button>
                                     </div>
@@ -208,7 +213,7 @@ const ApplicationInfoPage: React.FC = () => {
                                     <div style={{ backgroundColor: '#FEFBF0', padding: 10, borderRadius: 10 }} className="d-flex justify-content-between align-items-center">
                                         {secretKey}
 
-                                        <Button style={{ backgroundColor: '#1C608C', border: 'none' }}>
+                                        <Button onClick={() => copyToClipboard(secretKey)} style={{ backgroundColor: '#1C608C', border: 'none' }}>
                                             Copy
                                         </Button>
                                     </div>
