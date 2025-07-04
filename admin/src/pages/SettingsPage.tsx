@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Card, Accordion, Form, Button, Modal, ListGroup } from 'react-bootstrap';
-import { type User } from '../contexts/AuthContext';
+import { useAuth, type User } from '../contexts/AuthContext';
 import RBACFragment from '../fragments/RBACFragment';
+import { showToast } from '../utils/toastUtils';
 
 const SettingsPage: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
@@ -22,6 +23,8 @@ const SettingsPage: React.FC = () => {
     // Sample users data - in a real app, this would come from an API
     const [users, setUsers] = useState<User[]>([]);
 
+    const { user, logout } = useAuth();
+
 
     const handleCloseModal = () => {
         setShowModal(false);
@@ -38,11 +41,27 @@ const SettingsPage: React.FC = () => {
         // Implementation of handleSaveS3
     };
 
-    const handleChangePassword = () => {
-        setLoading(true);
-        // Implementation of handleChangePassword
-        setLoading(false);
-        setShowChangePasswordModal(true);
+    const handleChangePassword = async (e: React.FormEvent<any>) => {
+        e.preventDefault();
+
+
+        const response = await fetch('http://localhost:7766/api/v1/admin.change.password', {
+            method: 'POST',
+            headers: {
+                'x-username': user?.username || '',
+                'x-password': pwd
+            }
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            showToast(data.message, 3000);
+            return;
+        }
+
+        logout();
+        showToast('Password changed successfully', 3000);
+        setShowChangePasswordModal(false);
     };
 
     const handleRevokeUser = (userId: number) => {
@@ -148,7 +167,7 @@ const SettingsPage: React.FC = () => {
                         <Accordion.Header>Security</Accordion.Header>
                         <Accordion.Body>
                             <ListGroup variant="flush">
-                                <ListGroup.Item action onClick={() => handleChangePassword()}>
+                                <ListGroup.Item action onClick={() => setShowChangePasswordModal(true)}>
                                     Change Default Password
                                 </ListGroup.Item>
                             </ListGroup>
@@ -186,7 +205,7 @@ const SettingsPage: React.FC = () => {
                             <Form.Group className="mb-3" controlId="formNamespace">
                                 <Form.Label>Password</Form.Label>
                                 <Form.Control
-                                    type="text"
+                                    type="password"
                                     value={pwd}
                                     onChange={e => setPwd(e.target.value)}
                                     required
