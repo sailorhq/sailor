@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Toast as BootstrapToast, ToastContainer } from 'react-bootstrap';
+import logo from '../assets/sailor-logo.png';
 
 interface ToastProps {
     message: string;
@@ -22,9 +23,19 @@ const Toast: React.FC<ToastProps> = ({ message, duration = 3000, onClose }) => {
     }, [show, duration, onClose]);
 
     return (
-        <ToastContainer position="bottom-end" className="p-3" style={{ zIndex: 9999 }}>
-            <BootstrapToast style={{ color: 'white' }} show={show} onClose={() => { setShow(false); if (onClose) onClose(); }} bg="dark" delay={duration} autohide>
-                <BootstrapToast.Body>{message}</BootstrapToast.Body>
+        <ToastContainer position="bottom-end" className="p-3" style={{ zIndex: 9999, width: 'inherit !important' }}>
+            <BootstrapToast style={{ color: 'white' }} show={show} onClose={() => { setShow(false); if (onClose) onClose(); }} bg="secondary" delay={duration} autohide>
+                <BootstrapToast.Header>
+                    <img
+                        style={{ width: 20, height: 20 }}
+                        src={logo}
+                        alt="sailor-logo"
+                    />
+                    <strong className="me-auto">sailor says...</strong>
+                </BootstrapToast.Header>
+                <BootstrapToast.Body>
+                    {message}
+                </BootstrapToast.Body>
             </BootstrapToast>
         </ToastContainer>
     );
