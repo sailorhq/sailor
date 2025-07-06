@@ -7,6 +7,7 @@ import { setApps as setAppsAction } from '../appsSlice';
 import { setBucket as setBucketAction } from '../backupSlice';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
+import { addAuditEvent } from '../audit';
 
 interface ListAppsResponse {
     apps: string[];
@@ -68,7 +69,13 @@ const ApplicationsPage: React.FC = () => {
             setApp('');
             setSecretKey('');
 
-
+            addAuditEvent({
+                timestamp: new Date().toISOString(),
+                username: user?.username || '',
+                namespace: namespaceToCreate,
+                app: app,
+                action: 'create_app',
+            });
             fetchApps();
         }
     };

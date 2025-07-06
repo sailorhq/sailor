@@ -4,7 +4,7 @@ export interface AuditEvent {
     namespace: string;
     app: string;
     action: string;
-    details: any;
+    details?: any;
 }
 
 export const getAuditEvents = async (): Promise<AuditEvent[]> => {
