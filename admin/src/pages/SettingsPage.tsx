@@ -26,7 +26,7 @@ const SettingsPage: React.FC = () => {
         e.preventDefault();
         setLoading(true);
 
-        const response = await fetch('http://localhost:7766/api/v1/admin.change.password', {
+        const response = await fetch('/api/v1/admin.change.password', {
             method: 'POST',
             headers: {
                 'x-username': user?.username || '',
@@ -46,15 +46,15 @@ const SettingsPage: React.FC = () => {
         setLoading(false);
     };
 
-    const handleRevokeUser = (userId: number) => {
-        // Remove user from the list
-        // setUsers(users.filter(user => user.id !== userId));
-        // In a real app, you would make an API call here to revoke the user
-    };
+    // const handleRevokeUser = (userId: number) => {
+    // Remove user from the list
+    // setUsers(users.filter(user => user.id !== userId));
+    // In a real app, you would make an API call here to revoke the user
+    // };
 
 
     const fetchUsers = async () => {
-        const response = await fetch('http://localhost:7766/api/v1/admin.list.users');
+        const response = await fetch('/api/v1/admin.list.users');
         const data = await response.json();
         setUsers(data);
     }

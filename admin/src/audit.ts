@@ -8,12 +8,12 @@ export interface AuditEvent {
 }
 
 export const getAuditEvents = async (): Promise<AuditEvent[]> => {
-    const response = await fetch('http://localhost:7766/api/v1/audit.trail');
+    const response = await fetch('/api/v1/audit.trail');
     return response.json();
 }
 
 export const addAuditEvent = async (event: AuditEvent) => {
-    const response = await fetch('http://localhost:7766/api/v1/audit.trail', {
+    const response = await fetch('/api/v1/audit.trail', {
         method: 'POST',
         body: JSON.stringify(event),
     });

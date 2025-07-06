@@ -34,7 +34,7 @@ const ApplicationsPage: React.FC = () => {
     }, [])
 
     const fetchApps = async () => {
-        const res = await fetch('http://localhost:7766/api/v1/admin.list.apps', {
+        const res = await fetch('/api/v1/admin.list.apps', {
             headers: {
                 'x-token': user?.token || '',
                 'x-username': user?.username || '',
@@ -55,7 +55,7 @@ const ApplicationsPage: React.FC = () => {
 
         setLoading(false);
         const payload = { ns: namespaceToCreate, key: secretKey, app };
-        const res = await fetch(`http://localhost:7766/api/v1/create?${new URLSearchParams(payload).toString()}`, {
+        const res = await fetch(`/api/v1/create?${new URLSearchParams(payload).toString()}`, {
             method: 'PUT',
             headers: {
                 'x-username': user?.username || '',

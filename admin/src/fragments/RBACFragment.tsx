@@ -26,7 +26,7 @@ const RBACFragment: React.FC<RBACFragmentProps> = (props: RBACFragmentProps) => 
         const permissions = Array.from(permissionsToCreate).join('|');
         const joinedAllowedApps = Array.from(allowedApps).join('|');
         const api = props.user !== null ? 'admin.edit.user' : 'admin.create.user';
-        const url = `http://localhost:7766/api/v1/${api}?username=${usernameToCreate}&password=${passwordToCreate}&role=${roleToCreate}&permissions=${permissions}&allowed_apps=${joinedAllowedApps}`;
+        const url = `/api/v1/${api}?username=${usernameToCreate}&password=${passwordToCreate}&role=${roleToCreate}&permissions=${permissions}&allowed_apps=${joinedAllowedApps}`;
         const response = await fetch(url, {
             method: 'POST',
             headers: {

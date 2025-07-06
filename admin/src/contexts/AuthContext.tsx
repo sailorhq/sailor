@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const validateToken = async (user: User) => {
         try {
-            const response = await fetch('http://localhost:7766/api/v1/auth.validate', {
+            const response = await fetch('/api/v1/auth.validate', {
                 method: 'POST',
                 headers: {
                     'x-token': user.token,

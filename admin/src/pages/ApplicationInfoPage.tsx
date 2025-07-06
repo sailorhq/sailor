@@ -1,5 +1,5 @@
 import React, { useEffect, useState, type FormEvent } from 'react';
-import { Card, Tabs, Tab, Form, Button, Accordion, ListGroup, Modal, ButtonGroup, Badge, Alert } from 'react-bootstrap';
+import { Card, Tabs, Tab, Form, Button, Accordion, ListGroup, Modal, Badge, Alert } from 'react-bootstrap';
 import Editor from '@monaco-editor/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
@@ -24,13 +24,9 @@ interface Deployment {
 
 const ApplicationInfoPage: React.FC = () => {
     const [jsonConfig, setJsonConfig] = useState('{\n  "example": "configuration",\n  "settings": {\n    "enabled": true,\n    "timeout": 5000\n  }\n}');
-    const [jsonSecret, setJsonSecret] = useState('{\n  "example": "secret",\n  "settings": {\n    "enabled": true,\n    "timeout": 5000\n  }\n}');
     const [showRulesModal, setShowRulesModal] = useState(false);
     const [rulesContent, setRulesContent] = useState('// Add your JavaScript rules here\n\nfunction validateConfig(config) {\n  // Example rule\n  if (!config.enabled) {\n    return false;\n  }\n  return true;\n}');
-    // const [switchOn, setSwitchOn] = useState(false);
     const [bucketHost, setBucketHost] = useState('');
-    // const [s3AccessKey, setS3AccessKey] = useState('');
-    // const [s3SecretKey, setS3SecretKey] = useState('');
     const [checkingS3, setCheckingS3] = useState(false);
     const [savingS3, setSavingS3] = useState(false);
     const [pwd, setPwd] = useState('');
@@ -55,7 +51,7 @@ const ApplicationInfoPage: React.FC = () => {
 
     const fetchConfig = async () => {
         const payload = { ns, app: app.replace(ns + '-', '') };
-        const response = await fetch(`http://localhost:7766/api/v1/state?${new URLSearchParams(payload).toString()}`);
+        const response = await fetch(`/api/v1/admin.app.state?${new URLSearchParams(payload).toString()}`);
         const data = await response.json();
         setJsonConfig(JSON.stringify(data.configs, null, 2));
         setAccessKey(data.access_key);
@@ -91,7 +87,7 @@ const ApplicationInfoPage: React.FC = () => {
         setSavingRules(true);
         try {
             // API call to save rules
-            const response = await fetch(`http://localhost:7766/api/v1/rules?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') })}`, {
+            const response = await fetch(`/api/v1/rules?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') })}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -122,7 +118,7 @@ const ApplicationInfoPage: React.FC = () => {
         }
 
         // we need to first validate with the schema
-        const response = await fetch(`http://localhost:7766/api/v1/config?${new URLSearchParams({ ns, app: app.replace(ns + '-', ''), d_desc: deploymentDesc }).toString()}`, {
+        const response = await fetch(`/api/v1/config?${new URLSearchParams({ ns, app: app.replace(ns + '-', ''), d_desc: deploymentDesc }).toString()}`, {
             method: 'POST',
             body: jsonConfig,
             headers: {
@@ -154,7 +150,7 @@ const ApplicationInfoPage: React.FC = () => {
             deleted_secrets: deletedSecrets
         }
 
-        await fetch(`http://localhost:7766/api/v1/admin.secrets?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') }).toString()}`, {
+        await fetch(`/api/v1/admin.secrets?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') }).toString()}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -164,7 +160,7 @@ const ApplicationInfoPage: React.FC = () => {
     }
 
     const handleDeploy = async (version: string) => {
-        const response = await fetch(`http://localhost:7766/api/v1/deploy?${new URLSearchParams({ ns, app: app.replace(ns + '-', ''), deploy_ver: version }).toString()}`, {
+        const response = await fetch(`/api/v1/deploy?${new URLSearchParams({ ns, app: app.replace(ns + '-', ''), deploy_ver: version }).toString()}`, {
             method: 'PUT',
             headers: {
                 'x-username': user?.username || '',

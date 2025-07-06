@@ -32,7 +32,7 @@ const S3BackupFragment: React.FC<S3BackupFragmentProps> = (props) => {
             region: s3Region,
             schedule: cronExpression === '' ? '0 */24 * * *' : cronExpression
         };
-        const response = await fetch('http://localhost:7766/api/v1/admin.backup', {
+        const response = await fetch('/api/v1/admin.backup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

@@ -1,11 +1,16 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/codekidx/sailor/cmd/sailor/handlers"
-	"github.com/rs/cors"
 )
+
+//go:embed console
+var staticConsoleFS embed.FS
 
 func main() {
 
@@ -34,6 +39,35 @@ func main() {
 
 	mux.HandleFunc("/api/v1/audit.trail", sh.AuditHandler)
 
-	handler := cors.AllowAll().Handler(mux)
-	http.ListenAndServe(":7766", handler)
+	// Serve static files from the embedded console directory
+	consoleFS, err := fs.Sub(staticConsoleFS, "console")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a file server that serves the embedded files
+	fileServer := http.FileServer(http.FS(consoleFS))
+
+	// Handle console routes - serve static files and fallback to index.html for SPA routing
+	mux.HandleFunc("/console/", func(w http.ResponseWriter, r *http.Request) {
+		// Remove the /console prefix from the request path
+		requestPath := strings.TrimPrefix(r.URL.Path, "/console")
+		if requestPath == "" {
+			requestPath = "/"
+		}
+
+		// Check if the file exists in the embedded filesystem
+		if _, err := fs.Stat(consoleFS, requestPath[1:]); err == nil {
+			// File exists, serve it
+			r.URL.Path = requestPath
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// File doesn't exist, serve index.html for SPA routing
+		r.URL.Path = "/"
+		fileServer.ServeHTTP(w, r)
+	})
+
+	http.ListenAndServe(":7766", mux)
 }
