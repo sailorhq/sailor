@@ -33,7 +33,7 @@ func (sh *SailorCore) getAuditEvents(w http.ResponseWriter) {
 
 	var events = []AuditEvent{}
 	db.View(func(tx *bolt.Tx) error {
-		c := tx.Cursor()
+		c := tx.Bucket([]byte(BUCKET_AUDIT_TRAIL)).Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			var ae AuditEvent
@@ -54,7 +54,7 @@ func (sh *SailorCore) addAuditEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&ae)
 
 	db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(BUCKET_AUDIT))
+		b := tx.Bucket([]byte(BUCKET_AUDIT_TRAIL))
 		json, err := json.Marshal(ae)
 		if err != nil {
 			return err

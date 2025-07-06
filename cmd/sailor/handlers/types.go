@@ -12,11 +12,12 @@ import (
 
 const (
 	// buckets used by sailor
-	BUCKET_ADMIN    = "_admin"
-	BUCKET_META     = "_meta"
-	BUCKET_AUDIT    = "_audit"
-	BUCKET_USERS    = "users"
-	BUCKET_PROJECTS = "projects"
+	BUCKET_ADMIN       = "_admin"
+	BUCKET_META        = "_meta"
+	BUCKET_AUDIT       = "_audit"
+	BUCKET_USERS       = "users"
+	BUCKET_PROJECTS    = "projects"
+	BUCKET_AUDIT_TRAIL = "audit_trail"
 
 	// buckets used by sailor apps
 	BUCKET_CONFIGS    = "configs"
@@ -133,8 +134,14 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 		sc.dbconns[dbName] = db
 
 		// custom handling for admin db
-		if dbName == BUCKET_ADMIN {
+		switch dbName {
+		case BUCKET_ADMIN:
 			db.Update(func(tx *bolt.Tx) error {
+				_, err := tx.CreateBucketIfNotExists([]byte(BUCKET_BACKUP))
+				if err != nil {
+					return err
+				}
+
 				usersBucket, err := tx.CreateBucket([]byte(BUCKET_USERS))
 				if err != nil {
 					return err
@@ -153,6 +160,11 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 				}
 
 				return usersBucket.Put([]byte("admin"), json)
+			})
+		case BUCKET_AUDIT:
+			db.Update(func(tx *bolt.Tx) error {
+				_, err := tx.CreateBucketIfNotExists([]byte(BUCKET_AUDIT_TRAIL))
+				return err
 			})
 		}
 
