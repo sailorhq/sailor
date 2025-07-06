@@ -9,7 +9,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sc *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
+func (sc *SailorCore) AdminStateHandler(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
 	params, err := sc.extractSailorParams(r)
