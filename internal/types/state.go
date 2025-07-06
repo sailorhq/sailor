@@ -41,3 +41,9 @@ type SailorState struct {
 	Policy      string         `json:"policy"`
 	Deployments []Deployment   `json:"deployments"`
 }
+
+type SailorBackupState struct {
+	Version string            `json:"config_ver"`
+	Config  []byte            `json:"config"`
+	Secrets map[string][]byte `json:"secrets"`
+}

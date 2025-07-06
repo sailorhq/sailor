@@ -22,12 +22,14 @@ const (
 	BUCKET_CONFIGS    = "configs"
 	BUCKET_SECRETS    = "secrets"
 	BUCKET_DEPLOYMENT = "deployments"
+	BUCKET_BACKUP     = "backup"
 
 	// keys used by sailor
 	KEY_ACCESS_KEY       = "access_key"
 	KEY_SECRET_KEY       = "secret_key"
 	KEY_DEPLOYED_VERSION = "deploy_ver"
 	KEY_RULES            = "rules"
+	KEY_S3               = "s3"
 
 	// db extension used by sailor
 	DB_EXT = "sail"
