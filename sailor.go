@@ -136,7 +136,7 @@ func refresh(checkVersion bool) {
 		}
 	}
 
-	url := fmt.Sprintf("%s/state?ns=%s&app=%s&key=%s", sailor.addr, sailor.ns, sailor.app, sailor.opts.AccessKey)
+	url := fmt.Sprintf("%s/api/v1/state?ns=%s&app=%s&key=%s", sailor.addr, sailor.ns, sailor.app, sailor.opts.AccessKey)
 	resp, err := http.Get(url)
 	if err != nil {
 		go sleepAndRefresh()
@@ -173,13 +173,32 @@ func refresh(checkVersion bool) {
 		return
 	}
 
-	sailor.state.Lock()
-	sailor.state.meta = state.Meta
-	sailor.state.configs = state.Configs
-	sailor.state.secrets = state.Secrets
-	sailor.state.Unlock()
+	sailor.state.setState(state)
 
 	go sleepAndRefresh()
+}
+
+func (is *internalState) setState(state types.SailorState) {
+	is.Lock()
+	var configs map[string]any
+	err := json.Unmarshal(state.Config, &configs)
+	if err != nil {
+		// TODO :: log here that the config is flunked!!
+		return
+	}
+
+	is.configs = configs
+	is.secrets = make(map[string]string)
+	for k, v := range state.Secrets {
+		is.secrets[k] = string(v)
+	}
+
+	// finally set the version so that we surely know that the state is set properly
+	// without errors
+	is.meta = types.SailorMeta{
+		Version: state.Version,
+	}
+	is.Unlock()
 }
 
 func (is *internalState) Get(key string) (value any, err error) {

@@ -17,8 +17,8 @@ func main() {
 	mux.HandleFunc("/api/v1/config", sh.ConfigHandler)
 	mux.HandleFunc("/api/v1/deploy", sh.DeployHandler)
 	mux.HandleFunc("/api/v1/rules", sh.RuleHandler)
-	mux.HandleFunc("/api/v1/state", sh.StateHandler)
 	mux.HandleFunc("/api/v1/version", sh.VersionHandler)
+	mux.HandleFunc("/api/v1/state", sh.SailorStateHandler)
 
 	mux.HandleFunc("/api/v1/auth", sh.AuthHandler)
 	mux.HandleFunc("/api/v1/auth.validate", sh.ValidateHandler)
@@ -27,6 +27,7 @@ func main() {
 	mux.HandleFunc("/api/v1/admin.edit.user", sh.EditUserHandler)
 	mux.HandleFunc("/api/v1/admin.list.users", sh.ListUserHandler)
 	mux.HandleFunc("/api/v1/admin.list.apps", sh.ListAppsHandler)
+	mux.HandleFunc("/api/v1/admin.app.state", sh.StateHandler)
 	mux.HandleFunc("/api/v1/admin.secrets", sh.AddSecretHandler)
 	mux.HandleFunc("/api/v1/admin.change.password", sh.ChangePasswordHandler)
 	mux.HandleFunc("/api/v1/admin.backup", sh.BackupHandler)

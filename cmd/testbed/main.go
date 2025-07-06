@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	err := sailor.Connect("http://localhost:7766", "payment", "gateway")
+	err := sailor.Connect("http://localhost:7766", "sailor", "backend-core")
 	if err != nil {
 		panic(err)
 	}
@@ -16,7 +16,7 @@ func main() {
 	s := sailor.Instance()
 	defer s.Release()
 
-	v, _ := s.Get("name")
+	v, _ := s.Get("app")
 	fmt.Println("some value: ", v)
 
 	http.ListenAndServe(":8080", nil)
