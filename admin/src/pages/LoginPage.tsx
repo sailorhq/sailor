@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage: React.FC = () => {
@@ -9,7 +9,7 @@ const LoginPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const { login } = useAuth();
+    const { login, setLoading: setAuthLoading } = useAuth();
     const navigate = useNavigate();
 
     // Get the page user was trying to access
@@ -37,11 +37,12 @@ const LoginPage: React.FC = () => {
                 const errorData = await response.json();
                 setError(errorData.message || 'Login failed. Please check your credentials.');
             }
+
+            setLoading(false);
+            setAuthLoading(false);
         } catch (error) {
             console.error('Login error:', error);
             setError('Network error. Please try again.');
-        } finally {
-            setLoading(false);
         }
     };
 

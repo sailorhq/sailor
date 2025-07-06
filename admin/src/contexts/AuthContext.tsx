@@ -21,6 +21,7 @@ interface AuthContextType {
     logout: () => void;
     hasPermission: (permission: string) => boolean;
     hasRole: (role: Role) => boolean;
+    setLoading: (loading: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +91,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
     };
 
+    const setLoading = (loading: boolean) => {
+        setIsLoading(loading);
+    };
+
     const hasPermission = (permission: string): boolean => {
         return user?.permissions.includes(permission) || false;
     };
@@ -105,7 +110,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         logout,
         hasPermission,
-        hasRole
+        hasRole,
+        setLoading
     };
 
     return (
