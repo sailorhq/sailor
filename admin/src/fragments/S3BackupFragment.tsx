@@ -3,12 +3,15 @@ import { Badge, Button, Form, Modal } from "react-bootstrap";
 import { showToast } from "../utils/toastUtils";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
+import { setBucket } from "../backupSlice";
+import { useDispatch } from "react-redux";
 
 interface S3BackupFragmentProps {
     editMode?: boolean;
 }
 
 const S3BackupFragment: React.FC<S3BackupFragmentProps> = (props) => {
+    const dispatch = useDispatch();
     const [s3Region, setS3Region] = useState('');
     const [s3AccessKey, setS3AccessKey] = useState('');
     const [s3SecretKey, setS3SecretKey] = useState('');
@@ -44,6 +47,8 @@ const S3BackupFragment: React.FC<S3BackupFragmentProps> = (props) => {
             const data = await response.json();
             showToast(data.message, 3000);
         } else {
+            dispatch(setBucket(s3Bucket));
+            setBucket('');
             setS3Region('');
             setS3AccessKey('');
             setS3SecretKey('');
@@ -110,7 +115,6 @@ const S3BackupFragment: React.FC<S3BackupFragmentProps> = (props) => {
                 <Form.Group className="mb-3" controlId="formS3CronSchedule">
                     <Form.Label style={{ color: '#1C608C' }}>Schedule (Cron)</Form.Label>
                     <Form.Control
-                        required
                         type="text"
                         placeholder="Enter cron expression"
                         value={cronExpression}
