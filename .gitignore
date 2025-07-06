@@ -6,3 +6,6 @@ docs/
 # --- firebase stuffs --- 
 .firebase/
 firebase.json
+
+# Console Build (for embedding in binary)
+cmd/sailor/console
