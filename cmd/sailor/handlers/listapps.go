@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/codekidx/sailor/internal/types"
 	"github.com/golang-jwt/jwt/v5"
 	bolt "go.etcd.io/bbolt"
 )
@@ -37,6 +38,7 @@ func (sc *SailorCore) ListAppsHandler(w http.ResponseWriter, r *http.Request) {
 	db := sc.dbconns[BUCKET_ADMIN]
 
 	var user DBUser
+	var adminBackupState types.AdminBackupState
 	err = db.View(func(tx *bolt.Tx) error {
 		usersBucket := tx.Bucket([]byte(BUCKET_USERS))
 		username := r.Header.Get("x-username")
@@ -61,11 +63,23 @@ func (sc *SailorCore) ListAppsHandler(w http.ResponseWriter, r *http.Request) {
 
 				return nil
 			})
+
+			backupBucket := tx.Bucket([]byte(BUCKET_BACKUP))
+			backupBytes := backupBucket.Get([]byte(KEY_S3))
+			if backupBytes != nil {
+				err := json.Unmarshal(backupBytes, &adminBackupState)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		return nil
 	})
 
 	enc := json.NewEncoder(w)
-	enc.Encode(user.AllowedApps)
+	enc.Encode(types.ListAppsResponse{
+		Apps:             user.AllowedApps,
+		AdminBackupState: &adminBackupState,
+	})
 }

@@ -91,6 +91,12 @@ func NewSailorCore() *SailorCore {
 
 			sc.dbconns[projectKey] = db
 
+			// if err := backup.BackupState(projectKey, db); err != nil {
+			// 	return err
+			// }
+
+			// fmt.Println("uploaded state to s3 for: ", projectKey)
+
 			db.View(func(tx *bolt.Tx) error {
 				metaBucket := tx.Bucket([]byte(BUCKET_META))
 				version := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))

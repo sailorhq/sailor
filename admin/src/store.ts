@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import appsReducer from './appsSlice';
+import backupReducer from './backupSlice';
 
 const store = configureStore({
   reducer: {
     apps: appsReducer,
+    backup: backupReducer,
   },
 });
 

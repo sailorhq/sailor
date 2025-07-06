@@ -31,6 +31,15 @@ type Secret struct {
 	Value string `json:"value"`
 }
 
+type AdminBackupState struct {
+	Bucket string `json:"bucket"`
+}
+
+type ListAppsResponse struct {
+	Apps             []string          `json:"apps"`
+	AdminBackupState *AdminBackupState `json:"admin_backup_state"`
+}
+
 type SailorState struct {
 	Meta        SailorMeta     `json:"meta"`
 	Configs     map[string]any `json:"configs"`

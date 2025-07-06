@@ -4,10 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDispatch } from 'react-redux';
 import { setApps as setAppsAction } from '../appsSlice';
+import { setBucket as setBucketAction } from '../backupSlice';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
 
-
+interface ListAppsResponse {
+    apps: string[];
+    admin_backup_state: {
+        bucket: string;
+    };
+}
 
 const ApplicationsPage: React.FC = () => {
     const navigate = useNavigate();
@@ -36,15 +42,17 @@ const ApplicationsPage: React.FC = () => {
         });
         if (!res.ok) {
         }
-        const data = await res.json() as string[];
-        const nsListSet = new Set([...namespaces, ...data.map(project => project.split('-')[0])]);
+        const data = await res.json() as ListAppsResponse;
+        const nsListSet = new Set([...namespaces, ...data.apps.map(project => project.split('-')[0])]);
         setNamespaces(Array.from(nsListSet));
 
-        dispatch(setAppsAction(data));
+        dispatch(setAppsAction(data.apps));
+        dispatch(setBucketAction(data.admin_backup_state?.bucket || ''));
     }
 
     const handleCreateApp = async (e: React.FormEvent) => {
         e.preventDefault();
+
         setLoading(false);
         const payload = { ns: namespaceToCreate, key: secretKey, app };
         const res = await fetch(`http://localhost:7766/api/v1/create?${new URLSearchParams(payload).toString()}`, {
