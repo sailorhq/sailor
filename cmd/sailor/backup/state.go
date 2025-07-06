@@ -13,7 +13,7 @@ import (
 func BackupState(projectKey string, appDbConn *bolt.DB, bucket, region, accessKey, secretKey string) error {
 	// TODO :: make sure all keys that we access from are obtained from a common place
 	// this included the bucket names and key names
-	var backupState = types.SailorBackupState{
+	var backupState = types.SailorState{
 		Secrets: make(map[string][]byte),
 	}
 	err := appDbConn.View(func(tx *bolt.Tx) error {

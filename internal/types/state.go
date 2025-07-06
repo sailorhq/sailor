@@ -40,7 +40,7 @@ type ListAppsResponse struct {
 	AdminBackupState *AdminBackupState `json:"admin_backup_state"`
 }
 
-type SailorState struct {
+type AdminSailorState struct {
 	Meta        SailorMeta     `json:"meta"`
 	Configs     map[string]any `json:"configs"`
 	Secrets     []Secret       `json:"secrets"`
@@ -51,7 +51,7 @@ type SailorState struct {
 	Deployments []Deployment   `json:"deployments"`
 }
 
-type SailorBackupState struct {
+type SailorState struct {
 	Version string            `json:"config_ver"`
 	Config  []byte            `json:"config"`
 	Secrets map[string][]byte `json:"secrets"`

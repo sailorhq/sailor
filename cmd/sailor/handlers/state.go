@@ -32,7 +32,7 @@ func (sc *SailorCore) StateHandler(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal([]byte(configStr), &builtConfig)
 	w.Header().Set("Content-Type", "application/json")
 
-	resp := types.SailorState{
+	resp := types.AdminSailorState{
 		Configs:     builtConfig,
 		Secrets:     []types.Secret{},
 		Deployments: []types.Deployment{},
