@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { showToast } from '../utils/toastUtils';
 import validatorList from '../utils/validator-list';
+import { addAuditEvent } from '../audit';
 
 interface Secret {
     name: string;
@@ -97,6 +98,13 @@ const ApplicationInfoPage: React.FC = () => {
 
             if (response.ok) {
                 setShowRulesModal(false);
+                addAuditEvent({
+                    timestamp: new Date().toISOString(),
+                    namespace: ns,
+                    app: app,
+                    username: user?.username || '',
+                    action: 'update_schema',
+                });
                 showToast('Rules saved successfully', 3000);
             } else {
                 // Error handling
@@ -136,6 +144,13 @@ const ApplicationInfoPage: React.FC = () => {
             setDeploymentDesc('');
 
             fetchConfig();
+            addAuditEvent({
+                timestamp: new Date().toISOString(),
+                namespace: ns,
+                app: app,
+                username: user?.username || '',
+                action: 'create_deployment',
+            });
             showToast('Deployment created successfully', 3000);
         };
     };
@@ -150,13 +165,23 @@ const ApplicationInfoPage: React.FC = () => {
             deleted_secrets: deletedSecrets
         }
 
-        await fetch(`/api/v1/admin.secrets?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') }).toString()}`, {
+        const response = await fetch(`/api/v1/admin.secrets?${new URLSearchParams({ ns, app: app.replace(ns + '-', '') }).toString()}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
-        })
+        });
+
+        if (response.ok) {
+            addAuditEvent({
+                timestamp: new Date().toISOString(),
+                namespace: ns,
+                app: app,
+                username: user?.username || '',
+                action: 'update_secrets',
+            });
+        }
     }
 
     const handleDeploy = async (version: string) => {
@@ -169,6 +194,16 @@ const ApplicationInfoPage: React.FC = () => {
 
         if (response.ok) {
             fetchConfig();
+            addAuditEvent({
+                timestamp: new Date().toISOString(),
+                namespace: ns,
+                app: app,
+                username: user?.username || '',
+                action: 'deploy_configs',
+                details: {
+                    version: version,
+                }
+            });
             showToast('Deployed successfully', 3000);
         } else {
             showToast('Failed to deploy', 3000);
@@ -455,7 +490,7 @@ const ApplicationInfoPage: React.FC = () => {
                                 <div className="flex-grow-1">
                                     <div className="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <h6 className="mb-0">ver. {d.version}</h6>
+                                            <h6 className="mb-0">ver. {d.version} {d.deployed ? <Badge bg="success">Deployed</Badge> : <></>}</h6>
                                             <div className="small" style={{ color: '#1C608C' }}>
                                                 {d.description}
                                             </div>
@@ -475,7 +510,7 @@ const ApplicationInfoPage: React.FC = () => {
                                     onClick={() => handleDeploy(d.version)}
                                 >
                                     Deploy
-                                </Button> : <Badge bg="success">Deployed</Badge>}
+                                </Button> : <></>}
 
                             </ListGroup.Item>)}
                         </ListGroup>

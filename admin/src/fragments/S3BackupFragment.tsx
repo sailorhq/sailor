@@ -5,6 +5,8 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { setBucket } from "../backupSlice";
 import { useDispatch } from "react-redux";
+import { addAuditEvent } from "../audit";
+import { useAuth } from "../contexts/AuthContext";
 
 interface S3BackupFragmentProps {
     editMode?: boolean;
@@ -22,6 +24,8 @@ const S3BackupFragment: React.FC<S3BackupFragmentProps> = (props) => {
 
     const { bucket } = useSelector((state: RootState) => state.backup);
     const [s3Bucket, setS3Bucket] = useState(bucket || '');
+
+    const { user } = useAuth();
 
 
     const handleSaveS3 = async (e: React.FormEvent<any>) => {
@@ -48,12 +52,24 @@ const S3BackupFragment: React.FC<S3BackupFragmentProps> = (props) => {
             showToast(data.message, 3000);
         } else {
             dispatch(setBucket(s3Bucket));
-            setBucket('');
             setS3Region('');
             setS3AccessKey('');
             setS3SecretKey('');
             setCronExpression('');
             showToast('S3 backup details saved successfully', 3000);
+
+            addAuditEvent({
+                timestamp: new Date().toISOString(),
+                namespace: 'admin',
+                app: 'settings',
+                username: user?.username || '',
+                action: 'update_s3_details',
+                details: {
+                    bucket: s3Bucket,
+                }
+            });
+
+            setBucket('');
         }
         setSavingS3(false);
     };

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import type { RootState } from "../store";
 import { useSelector } from "react-redux";
-import type { User } from "../contexts/AuthContext";
+import { useAuth, type User } from "../contexts/AuthContext";
 import { showToast } from "../utils/toastUtils";
+import { addAuditEvent } from "../audit";
 
 type RBACFragmentProps = {
     user: User | null,
@@ -18,6 +19,7 @@ const RBACFragment: React.FC<RBACFragmentProps> = (props: RBACFragmentProps) => 
     const [allowedApps, setAllowedApps] = useState<Set<string>>(new Set(props.user?.allowed_apps || []));
     const [savingS3] = useState(false);
 
+    const { user } = useAuth();
 
     const apps = useSelector((state: RootState) => state.apps.values);
 
@@ -35,6 +37,19 @@ const RBACFragment: React.FC<RBACFragmentProps> = (props: RBACFragmentProps) => 
         });
 
         if (response.ok) {
+            addAuditEvent({
+                timestamp: new Date().toISOString(),
+                namespace: 'admin',
+                app: 'rbac',
+                username: user?.username || '',
+                action: props.user !== null ? 'update_user' : 'create_user',
+                details: {
+                    for_user: usernameToCreate,
+                    permissions: permissions,
+                    allowed_apps: joinedAllowedApps,
+                }
+            });
+
             setUsernameToCreate('');
             setPasswordToCreate('');
             setRoleToCreate('');
