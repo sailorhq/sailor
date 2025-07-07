@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -17,7 +18,13 @@ import (
 const (
 	ENV_SAILOR_URL        = "SAILOR_URL"
 	ENV_SAILOR_ACCESS_KEY = "SAILOR_ACCESS_KEY"
+	ENV_SAILOR_SECRET_KEY = "SAILOR_SECRET_KEY"
 	ENV_SAILOR_BACKUP_URL = "SAILOR_BACKUP_URL"
+)
+
+const (
+	state_api_path   = "api/v1/state"
+	version_api_path = "api/v1/version"
 )
 
 type internalState struct {
@@ -37,17 +44,19 @@ type Sailor struct {
 
 	isConnected    bool
 	sourceUnstable bool
+
+	sailorClient *http.Client
 }
 
 var sailor = Sailor{
-	addr: "",
-	ns:   "",
-	app:  "",
-	opts: &types.SailorOpts{
-		RefreshTimeout: 5 * time.Second,
-	},
+	addr:        "",
+	ns:          "",
+	app:         "",
 	state:       internalState{},
 	isConnected: false,
+	sailorClient: &http.Client{
+		Timeout: 10 * time.Second,
+	},
 }
 
 func Connect(addr, ns, app string, opts ...types.SailorOpts) error {
@@ -57,6 +66,11 @@ func Connect(addr, ns, app string, opts ...types.SailorOpts) error {
 	// check if opts are present
 	if len(opts) > 0 {
 		sailor.opts = &opts[0]
+
+		// if refresh timeout is not set, set it to 5 seconds by default
+		if sailor.opts.RefreshTimeout == 0 {
+			sailor.opts.RefreshTimeout = 5 * time.Second
+		}
 	} else {
 		// defaults to 5 seconds
 		sailor.opts = &types.SailorOpts{
@@ -80,7 +94,18 @@ func Connect(addr, ns, app string, opts ...types.SailorOpts) error {
 		}
 	}
 
-	refresh(false)
+	if sailor.opts.SecretKey == "" {
+		envKey := os.Getenv(ENV_SAILOR_SECRET_KEY)
+		if envKey != "" {
+			sailor.opts.SecretKey = envKey
+		}
+	}
+
+	if sailor.opts.AccessKey == "" || sailor.opts.SecretKey == "" {
+		return fmt.Errorf("access key or secret key is not set, sailor cannot connect")
+	}
+
+	refresh(true)
 
 	sailor.isConnected = true
 
@@ -89,12 +114,11 @@ func Connect(addr, ns, app string, opts ...types.SailorOpts) error {
 
 func sleepAndRefresh() {
 	time.Sleep(sailor.opts.RefreshTimeout)
-	refresh(true)
+	refresh(false)
 }
 
 func checkStateVersion() bool {
-	url := fmt.Sprintf("%s/version?ns=%s&app=%s&key=%s", sailor.addr, sailor.ns, sailor.app, sailor.opts.AccessKey)
-	fmt.Println("url: ", url)
+	url := fmt.Sprintf("%s/%s?ns=%s&app=%s", sailor.addr, version_api_path, sailor.ns, sailor.app)
 	resp, err := http.Get(url)
 	if err != nil {
 		return false
@@ -121,33 +145,45 @@ func checkStateVersion() bool {
 	// mark source as stable.. if it was set unstable before
 	sailor.sourceUnstable = false
 
-	fmt.Println("string(b): ", string(b))
-
 	return !strings.EqualFold(sailor.state.meta.Version, string(b))
 }
 
-func refresh(checkVersion bool) {
-	fmt.Println("[REFRESH] trying to refresh config...")
-	if checkVersion {
+func refresh(isInitiating bool) {
+	if !isInitiating {
 		if shouldRefresh := checkStateVersion(); !shouldRefresh {
-			fmt.Println("[REFRESH] state version same, not updating config")
+			sailor.log("sailor state version is same, not updating config")
 			go sleepAndRefresh()
 			return
 		}
 	}
 
-	url := fmt.Sprintf("%s/api/v1/state?ns=%s&app=%s&key=%s", sailor.addr, sailor.ns, sailor.app, sailor.opts.AccessKey)
-	resp, err := http.Get(url)
+	sailor.log("refreshing sailor state...")
+	url := fmt.Sprintf("%s/%s?ns=%s&app=%s", sailor.addr, state_api_path, sailor.ns, sailor.app)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		sailor.log(fmt.Sprintf("error creating request: %s", err.Error()))
+		go sleepAndRefresh()
+		return
+	}
+
+	req.Header.Set("x-access-key", sailor.opts.AccessKey)
+	req.Header.Set("x-secret-key", sailor.opts.SecretKey)
+
+	resp, err := sailor.sailorClient.Do(req)
+	if err != nil {
+		sailor.log(fmt.Sprintf("error fetching state: %s", err.Error()))
 		go sleepAndRefresh()
 		return
 	}
 
 	if resp.StatusCode != 200 {
+		sailor.log("marking sailor source as unstable")
 		sailor.sourceUnstable = true
 
-		// TODO :: log here that going to fetch from backup
+		sailor.log("sailor is not reachable, fetching from backup")
+
 		if sailor.opts.BackupURL == "" {
+			sailor.log("no backup url set, waiting for sailor to be reachable")
 			go sleepAndRefresh()
 			return
 		}
@@ -159,6 +195,7 @@ func refresh(checkVersion bool) {
 	defer resp.Body.Close()
 
 	if err != nil {
+		sailor.logf("cannot read response from sailor: %s", err.Error())
 		go sleepAndRefresh()
 		return
 	}
@@ -169,13 +206,18 @@ func refresh(checkVersion bool) {
 	var state types.SailorState
 	err = json.Unmarshal(b, &state)
 	if err != nil {
-		// TODO :: log here that the refresh object is flunked!!
+		sailor.logf("sailor response is not in an expected format: %s", err.Error())
 		return
 	}
 
 	sailor.state.setState(state)
 
-	go sleepAndRefresh()
+	if !sailor.opts.AvoidRefresh {
+		go sleepAndRefresh()
+		return
+	}
+
+	sailor.log("avoiding refresh as per options provided...")
 }
 
 func (is *internalState) setState(state types.SailorState) {
@@ -263,6 +305,18 @@ func getClaims(secretStr string, accessKey string) (jwt.MapClaims, error) {
 	return nil, fmt.Errorf("invalid token")
 }
 
+func (s *Sailor) logf(msg string, args ...any) {
+	if sailor.opts.Logging {
+		log.Printf(msg, args...)
+	}
+}
+
+func (s *Sailor) log(msg string) {
+	if sailor.opts.Logging {
+		log.Println(msg)
+	}
+}
+
 func (is *internalState) Release() {
 	is.RUnlock()
 }
@@ -270,4 +324,8 @@ func (is *internalState) Release() {
 func Instance() *internalState {
 	sailor.state.RLock()
 	return &sailor.state
+}
+
+func Refresh() {
+	refresh(true)
 }
