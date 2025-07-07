@@ -43,3 +43,15 @@ input:focus {
 .nav-tabs {
   border-bottom: 1px solid #1C608C !important;
 }
+
+.badge.bg-primary.badge-create-app {
+  background-color: #37a654 !important;
+}
+
+.badge.bg-primary.badge-deploy-configs {
+  background-color: #1C608C !important;
+}
+
+.badge.bg-primary.badge-update {
+  background-color: #dfb865 !important;
+}

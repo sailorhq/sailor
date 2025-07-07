@@ -2,12 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Card, ListGroup, Badge, Button } from 'react-bootstrap';
 import { getAuditEvents, type AuditEvent } from '../audit';
 
-const getBadgeColor = (action: string) => {
+const getBadgeClassName = (action: string) => {
     switch (action) {
         case 'create_app':
-            return 'success';
+        case 'create_deployment':
+            return 'badge-create-app';
+        case 'update_schema':
+        case 'update_user':
+            return 'badge-update';
         default:
-            return 'primary';
+            return 'badge-deploy-configs';
     }
 }
 
@@ -21,16 +25,16 @@ const AuditPage: React.FC = () => {
     return (
         <Card className="border-0 shadow-sm" style={{ minHeight: '80vh', borderRadius: 10 }}>
             <Card.Body>
-                <Card.Title className="mb-4">Audit Trail</Card.Title>
+                <Card.Title className="mb-2">Audit Trail</Card.Title>
                 <div className="d-flex justify-content-end">
-                    <Button className='mb-2' style={{ backgroundColor: '#1C608C', border: 'none' }} onClick={() => getAuditEvents().then(setAuditEvents)}>Refresh</Button>
+                    <Button className='mb-4' style={{ backgroundColor: '#1C608C', border: 'none' }} onClick={() => getAuditEvents().then(setAuditEvents)}>Refresh</Button>
                 </div>
-                <ListGroup>
+                <ListGroup style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                     {auditEvents.map((event, index) => (
                         <ListGroup.Item key={index} className="d-flex justify-content-between align-items-start">
                             <div className="ms-2 me-auto">
                                 <div className="text-muted">
-                                    <Badge bg={getBadgeColor(event.action)} className="me-2">{event.action}</Badge>
+                                    <Badge className={`me-2 ${getBadgeClassName(event.action)}`}>{event.action}</Badge>
                                     {JSON.stringify(event, null, 2)}
                                 </div>
                             </div>
