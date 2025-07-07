@@ -69,5 +69,9 @@ func main() {
 		fileServer.ServeHTTP(w, r)
 	})
 
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/console", http.StatusFound)
+	})
+
 	http.ListenAndServe(":7766", mux)
 }
