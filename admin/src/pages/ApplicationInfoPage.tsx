@@ -180,6 +180,10 @@ const ApplicationInfoPage: React.FC = () => {
                 app: app,
                 username: user?.username || '',
                 action: 'update_secrets',
+                details: {
+                    secrets: payload.secrets.map(s => s.name),
+                    deleted_secrets: payload.deleted_secrets.map(s => s.name),
+                }
             });
 
             fetchConfig();
