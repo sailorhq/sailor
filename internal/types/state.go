@@ -10,7 +10,7 @@ type SailorMeta struct {
 
 type SailorOpts struct {
 	Logging        bool
-	AvoidRefresh   bool
+	DisableRefresh bool
 	RefreshTimeout time.Duration
 	BackupURL      string
 	AccessKey      string
