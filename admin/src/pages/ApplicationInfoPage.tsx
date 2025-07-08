@@ -181,6 +181,9 @@ const ApplicationInfoPage: React.FC = () => {
                 username: user?.username || '',
                 action: 'update_secrets',
             });
+
+            fetchConfig();
+            showToast('Secrets saved successfully', 3000);
         }
     }
 
@@ -454,7 +457,9 @@ const ApplicationInfoPage: React.FC = () => {
                                         setSecrets([...secrets, { name: '', value: '' }]);
                                     }} style={{ backgroundColor: '#1C608C', border: 'none' }}>+ Add</Button>
 
-                                    <Button onClick={handleSaveSecrets} style={{ backgroundColor: '#1C608C', border: 'none' }}>Save</Button>
+                                    <Button
+                                        disabled={secrets.length === 0 && deletedSecrets.length === 0}
+                                        onClick={handleSaveSecrets} style={{ backgroundColor: '#1C608C', border: 'none' }}>Save</Button>
                                 </div>
 
 
