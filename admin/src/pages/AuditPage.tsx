@@ -35,7 +35,7 @@ const AuditPage: React.FC = () => {
                             <div className="ms-2 me-auto">
                                 <div className="text-muted">
                                     <Badge className={`me-2 ${getBadgeClassName(event.action)}`}>{event.action}</Badge>
-                                    {JSON.stringify(event, null, 2)}
+                                    <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{JSON.stringify(event, null, 2)}</span>
                                 </div>
                             </div>
                         </ListGroup.Item>
