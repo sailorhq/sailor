@@ -16,8 +16,6 @@ func TestConnect(t *testing.T) {
 	}
 
 	s := Instance()
-	defer s.Release()
-
 	v, err := s.Get("app")
 	if err != nil {
 		t.Error(err)

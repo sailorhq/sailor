@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/codekidx/sailor/internal/types"
@@ -29,10 +29,9 @@ const (
 )
 
 type internalState struct {
-	sync.RWMutex
 	meta    types.SailorMeta
-	configs map[string]any
-	secrets map[string]string
+	configs atomic.Value
+	secrets atomic.Value
 }
 
 type Sailor struct {
@@ -53,7 +52,6 @@ var sailor = Sailor{
 	addr:        "",
 	ns:          "",
 	app:         "",
-	state:       internalState{},
 	isConnected: false,
 	sailorClient: &http.Client{
 		Timeout: 10 * time.Second,
@@ -167,8 +165,8 @@ func refresh() {
 		sailor.sourceUnstable = true
 	}
 
-	sailor.logf("config: %+v\n", &sailor.state.configs)
-	sailor.logf("secrets: %+v\n", &sailor.state.secrets)
+	sailor.logf("config: %+v\n", *sailor.state.configs.Load().(*map[string]any))
+	sailor.logf("secrets: %+v\n", *sailor.state.secrets.Load().(*map[string][]byte))
 	sailor.logf("version: %s\n", sailor.state.meta.Version)
 
 	if !sailor.opts.DisableRefresh {
@@ -232,7 +230,6 @@ func fetchState() error {
 }
 
 func (is *internalState) setState(state types.SailorState) {
-	is.Lock()
 	var configs map[string]any
 	err := json.Unmarshal(state.Config, &configs)
 	if err != nil {
@@ -240,46 +237,14 @@ func (is *internalState) setState(state types.SailorState) {
 		return
 	}
 
-	is.configs = configs
-	is.secrets = make(map[string]string)
-	for k, v := range state.Secrets {
-		is.secrets[k] = string(v)
-	}
+	is.configs.Store(&configs)
+	is.secrets.Store(&state.Secrets)
 
 	// finally set the version so that we surely know that the state is set properly
 	// without errors
 	is.meta = types.SailorMeta{
 		Version: state.Version,
 	}
-	is.Unlock()
-}
-
-func (is *internalState) Get(key string) (value any, err error) {
-	var ok bool
-	if value, ok = is.configs[key]; !ok {
-		err = fmt.Errorf("cannot find config %s", key)
-		return value, err
-	}
-	return
-}
-
-func (is *internalState) GetSecret(key string) (value string, err error) {
-	var (
-		data string
-		ok   bool
-	)
-
-	if data, ok = is.secrets[key]; !ok {
-		return "", fmt.Errorf("secret %s not found", key)
-	}
-
-	// TODO :: get access key from sailor instance
-	claims, err := getClaims(string(data), "")
-	if err != nil {
-		// TODO :: user friendly bug
-		return "", err
-	}
-	return claims["data"].(string), nil
 }
 
 // Function to validate and extract map claims from the JWT string
@@ -313,13 +278,45 @@ func (s *Sailor) log(msg string) {
 	}
 }
 
-func (is *internalState) Release() {
-	is.RUnlock()
+type ISailor interface {
+	Get(key string) (any, error)
+	GetSecret(key string) (string, error)
 }
 
-func Instance() *internalState {
-	sailor.state.RLock()
-	return &sailor.state
+type SailorInstance struct {
+	config  *map[string]any
+	secrets *map[string][]byte
+}
+
+func (s *SailorInstance) Get(key string) (any, error) {
+	var data any
+	var ok bool
+	if data, ok = (*s.config)[key]; !ok {
+		return nil, fmt.Errorf("config key %s not found", key)
+	}
+	return data, nil
+}
+
+func (s *SailorInstance) GetSecret(key string) (string, error) {
+	var data []byte
+	var ok bool
+	if data, ok = (*s.secrets)[key]; !ok {
+		return "", fmt.Errorf("secret key %s not found", key)
+	}
+
+	claims, err := getClaims(string(data), sailor.opts.SecretKey)
+	if err != nil {
+		// TODO :: user friendly bug
+		return "", err
+	}
+	return claims["data"].(string), nil
+}
+
+func Instance() ISailor {
+	return &SailorInstance{
+		config:  sailor.state.configs.Load().(*map[string]any),
+		secrets: sailor.state.secrets.Load().(*map[string][]byte),
+	}
 }
 
 func Refresh() {
