@@ -2,6 +2,7 @@ package sailor
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -105,16 +106,23 @@ func Connect(addr, ns, app string, opts ...types.SailorOpts) error {
 		return fmt.Errorf("access key or secret key is not set, sailor cannot connect")
 	}
 
-	refresh(true)
+	err := fetchState()
+	if err != nil {
+		return err
+	}
 
 	sailor.isConnected = true
+
+	if !sailor.opts.DisableRefresh {
+		go sleepAndRefresh()
+	}
 
 	return nil
 }
 
 func sleepAndRefresh() {
 	time.Sleep(sailor.opts.RefreshTimeout)
-	refresh(false)
+	refresh()
 }
 
 func checkStateVersion() bool {
@@ -142,28 +150,41 @@ func checkStateVersion() bool {
 		return false
 	}
 
-	// mark source as stable.. if it was set unstable before
-	sailor.sourceUnstable = false
-
 	return !strings.EqualFold(sailor.state.meta.Version, string(b))
 }
 
-func refresh(isInitiating bool) {
-	if !isInitiating {
-		if shouldRefresh := checkStateVersion(); !shouldRefresh {
-			sailor.log("sailor state version is same, not updating config")
-			go sleepAndRefresh()
-			return
-		}
+func refresh() {
+	if shouldRefresh := checkStateVersion(); !shouldRefresh {
+		sailor.log("sailor state version is same, not updating config")
+		go sleepAndRefresh()
+		return
 	}
 
 	sailor.log("refreshing sailor state...")
+	err := fetchState()
+	if err != nil {
+		sailor.logf("error fetching state: %s", err.Error())
+		sailor.sourceUnstable = true
+	}
+
+	sailor.logf("config: %+v\n", &sailor.state.configs)
+	sailor.logf("secrets: %+v\n", &sailor.state.secrets)
+	sailor.logf("version: %s\n", sailor.state.meta.Version)
+
+	if !sailor.opts.DisableRefresh {
+		go sleepAndRefresh()
+		return
+	}
+
+	sailor.log("avoiding refresh as per options provided...")
+}
+
+func fetchState() error {
 	url := fmt.Sprintf("%s/%s?ns=%s&app=%s", sailor.addr, state_api_path, sailor.ns, sailor.app)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		sailor.log(fmt.Sprintf("error creating request: %s", err.Error()))
-		go sleepAndRefresh()
-		return
+		return err
 	}
 
 	req.Header.Set("x-access-key", sailor.opts.AccessKey)
@@ -172,8 +193,7 @@ func refresh(isInitiating bool) {
 	resp, err := sailor.sailorClient.Do(req)
 	if err != nil {
 		sailor.log(fmt.Sprintf("error fetching state: %s", err.Error()))
-		go sleepAndRefresh()
-		return
+		return err
 	}
 
 	if resp.StatusCode != 200 {
@@ -183,12 +203,12 @@ func refresh(isInitiating bool) {
 		sailor.log("sailor is not reachable, fetching from backup")
 
 		if sailor.opts.BackupURL == "" {
-			sailor.log("no backup url set, waiting for sailor to be reachable")
-			go sleepAndRefresh()
-			return
+			msg := "no backup url set, waiting for sailor to be reachable"
+			sailor.log(msg)
+			return errors.New(msg)
 		}
 
-		return
+		return errors.New("unable to fetch state from sailor")
 	}
 
 	b, err := io.ReadAll(resp.Body)
@@ -196,28 +216,19 @@ func refresh(isInitiating bool) {
 
 	if err != nil {
 		sailor.logf("cannot read response from sailor: %s", err.Error())
-		go sleepAndRefresh()
-		return
+		return err
 	}
-
-	// mark source as stable.. if it was set unstable before
-	sailor.sourceUnstable = false
 
 	var state types.SailorState
 	err = json.Unmarshal(b, &state)
 	if err != nil {
 		sailor.logf("sailor response is not in an expected format: %s", err.Error())
-		return
+		return err
 	}
 
 	sailor.state.setState(state)
 
-	if !sailor.opts.AvoidRefresh {
-		go sleepAndRefresh()
-		return
-	}
-
-	sailor.log("avoiding refresh as per options provided...")
+	return nil
 }
 
 func (is *internalState) setState(state types.SailorState) {
@@ -250,21 +261,6 @@ func (is *internalState) Get(key string) (value any, err error) {
 		return value, err
 	}
 	return
-}
-
-func (is *internalState) GetDecode(key string, target *any) error {
-	// TODO :: maybe check if we want to use mapstructure module here!
-	// var data any
-	// var ok bool
-	// if data, ok = s.configs[key]; !ok {
-	// 	return fmt.Errorf("config key %s not found", key)
-	// }
-
-	// err := json.Unmarshal(data, target)
-	// if err != nil {
-	// 	return err
-	// }
-	return nil
 }
 
 func (is *internalState) GetSecret(key string) (value string, err error) {
@@ -327,5 +323,5 @@ func Instance() *internalState {
 }
 
 func Refresh() {
-	refresh(true)
+	refresh()
 }
