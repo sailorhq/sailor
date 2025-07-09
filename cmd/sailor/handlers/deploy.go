@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/codekidx/sailor/cmd/sailor/backup"
 	"github.com/codekidx/sailor/internal/types"
 	bolt "go.etcd.io/bbolt"
 )
@@ -33,10 +34,12 @@ func (sc *SailorCore) DeployHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	projectKey := fmt.Sprintf("%s-%s", params.Ns, params.App)
+
 	err = db.Update(func(tx *bolt.Tx) error {
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 		if err = metaBucket.Put([]byte(KEY_DEPLOYED_VERSION), []byte(params.DeployVersion)); err == nil {
-			sc.versions[fmt.Sprintf("%s-%s", params.Ns, params.App)] = params.DeployVersion
+			sc.versions[projectKey] = params.DeployVersion
 		}
 
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
@@ -57,7 +60,30 @@ func (sc *SailorCore) DeployHandler(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 
-		return deploymentBucket.Put([]byte(params.DeployVersion), depBytes)
+		if err = deploymentBucket.Put([]byte(params.DeployVersion), depBytes); err != nil {
+			return err
+		}
+
+		// start backup
+		backupDetailsBytes := metaBucket.Get([]byte(KEY_S3))
+		if len(backupDetailsBytes) == 0 {
+			// TODO :: log here that consumer cannot recover if sailor is not alive!
+			return nil
+		}
+
+		accessKey := string(metaBucket.Get([]byte(KEY_ACCESS_KEY)))
+		secretKey := string(metaBucket.Get([]byte(KEY_SECRET_KEY)))
+
+		var backupDetails BackupDetails
+		if err := json.Unmarshal(backupDetailsBytes, &backupDetails); err != nil {
+			return err
+		}
+
+		if err := backup.BackupState(projectKey, db, backupDetails.Bucket, backupDetails.Region, accessKey, secretKey); err != nil {
+			return tx.Rollback()
+		}
+
+		return nil
 	})
 
 	if err != nil {
