@@ -45,6 +45,7 @@ func (sc *SailorCore) DeployHandler(w http.ResponseWriter, r *http.Request) {
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
 		depBytes := deploymentBucket.Get([]byte(params.DeployVersion))
 		if err != nil {
+			tx.Rollback()
 			return err
 		}
 
@@ -57,40 +58,55 @@ func (sc *SailorCore) DeployHandler(w http.ResponseWriter, r *http.Request) {
 
 		depBytes, err = json.Marshal(deployment)
 		if err != nil {
+			tx.Rollback()
 			return err
 		}
 
 		if err = deploymentBucket.Put([]byte(params.DeployVersion), depBytes); err != nil {
+			tx.Rollback()
 			return err
 		}
 
 		// start backup
-		backupDetailsBytes := metaBucket.Get([]byte(KEY_S3))
-		if len(backupDetailsBytes) == 0 {
-			// TODO :: log here that consumer cannot recover if sailor is not alive!
-			return nil
-		}
-
-		accessKey := string(metaBucket.Get([]byte(KEY_ACCESS_KEY)))
-		secretKey := string(metaBucket.Get([]byte(KEY_SECRET_KEY)))
-
-		var backupDetails BackupDetails
-		if err := json.Unmarshal(backupDetailsBytes, &backupDetails); err != nil {
+		err = backupState(projectKey, db, sc.dbconns[BUCKET_ADMIN])
+		if err != nil {
+			tx.Rollback()
 			return err
-		}
-
-		if err := backup.BackupState(projectKey, db, backupDetails.Bucket, backupDetails.Region, accessKey, secretKey); err != nil {
-			return tx.Rollback()
 		}
 
 		return nil
 	})
 
 	if err != nil {
-		enc.Encode(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
 
 	enc.Encode("done!")
 
+}
+
+func backupState(projectKey string, appDbConn *bolt.DB, adminDbConn *bolt.DB) error {
+	var backupDetails BackupDetails
+	return adminDbConn.View(func(tx *bolt.Tx) error {
+		backupBucket := tx.Bucket([]byte(BUCKET_BACKUP))
+		backupBytes := backupBucket.Get([]byte(KEY_S3))
+		if backupBytes != nil {
+			err := json.Unmarshal(backupBytes, &backupDetails)
+			if err != nil {
+				return err
+			}
+		} else {
+			// TODO :: log here that consumer cannot recover if sailor is not alive!
+			return nil
+		}
+
+		// TODO :: BackupDetails struct should be in a common place
+		if err := backup.BackupState(projectKey, appDbConn, backupDetails.Bucket, backupDetails.Region, backupDetails.AccessKey, backupDetails.SecretKey); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
