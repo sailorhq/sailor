@@ -3,7 +3,7 @@
 echo "Building React console with /console/ base path..."
 
 # Navigate to admin directory
-cd admin
+cd ../console
 
 # Install dependencies if needed
 if [ ! -d "node_modules" ]; then
@@ -21,7 +21,7 @@ bun run build
 
 # Copy the built files to the console directory for embedding
 echo "Copying built files to console directory..."
-cd ..
+cd ../sailor
 rm -rf cmd/sailor/console
 cp -r admin/dist cmd/sailor/console
 
