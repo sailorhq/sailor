@@ -1,12 +1,10 @@
 package main
 
 import (
-	"embed"
-	"io/fs"
-	"net/http"
-	"strings"
-
 	"github.com/codekidx/sailor/cmd/sailor/handlers"
+
+	"github.com/fasthttp/router"
+	"github.com/valyala/fasthttp"
 )
 
 //go:embed console
@@ -14,8 +12,20 @@ var staticConsoleFS embed.FS
 
 func main() {
 
-	sh := handlers.NewSailorCore()
+	core := handlers.NewSailorCore()
 
+	r := router.New()
+
+	// --- SRD - Sailor Resource Definition ---
+	// KIND OF RESOURCE:
+	// - CONFIGS
+	// - SECRETS
+	// - MISC - (can only be fetched when asked with a resource name)
+
+	// r.PUT("/api/v1/resource/{namespace}/{app}", core.CreateResourceHandler) // PUT
+	// mux.HandleFunc("/api/v1/resource/all", sh.SailorStateHandler)               // GET
+
+	r.PUT("/api/v1/project/{namespace}/{app}", core.CreateProjectHandler)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/create", sh.CreateAppHandler)
 	mux.HandleFunc("/api/v1/update", sh.UpdateAppMetaHandler)
@@ -73,5 +83,5 @@ func main() {
 		http.Redirect(w, r, "/console", http.StatusFound)
 	})
 
-	http.ListenAndServe(":7766", mux)
+	fasthttp.ListenAndServe(":7766", r.Handler)
 }
