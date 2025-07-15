@@ -26,6 +26,7 @@ type Deployment struct {
 	CreatedBy   string `json:"created_by"`
 	DeployedAt  string `json:"deployed_at"`
 	DeployedBy  string `json:"deployed_by"`
+	Data        []byte `json:"data"`
 }
 
 type Secret struct {

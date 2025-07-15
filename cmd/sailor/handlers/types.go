@@ -10,6 +10,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+type ResourceKind string
+
 const (
 	// buckets used by sailor
 	BUCKET_ADMIN       = "_admin"
@@ -20,10 +22,17 @@ const (
 	BUCKET_AUDIT_TRAIL = "audit_trail"
 
 	// buckets used by sailor apps
+	BUCKET_RESOURCE   = "resource"
 	BUCKET_CONFIGS    = "configs"
 	BUCKET_SECRETS    = "secrets"
+	BUCKET_MISC       = "misc"
 	BUCKET_DEPLOYMENT = "deployments"
 	BUCKET_BACKUP     = "backup"
+
+	// kind of resource in sailor
+	KindConfig = "config"
+	KindSecret = "secret"
+	KindMisc   = "misc"
 
 	// keys used by sailor
 	KEY_ACCESS_KEY       = "access_key"
