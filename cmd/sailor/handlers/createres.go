@@ -34,7 +34,10 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 	ns := ctx.UserValue("namespace").(string)
 	app := ctx.UserValue("app").(string)
 	kind := ctx.UserValue("kind").(string)
-	name := ctx.UserValue("name").(string)
+	var name string
+	if n, ok := ctx.UserValue("name").(string); ok {
+		name = n
+	}
 
 	if ns == "" || app == "" || kind == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)

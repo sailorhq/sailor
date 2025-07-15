@@ -13,6 +13,10 @@ func main() {
 
 	core := handlers.NewSailorCore()
 
+	if core == nil {
+		panic("core of sailor was unable to start! check for errors...")
+	}
+
 	r := router.New()
 
 	// --- SRD - Sailor Resource Definition ---
@@ -26,9 +30,15 @@ func main() {
 
 	r.PUT("/api/v1/project/{namespace}/{app}", core.CreateProjectHandler)
 
-	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}", core.CreateResourceHandler) // PUT
+	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}", core.CreateResourceHandler) // PUT -- this is for config and secrets which doesn't require resource name
+
+	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}", core.CreateResourceHandler) // PUT -- this is for misc resource
+
+	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/deployment", core.CreateDeploymentHandler) // PUT
 
 	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}/deployment", core.CreateDeploymentHandler) // PUT
+
+	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/deploy", core.DeployResourceHandler) // POST
 
 	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/{name}/deploy", core.DeployResourceHandler) // POST
 

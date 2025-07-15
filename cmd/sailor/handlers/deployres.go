@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,7 +21,10 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 	ns := ctx.UserValue("namespace").(string)
 	app := ctx.UserValue("app").(string)
 	kind := ctx.UserValue("kind").(string)
-	name := ctx.UserValue("name").(string)
+	var name string
+	if n, ok := ctx.UserValue("name").(string); ok {
+		name = n
+	}
 
 	if ns == "" || app == "" || kind == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
@@ -60,7 +64,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
 		depBytes := deploymentBucket.Get([]byte(deployment.Version))
 		if depBytes == nil {
-			return fmt.Errorf("no deployment named: %s", deployment.Version)
+			return fmt.Errorf("no deployment with version: %s", deployment.Version)
 		}
 
 		var resourceKey = kind
@@ -105,7 +109,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 
 	if err != nil {
 		ctx.SetStatusCode(http.StatusBadRequest)
-		enc.Encode(ResponseMessage{Message: "cannot create deployment with empty data"})
+		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
 

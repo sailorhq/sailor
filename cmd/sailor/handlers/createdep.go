@@ -24,7 +24,10 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	ns := ctx.UserValue("namespace").(string)
 	app := ctx.UserValue("app").(string)
 	kind := ctx.UserValue("kind").(string)
-	name := ctx.UserValue("name").(string)
+	var name string
+	if n, ok := ctx.UserValue("name").(string); ok {
+		name = n
+	}
 
 	if ns == "" || app == "" || kind == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
@@ -58,8 +61,14 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	if deployment.Description == "" {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "description is required to create a deployment"})
+		return
+	}
+
 	projectKey := fmt.Sprintf("%s-%s", ns, app)
-	sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
+	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
 		ver, _ := deploymentBucket.Cursor().Last()
 		if ver == nil {
@@ -70,12 +79,9 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 				return err
 			}
 
-			next, _ := strconv.Atoi(string(ver))
-			next += 1
-
 			depBytes, err := json.Marshal(types.Deployment{
 				Description: deployment.Description,
-				Version:     strconv.Itoa(next),
+				Version:     "1",
 				Deployed:    false,
 				CreatedAt:   time.Now().Format(time.RFC3339),
 				CreatedBy:   "--todo--",
@@ -85,10 +91,21 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			if err != nil {
 				return err
 			}
-			return deploymentBucket.Put(fmt.Append(nil, next), depBytes)
+			return deploymentBucket.Put(fmt.Append(nil, ver), depBytes)
+		} else {
+			next, _ := strconv.Atoi(string(ver))
+			next += 1
 		}
 
 		return nil
 	})
+
+	if err != nil {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		return
+	}
+
+	enc.Encode(ResponseMessage{Message: "ok"})
 
 }
