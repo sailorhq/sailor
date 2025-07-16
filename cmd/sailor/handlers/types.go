@@ -74,6 +74,8 @@ type SailorCore struct {
 
 	versions map[string]string
 
+	kube *kubernetes.Clientset
+
 	log *zap.Logger
 }
 
@@ -135,6 +137,20 @@ func NewSailorCore() *SailorCore {
 	// load audit bucket
 	if err = sc.initInternalDatabase(BUCKET_AUDIT); err != nil {
 		return nil
+	}
+
+	// Load in-cluster config
+	config, err := rest.InClusterConfig()
+	if err == nil {
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			logger.Warn("error while initializing kubernetes client", zap.String("error", err.Error()))
+			return nil
+		}
+
+		sc.kube = clientset
+	} else {
+		logger.Warn("cannot get cluster config, is sailor running inside kubernetes?", zap.String("error", err.Error()))
 	}
 
 	return &sc

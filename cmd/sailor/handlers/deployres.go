@@ -9,6 +9,10 @@ import (
 	"github.com/codekidx/sailor/internal/types"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
+	"go.uber.org/zap"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type DeployResourceRequest struct {
@@ -81,7 +85,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
-		var resource CreateResourceRequest
+		var resource SailorResource
 		resBytes := resourceBucket.Get([]byte(resourceKey))
 		if err := json.Unmarshal(resBytes, &resource); err != nil {
 			return err
@@ -101,9 +105,88 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
-		// TODO :: here we will get the resource setting and do k8s deployment
+		// here we will get the resource setting and do k8s deployment
 		// if k8s is marked true .. if k8s deployment fails then we will
 		// rollback all the operations under tx and return error to the user
+		resourceName := fmt.Sprintf("%s-%s", app, resourceKey)
+		if resource.Setting.Deploy.K8s {
+			switch kind {
+			case KindConfig, KindMisc:
+				cm := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resourceName,
+						Namespace: ns,
+					},
+					Data: map[string]string{
+						"_content": string(deploymentInfo.Data),
+					},
+				}
+
+				if sc.kube != nil {
+					kubeConfigMap := sc.kube.CoreV1().ConfigMaps(ns)
+					var err error
+
+					cmRes, _ := kubeConfigMap.Get(context.TODO(), resourceName, metav1.GetOptions{})
+					if cmRes == nil {
+						_, err = kubeConfigMap.Create(context.TODO(), cm, metav1.CreateOptions{})
+					} else {
+						_, err = kubeConfigMap.Update(ctx, cm, metav1.UpdateOptions{})
+					}
+
+					if err != nil {
+						sc.log.Error("error while deploying configmap",
+							zap.String("ns", ns),
+							zap.String("app", app),
+							zap.String("resource", resourceKey),
+							zap.Error(err),
+						)
+						return tx.Rollback()
+					}
+				} else {
+					sc.log.Error("k8s client uninitialized, cannot deploy config to k8s",
+						zap.String("ns", ns),
+						zap.String("app", app),
+						zap.String("resource", resourceKey),
+					)
+				}
+			case KindSecret:
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resourceName,
+						Namespace: ns,
+					},
+					StringData: map[string]string{
+						// TODO :: !!!
+					},
+				}
+
+				if sc.kube != nil {
+					kubeSecrets := sc.kube.CoreV1().Secrets(ns)
+
+					secRes, _ := kubeSecrets.Get(context.TODO(), resourceName, metav1.GetOptions{})
+					if secRes == nil {
+						_, err = kubeSecrets.Create(context.TODO(), secret, metav1.CreateOptions{})
+					} else {
+						_, err = kubeSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{})
+					}
+					if err != nil {
+						sc.log.Error("error while deploying configmap",
+							zap.String("ns", ns),
+							zap.String("app", app),
+							zap.String("resource", resourceKey),
+							zap.Error(err),
+						)
+						return tx.Rollback()
+					}
+				} else {
+					sc.log.Error("k8s client uninitialized, cannot deploy config to k8s",
+						zap.String("ns", ns),
+						zap.String("app", app),
+						zap.String("resource", resourceKey),
+					)
+				}
+			}
+		}
 		return nil
 	})
 
