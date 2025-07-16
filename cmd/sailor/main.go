@@ -34,6 +34,10 @@ func main() {
 
 	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}", core.CreateResourceHandler) // PUT -- this is for misc resource
 
+	r.GET("/api/v1/resource/{namespace}/{app}/{kind}", core.GetResourceHandler)
+
+	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/{name}", core.GetResourceHandler)
+
 	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/deployment", core.CreateDeploymentHandler) // PUT
 
 	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}/deployment", core.CreateDeploymentHandler) // PUT
