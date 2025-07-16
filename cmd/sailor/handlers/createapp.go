@@ -33,6 +33,12 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	projectKey := fmt.Sprintf("%s-%s", ns, app)
+	if _, ok := sc.dbconns[projectKey]; ok {
+		ctx.SetStatusCode(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: "project already exists"})
+		return
+	}
+
 	db, err := bolt.Open(fmt.Sprintf("./configs/%s.%s", projectKey, DB_EXT), 0600, nil)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)

@@ -13,8 +13,13 @@ type DeploySetting struct {
 	K8s bool `json:"k8s"`
 }
 
+type SchemaSetting struct {
+	Strict bool `json:"strict"`
+}
+
 type ResourceSetting struct {
-	Deploy DeploySetting
+	Deploy DeploySetting `json:"deploy"`
+	Schema SchemaSetting `json:"schema"`
 }
 
 type Resource struct {
@@ -23,8 +28,9 @@ type Resource struct {
 	Version string           `json:"version"`
 }
 
-type CreateResourceRequest struct {
+type SailorResource struct {
 	Data    map[string]any   `json:"data"`
+	Schema  map[string]any   `json:"schema"`
 	Setting *ResourceSetting `json:"setting"`
 }
 
@@ -57,7 +63,14 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var resource CreateResourceRequest
+	projectKey := fmt.Sprintf("%s-%s", ns, app)
+	if _, ok := sc.dbconns[projectKey]; !ok {
+		ctx.SetStatusCode(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: "no such project in sailor"})
+		return
+	}
+
+	var resource SailorResource
 	err := json.Unmarshal(ctx.Request.Body(), &resource)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
@@ -69,22 +82,22 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 	if resource.Setting == nil {
 		resource.Setting = &ResourceSetting{
 			Deploy: DeploySetting{K8s: false},
+			Schema: SchemaSetting{
+				Strict: false,
+			},
 		}
 	}
 
-	projectKey := fmt.Sprintf("%s-%s", ns, app)
-	if _, ok := sc.dbconns[projectKey]; !ok {
-		ctx.SetStatusCode(http.StatusInternalServerError)
-		enc.Encode(ResponseMessage{Message: "no such project in sailor"})
-		return
-	}
-
 	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
-		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
-
 		var resourceKey = kind
 		if kind == KindMisc {
 			resourceKey = name
+		}
+
+		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
+		resBytes := resourceBucket.Get([]byte(resourceKey))
+		if resBytes != nil {
+			return fmt.Errorf("%s is already created", resourceKey)
 		}
 
 		res, err := json.Marshal(&resource)

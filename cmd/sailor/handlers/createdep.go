@@ -91,13 +91,30 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			if err != nil {
 				return err
 			}
-			return deploymentBucket.Put(fmt.Append(nil, ver), depBytes)
+			return deploymentBucket.Put(ver, depBytes)
 		} else {
 			next, _ := strconv.Atoi(string(ver))
 			next += 1
-		}
 
-		return nil
+			b, err := json.Marshal(&deployment.Data)
+			if err != nil {
+				return err
+			}
+
+			depBytes, err := json.Marshal(types.Deployment{
+				Description: deployment.Description,
+				Version:     fmt.Sprint(next),
+				Deployed:    false,
+				CreatedAt:   time.Now().Format(time.RFC3339),
+				CreatedBy:   "--todo--",
+				Data:        b,
+			})
+
+			if err != nil {
+				return err
+			}
+			return deploymentBucket.Put(fmt.Append(nil, next), depBytes)
+		}
 	})
 
 	if err != nil {
