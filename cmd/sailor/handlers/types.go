@@ -8,6 +8,11 @@ import (
 	"os"
 
 	bolt "go.etcd.io/bbolt"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
+	"go.uber.org/zap"
 )
 
 type ResourceKind string
@@ -68,12 +73,16 @@ type SailorCore struct {
 	dbconns map[string]*bolt.DB
 
 	versions map[string]string
+
+	log *zap.Logger
 }
 
 func NewSailorCore() *SailorCore {
+	logger, _ := zap.NewProduction()
 	sc := SailorCore{
 		dbconns:  make(map[string]*bolt.DB),
 		versions: make(map[string]string),
+		log:      logger,
 	}
 
 	if err := sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
