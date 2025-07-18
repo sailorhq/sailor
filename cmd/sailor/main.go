@@ -52,6 +52,13 @@ func main() {
 	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/setting", core.GetResourceSetting)
 	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/{name}/setting", core.GetResourceSetting)
 
+	// SCHEMA
+	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/schema", core.UpdateResourceSchemaHandler)
+	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/{name}/schema", core.UpdateResourceSchemaHandler)
+
+	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/schema", core.GetResourceSchemaHandler)
+	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/{name}/schema", core.GetResourceSchemaHandler)
+
 	// mux.HandleFunc("/api/v1/resource/{kind}/{name}", sh.SailorStateHandler)         // GET
 	// mux.HandleFunc("/api/v1/resource/{kind}/{name}/version", sh.SailorStateHandler) // GET
 	// resource setting is used to tell Sailor how the resource should be handled
