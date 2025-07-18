@@ -19,6 +19,7 @@ import (
 type CreateDeploymentRequest struct {
 	Description string         `json:"desc"`
 	Data        map[string]any `json:"data"`
+	StringData  string         `json:"string_data"`
 }
 
 func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
@@ -58,6 +59,12 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	if kind == KindMisc && deployment.StringData == "" {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "cannot create deployment with empty string_data for kind misc"})
+		return
+	}
+
 	if len(deployment.Data) == 0 {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "cannot create deployment with empty data"})
@@ -82,17 +89,22 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		if deploymentBucket == nil {
 			return errors.New("deployment not available, was the resource created?")
 		}
-		ver, _ := deploymentBucket.Cursor().Last()
-		if ver == nil {
-			ver = []byte("1")
 
+		var resourceData = deployment.StringData
+		if kind != KindMisc {
 			b, err := json.Marshal(&deployment.Data)
 			if err != nil {
 				return err
 			}
+			resourceData = string(b)
+		}
 
-			diff := differ.DiffMain("", string(b), true)
-			patchList := differ.PatchMake("", string(b), diff)
+		ver, _ := deploymentBucket.Cursor().Last()
+		if ver == nil {
+			ver = []byte("1")
+
+			diff := differ.DiffMain("", resourceData, true)
+			patchList := differ.PatchMake("", resourceData, diff)
 			patch := differ.PatchToText(patchList)
 
 			depBytes, err := json.Marshal(types.Deployment{
@@ -112,16 +124,11 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			next, _ := strconv.Atoi(string(ver))
 			next += 1
 
-			b, err := json.Marshal(&deployment.Data)
-			if err != nil {
-				return err
-			}
-
 			versionKey := fmt.Sprintf("%s_version", resourceKey)
 			resourceJSON := buildResource(sc.dbconns[projectKey], resourceKey, versionKey)
 
-			diff := differ.DiffMain(resourceJSON, string(b), true)
-			patchList := differ.PatchMake(resourceJSON, string(b), diff)
+			diff := differ.DiffMain(resourceJSON, resourceData, true)
+			patchList := differ.PatchMake(resourceJSON, resourceData, diff)
 			patch := differ.PatchToText(patchList)
 
 			depBytes, err := json.Marshal(types.Deployment{
