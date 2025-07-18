@@ -47,8 +47,10 @@ func main() {
 	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/{name}/deploy", core.DeployResourceHandler) // POST
 
 	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/setting", core.UpdateResourceSetting)
-
 	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/{name}/setting", core.UpdateResourceSetting)
+
+	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/setting", core.GetResourceSetting)
+	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/{name}/setting", core.GetResourceSetting)
 
 	// mux.HandleFunc("/api/v1/resource/{kind}/{name}", sh.SailorStateHandler)         // GET
 	// mux.HandleFunc("/api/v1/resource/{kind}/{name}/version", sh.SailorStateHandler) // GET
