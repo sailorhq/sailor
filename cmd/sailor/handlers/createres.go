@@ -22,14 +22,7 @@ type ResourceSetting struct {
 	Schema SchemaSetting `json:"schema"`
 }
 
-type Resource struct {
-	Data    map[string]any   `json:"data"`
-	Setting *ResourceSetting `json:"setting"`
-	Version string           `json:"version"`
-}
-
 type SailorResource struct {
-	Data    map[string]any   `json:"data"`
 	Schema  map[string]any   `json:"schema"`
 	Setting *ResourceSetting `json:"setting"`
 }
