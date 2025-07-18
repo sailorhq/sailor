@@ -32,9 +32,9 @@ func (sc *SailorCore) UpdateResourceSchemaHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if kind == KindMisc && name == "" {
+	if kind == KindMisc {
 		ctx.SetStatusCode(http.StatusBadRequest)
-		enc.Encode(ResponseMessage{Message: "missing resource name"})
+		enc.Encode(ResponseMessage{Message: "cannot set schema of misc resource"})
 		return
 	}
 
