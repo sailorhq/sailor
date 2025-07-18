@@ -27,7 +27,7 @@ func (sc *SailorCore) AdminStateHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	configStr := buildConfig(db)
+	configStr := buildResource(db, "", KEY_DEPLOYED_VERSION)
 	var builtConfig map[string]any
 	json.Unmarshal([]byte(configStr), &builtConfig)
 	w.Header().Set("Content-Type", "application/json")

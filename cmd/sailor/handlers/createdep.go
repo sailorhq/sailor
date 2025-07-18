@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/codekidx/sailor/internal/types"
 	"github.com/valyala/fasthttp"
+
+	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 )
 
 type CreateDeploymentRequest struct {
@@ -68,8 +71,17 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	projectKey := fmt.Sprintf("%s-%s", ns, app)
+	var resourceKey = kind
+	if kind == KindMisc {
+		resourceKey = name
+	}
+	differ := diffmod.New()
+
 	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
-		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
+		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
+		if deploymentBucket == nil {
+			return errors.New("deployment not available, was the resource created?")
+		}
 		ver, _ := deploymentBucket.Cursor().Last()
 		if ver == nil {
 			ver = []byte("1")
@@ -79,13 +91,17 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 				return err
 			}
 
+			diff := differ.DiffMain("", string(b), true)
+			patchList := differ.PatchMake("", string(b), diff)
+			patch := differ.PatchToText(patchList)
+
 			depBytes, err := json.Marshal(types.Deployment{
 				Description: deployment.Description,
 				Version:     "1",
 				Deployed:    false,
 				CreatedAt:   time.Now().Format(time.RFC3339),
 				CreatedBy:   "--todo--",
-				Data:        b,
+				Diff:        patch,
 			})
 
 			if err != nil {
@@ -101,13 +117,20 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 				return err
 			}
 
+			versionKey := fmt.Sprintf("%s_version", resourceKey)
+			resourceJSON := buildResource(sc.dbconns[projectKey], resourceKey, versionKey)
+
+			diff := differ.DiffMain(resourceJSON, string(b), true)
+			patchList := differ.PatchMake(resourceJSON, string(b), diff)
+			patch := differ.PatchToText(patchList)
+
 			depBytes, err := json.Marshal(types.Deployment{
 				Description: deployment.Description,
 				Version:     fmt.Sprint(next),
 				Deployed:    false,
 				CreatedAt:   time.Now().Format(time.RFC3339),
 				CreatedBy:   "--todo--",
-				Data:        b,
+				Diff:        patch,
 			})
 
 			if err != nil {

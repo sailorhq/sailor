@@ -100,6 +100,11 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 			return fmt.Errorf("%s is already created", resourceKey)
 		}
 
+		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
+		if _, err := deploymentBucket.CreateBucket([]byte(resourceKey)); err != nil {
+			return err
+		}
+
 		res, err := json.Marshal(&resource)
 		if err != nil {
 			return err

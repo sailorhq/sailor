@@ -65,7 +65,7 @@ func (sh *SailorCore) SailorStateHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	builtConfig := buildConfig(db)
+	builtConfig := buildResource(db, "", KEY_DEPLOYED_VERSION)
 	state.Config = []byte(builtConfig)
 
 	enc.Encode(&state)

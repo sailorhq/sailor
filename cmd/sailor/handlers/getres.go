@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/valyala/fasthttp"
-	bolt "go.etcd.io/bbolt"
 )
 
 func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
@@ -45,29 +44,30 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var resource SailorResource
-	err := sc.dbconns[projectKey].View(func(tx *bolt.Tx) error {
-		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
+	var resourceKey = kind
+	if kind == KindMisc {
+		resourceKey = name
+	}
+	versionKey := fmt.Sprintf("%s_version", resourceKey)
 
-		var resourceKey = kind
-		if kind == KindMisc {
-			resourceKey = name
-		}
+	resStr := buildResource(sc.dbconns[projectKey], resourceKey, versionKey)
+	if resStr == "" {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return
+	}
 
-		resBytes := resourceBucket.Get([]byte(resourceKey))
-		if resBytes == nil {
-			return fmt.Errorf("cannot find %s resource in %s", resourceKey, projectKey)
-		}
+	if kind == KindMisc {
+		enc.Encode(resStr)
+		return
+	}
 
-		return json.Unmarshal(resBytes, &resource)
-	})
-
-	if err != nil {
-		ctx.SetStatusCode(http.StatusInternalServerError)
-		enc.Encode(ResponseMessage{Message: err.Error()})
+	var data map[string]any
+	if err := json.Unmarshal([]byte(resStr), &data); err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		enc.Encode(ResponseMessage{Message: "error while parsing resource json!"})
 		return
 	}
 
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	enc.Encode(resource.Data)
+	enc.Encode(data)
 }

@@ -59,7 +59,7 @@ func (sc *SailorCore) patchConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	configJson := buildConfig(db)
+	configJson := buildResource(db, "", KEY_DEPLOYED_VERSION)
 	differ := diffmod.New()
 
 	var next int
@@ -188,7 +188,7 @@ func (sc *SailorCore) getConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	configJson := buildConfig(db)
+	configJson := buildResource(db, "", KEY_DEPLOYED_VERSION)
 	var builtConfig map[string]any
 	json.Unmarshal([]byte(configJson), &builtConfig)
 	w.Header().Set("Content-Type", "application/json")
@@ -196,14 +196,20 @@ func (sc *SailorCore) getConfig(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func buildConfig(db *bolt.DB) string {
+func buildResource(db *bolt.DB, resourceKey, versionKey string) string {
 	var configJson string
 	db.View(func(tx *bolt.Tx) error {
-		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
+		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 
 		min := []byte("0")
-		max := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
+		max := metaBucket.Get([]byte(versionKey))
+		// max is the current deployed version, if this is nil then
+		// it means that this resource was never deployed
+		if max == nil {
+			return nil
+		}
+
 		cur := deploymentBucket.Cursor()
 
 		differ := diffmod.New()

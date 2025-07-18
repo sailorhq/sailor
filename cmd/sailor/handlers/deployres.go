@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/codekidx/sailor/internal/types"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 	"go.uber.org/zap"
@@ -64,44 +63,30 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 
 	projectKey := fmt.Sprintf("%s-%s", ns, app)
 	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
-		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
-		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT))
+		var resourceKey = kind
+		if kind == KindMisc {
+			resourceKey = name
+		}
+		versionKey := fmt.Sprintf("%s_version", resourceKey)
+
+		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
 		depBytes := deploymentBucket.Get([]byte(deployment.Version))
 		if depBytes == nil {
 			return fmt.Errorf("no deployment with version: %s", deployment.Version)
 		}
 
-		var resourceKey = kind
-		if kind == KindMisc {
-			resourceKey = name
-		}
-
-		versionKey := fmt.Sprintf("%s_version", resourceKey)
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
-		metaBucket.Put([]byte(versionKey), []byte(deployment.Version))
-
-		var deploymentInfo types.Deployment
-		if err := json.Unmarshal(depBytes, &deploymentInfo); err != nil {
+		if err := metaBucket.Put([]byte(versionKey), []byte(deployment.Version)); err != nil {
 			return err
 		}
 
+		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
 		var resource SailorResource
 		resBytes := resourceBucket.Get([]byte(resourceKey))
 		if err := json.Unmarshal(resBytes, &resource); err != nil {
 			return err
 		}
-
-		var data map[string]any
-		if err := json.Unmarshal(deploymentInfo.Data, &data); err != nil {
-			return err
-		}
-		resource.Data = data
-
 		if resBytes, err = json.Marshal(&resource); err != nil {
-			return err
-		}
-
-		if err := resourceBucket.Put([]byte(resourceKey), resBytes); err != nil {
 			return err
 		}
 
@@ -118,7 +103,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						Namespace: ns,
 					},
 					Data: map[string]string{
-						"_content": string(deploymentInfo.Data),
+						"_content": buildResource(sc.dbconns[projectKey], resourceKey, versionKey),
 					},
 				}
 
