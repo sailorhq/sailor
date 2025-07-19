@@ -72,7 +72,7 @@ func (sc *SailorCore) UpdateResourceSchemaHandler(ctx *fasthttp.RequestCtx) {
 
 		sailorRes.Schema = resource.Schema
 
-		if resBytes, err = json.Marshal(&resource); err != nil {
+		if resBytes, err = json.Marshal(&sailorRes); err != nil {
 			return err
 		}
 

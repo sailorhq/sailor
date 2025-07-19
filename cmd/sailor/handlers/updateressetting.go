@@ -72,7 +72,7 @@ func (sc *SailorCore) UpdateResourceSetting(ctx *fasthttp.RequestCtx) {
 
 		sailorRes.Setting = resource.Setting
 
-		if resBytes, err = json.Marshal(&resource); err != nil {
+		if resBytes, err = json.Marshal(&sailorRes); err != nil {
 			return err
 		}
 

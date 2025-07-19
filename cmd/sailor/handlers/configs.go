@@ -129,7 +129,7 @@ func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
 	// and then form a single error at one time
 	for key := range mainMap {
 		keyPath := fmt.Sprintf("%s.%s", parent, key)
-		fmt.Println("checking key: ", keyPath)
+		// TODO :: do zap logging
 		if _, ok := subMap[key]; !ok {
 			return fmt.Errorf("rule for %s not present in schema", keyPath)
 		} else if nestedMap, ok := mainMap[key].(map[string]any); ok {
