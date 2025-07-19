@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -85,6 +86,29 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	differ := diffmod.New()
 
 	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
+		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
+		resBytes := resourceBucket.Get([]byte(resourceKey))
+		if resBytes == nil {
+			return fmt.Errorf("%s resource not created", resourceKey)
+		}
+
+		var resource SailorResource
+		if err := json.Unmarshal(resBytes, &resource); err != nil {
+			return err
+		}
+
+		// if strict schema validation is enabled then we check it!
+		if resource.Setting.Schema.Strict {
+			if err := hasRuleForAllKeys(deployment.Data, resource.Schema, "$root"); err != nil {
+				return err
+			}
+			if errs := validateWithRules(deployment.Data, resource.Schema); len(errs) > 0 {
+				// TODO :: we need to define a proper error struct with the validation
+				// `errs` as []string!
+				return errors.New(strings.Join(errs, ","))
+			}
+		}
+
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
 		if deploymentBucket == nil {
 			return errors.New("deployment not available, was the resource created?")
