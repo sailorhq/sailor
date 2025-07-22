@@ -28,22 +28,22 @@ func main() {
 	// r.PUT("/api/v1/resource/{namespace}/{app}", core.CreateResourceHandler) // PUT
 	// mux.HandleFunc("/api/v1/resource/all", sh.SailorStateHandler)               // GET
 
+	// CORE
+
+	// PROJECT
 	r.PUT("/api/v1/project/{namespace}/{app}", core.CreateProjectHandler)
 
-	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}", core.CreateResourceHandler) // PUT -- this is for config and secrets which doesn't require resource name
-
+	// RESOURCE
+	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}", core.CreateResourceHandler)        // PUT -- this is for config and secrets which doesn't require resource name
 	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}", core.CreateResourceHandler) // PUT -- this is for misc resource
 
 	r.GET("/api/v1/resource/{namespace}/{app}/{kind}", core.GetResourceHandler)
-
 	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/{name}", core.GetResourceHandler)
 
-	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/deployment", core.CreateDeploymentHandler) // PUT
-
+	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/deployment", core.CreateDeploymentHandler)        // PUT
 	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}/deployment", core.CreateDeploymentHandler) // PUT
 
-	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/deploy", core.DeployResourceHandler) // POST
-
+	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/deploy", core.DeployResourceHandler)        // POST
 	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/{name}/deploy", core.DeployResourceHandler) // POST
 
 	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/setting", core.UpdateResourceSetting)

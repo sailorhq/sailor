@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ type BackupDetails struct {
 	SecretKey string `json:"secret_key"`
 }
 
-func (sc *SailorCore) BackupHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) BackupHandler(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	var backupDetails BackupDetails
 	if err := json.NewDecoder(r.Body).Decode(&backupDetails); err != nil {
@@ -23,7 +23,7 @@ func (sc *SailorCore) BackupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
+	err := c.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		backupBucket, err := tx.CreateBucketIfNotExists([]byte(BUCKET_BACKUP))
 		if err != nil {
 			return err

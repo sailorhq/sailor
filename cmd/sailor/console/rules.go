@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sc *SailorCore) RuleHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) RuleHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -16,7 +16,7 @@ func (sc *SailorCore) RuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 
-	params, err := sc.extractSailorParams(r)
+	params, err := c.extractSailorParams(r)
 	if err != nil {
 		// TODO: log here!
 		enc.Encode(ResponseMessage{Message: err.Error()})
@@ -24,7 +24,7 @@ func (sc *SailorCore) RuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := sc.getDBConn(params)
+	db, err := c.getDBConn(params)
 	if err != nil {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		w.WriteHeader(http.StatusInternalServerError)

@@ -8,4 +8,4 @@ docs/
 firebase.json
 
 # Console Build (for embedding in binary)
-cmd/sailor/console
+cmd/sailor/ui

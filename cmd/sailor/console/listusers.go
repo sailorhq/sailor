@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -7,11 +7,11 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sc *SailorCore) ListUserHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) ListUserHandler(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
 	// TODO :: here we need to check it the current user role is admin and then give out the list
-	db := sc.dbconns[BUCKET_ADMIN]
+	db := c.dbconns[BUCKET_ADMIN]
 
 	var users []User
 	db.View(func(tx *bolt.Tx) error {

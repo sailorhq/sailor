@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -17,19 +17,19 @@ type AuditEvent struct {
 	Details   any       `json:"details"`
 }
 
-func (sh *SailorCore) AuditHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) AuditHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		sh.getAuditEvents(w)
+		c.getAuditEvents(w)
 	case http.MethodPost:
-		sh.addAuditEvent(w, r)
+		c.addAuditEvent(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
-func (sh *SailorCore) getAuditEvents(w http.ResponseWriter) {
-	db := sh.dbconns[BUCKET_AUDIT]
+func (c *Console) getAuditEvents(w http.ResponseWriter) {
+	db := c.dbconns[BUCKET_AUDIT]
 
 	var events = []AuditEvent{}
 	db.View(func(tx *bolt.Tx) error {
@@ -47,8 +47,8 @@ func (sh *SailorCore) getAuditEvents(w http.ResponseWriter) {
 	enc.Encode(events)
 }
 
-func (sh *SailorCore) addAuditEvent(w http.ResponseWriter, r *http.Request) {
-	db := sh.dbconns[BUCKET_AUDIT]
+func (c *Console) addAuditEvent(w http.ResponseWriter, r *http.Request) {
+	db := c.dbconns[BUCKET_AUDIT]
 
 	var ae AuditEvent
 	json.NewDecoder(r.Body).Decode(&ae)

@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sh *SailorCore) EditUserHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) EditUserHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -17,7 +17,7 @@ func (sh *SailorCore) EditUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 
-	db := sh.dbconns[BUCKET_ADMIN]
+	db := c.dbconns[BUCKET_ADMIN]
 
 	err := db.Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))

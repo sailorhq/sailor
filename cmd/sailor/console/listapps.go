@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sc *SailorCore) ListAppsHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) ListAppsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -35,7 +35,7 @@ func (sc *SailorCore) ListAppsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := sc.dbconns[BUCKET_ADMIN]
+	db := c.dbconns[BUCKET_ADMIN]
 
 	var user DBUser
 	var adminBackupState types.AdminBackupState

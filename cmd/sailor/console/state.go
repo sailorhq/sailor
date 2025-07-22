@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sh *SailorCore) SailorStateHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) SailorStateHandler(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
 	ak := strings.TrimSpace(r.Header.Get("x-access-key"))
@@ -21,14 +21,14 @@ func (sh *SailorCore) SailorStateHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	params, err := sh.extractSailorParams(r)
+	params, err := c.extractSailorParams(r)
 	if err != nil {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	db, err := sh.getDBConn(params)
+	db, err := c.getDBConn(params)
 	if err != nil {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		w.WriteHeader(http.StatusInternalServerError)
@@ -65,8 +65,8 @@ func (sh *SailorCore) SailorStateHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	builtConfig := buildResource(db, "", KEY_DEPLOYED_VERSION)
-	state.Config = []byte(builtConfig)
+	// builtConfig := buildResource(db, "", KEY_DEPLOYED_VERSION)
+	// state.Config = []byte(builtConfig)
 
 	enc.Encode(&state)
 }

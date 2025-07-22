@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ type SecretRequest struct {
 	DeletedSecrets []types.Secret `json:"deleted_secrets"`
 }
 
-func (sc *SailorCore) AddSecretHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) AddSecretHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -37,14 +37,14 @@ func (sc *SailorCore) AddSecretHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params, err := sc.extractSailorParams(r)
+	params, err := c.extractSailorParams(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
 
-	if db, ok := sc.dbconns[params.ProjectKey]; ok {
+	if db, ok := c.dbconns[params.ProjectKey]; ok {
 		err := db.Update(func(tx *bolt.Tx) error {
 			secretsBucket := tx.Bucket([]byte(BUCKET_SECRETS))
 			metaBucket := tx.Bucket([]byte(BUCKET_META))

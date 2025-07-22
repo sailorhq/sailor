@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ type AuthResponse struct {
 	Token       string   `json:"token"`
 }
 
-func (sc *SailorCore) AuthHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -26,7 +26,7 @@ func (sc *SailorCore) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("x-username")
 	password := r.Header.Get("x-password")
 
-	db := sc.dbconns[BUCKET_ADMIN]
+	db := c.dbconns[BUCKET_ADMIN]
 
 	var user DBUser
 	err := db.View(func(tx *bolt.Tx) error {

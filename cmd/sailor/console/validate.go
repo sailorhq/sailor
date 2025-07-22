@@ -1,4 +1,4 @@
-package handlers
+package console
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sc *SailorCore) ValidateHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Console) ValidateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -39,7 +39,7 @@ func (sc *SailorCore) ValidateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := sc.dbconns[BUCKET_ADMIN]
+	db := c.dbconns[BUCKET_ADMIN]
 
 	enc := json.NewEncoder(w)
 
