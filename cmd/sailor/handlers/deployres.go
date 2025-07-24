@@ -62,6 +62,12 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	projectKey := fmt.Sprintf("%s-%s", ns, app)
+	if _, ok := sc.dbconns[projectKey]; !ok {
+		ctx.SetStatusCode(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: "sailor project was not created"})
+		return
+	}
+
 	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
 		var resourceKey = kind
 		if kind == KindMisc {
