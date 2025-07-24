@@ -117,10 +117,13 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					kubeConfigMap := sc.kube.CoreV1().ConfigMaps(ns)
 					var err error
 
-					cmRes, _ := kubeConfigMap.Get(context.TODO(), resourceName, metav1.GetOptions{})
-					if cmRes == nil {
+					_, err = kubeConfigMap.Get(context.TODO(), resourceName, metav1.GetOptions{})
+					// this means that kubernetes cannot get any resource
+					if err != nil {
+						sc.Log.Info("creating a new k8s config resource", zap.String("name", resourceName))
 						_, err = kubeConfigMap.Create(context.TODO(), cm, metav1.CreateOptions{})
 					} else {
+						sc.Log.Info("updating a new k8s config resource", zap.String("name", resourceName))
 						_, err = kubeConfigMap.Update(ctx, cm, metav1.UpdateOptions{})
 					}
 
@@ -131,7 +134,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 							zap.String("resource", resourceKey),
 							zap.Error(err),
 						)
-						return tx.Rollback()
+						return err
 					}
 				} else {
 					sc.Log.Error("k8s client uninitialized, cannot deploy config to k8s",
@@ -141,23 +144,28 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					)
 				}
 			case KindSecret:
+				resStr := buildResource(sc.dbconns[projectKey], resourceKey, versionKey)
+				var resMap map[string]string
+				if err := json.Unmarshal([]byte(resStr), &resMap); err != nil {
+					return err
+				}
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: ns,
 					},
-					StringData: map[string]string{
-						// TODO :: !!!
-					},
+					StringData: resMap,
 				}
 
 				if sc.kube != nil {
 					kubeSecrets := sc.kube.CoreV1().Secrets(ns)
 
-					secRes, _ := kubeSecrets.Get(context.TODO(), resourceName, metav1.GetOptions{})
-					if secRes == nil {
+					_, err := kubeSecrets.Get(context.TODO(), resourceName, metav1.GetOptions{})
+					if err != nil {
+						sc.Log.Info("creating a new k8s secret resource", zap.String("name", resourceName))
 						_, err = kubeSecrets.Create(context.TODO(), secret, metav1.CreateOptions{})
 					} else {
+						sc.Log.Info("updating a new k8s secret resource", zap.String("name", resourceName))
 						_, err = kubeSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{})
 					}
 					if err != nil {
