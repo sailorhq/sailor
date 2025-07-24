@@ -65,11 +65,11 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
-		if err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(generateAccessKey("sailor", 16))); err != nil {
+		if err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(generateUniqueKey("sailor", 16))); err != nil {
 			return err
 		}
 
-		return metaBucket.Put([]byte(KEY_SECRET_KEY), []byte(generateAccessKey("secret", 32)))
+		return metaBucket.Put([]byte(KEY_SECRET_KEY), []byte(generateUniqueKey("secret", 32)))
 	})
 
 	adminDB := sc.dbconns[BUCKET_ADMIN]
@@ -92,7 +92,7 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-func generateAccessKey(prefix string, length int) string {
+func generateUniqueKey(prefix string, length int) string {
 
 	b := make([]byte, length)
 	for i := range b {
