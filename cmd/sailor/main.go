@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/codekidx/sailor/cmd/sailor/console"
 	"github.com/codekidx/sailor/cmd/sailor/handlers"
 
 	"github.com/fasthttp/router"
@@ -18,6 +19,10 @@ func main() {
 	}
 
 	r := router.New()
+	apiV1 := r.Group("/api/v1")
+	consoleV1 := r.Group("/console/v1")
+
+	console.Initialize(consoleV1)
 
 	// --- SRD - Sailor Resource Definition ---
 	// KIND OF RESOURCE:
@@ -31,33 +36,33 @@ func main() {
 	// CORE
 
 	// PROJECT
-	r.PUT("/api/v1/project/{namespace}/{app}", core.CreateProjectHandler)
+	apiV1.PUT("/project/{namespace}/{app}", core.CreateProjectHandler)
 
 	// RESOURCE
-	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}", core.CreateResourceHandler)        // PUT -- this is for config and secrets which doesn't require resource name
-	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}", core.CreateResourceHandler) // PUT -- this is for misc resource
+	apiV1.PUT("/resource/{namespace}/{app}/{kind}", core.CreateResourceHandler)        // PUT -- this is for config and secrets which doesn't require resource name
+	apiV1.PUT("/resource/{namespace}/{app}/{kind}/{name}", core.CreateResourceHandler) // PUT -- this is for misc resource
 
-	r.GET("/api/v1/resource/{namespace}/{app}/{kind}", core.GetResourceHandler)
-	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/{name}", core.GetResourceHandler)
+	apiV1.GET("/resource/{namespace}/{app}/{kind}", core.GetResourceHandler)
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}", core.GetResourceHandler)
 
-	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/deployment", core.CreateDeploymentHandler)        // PUT
-	r.PUT("/api/v1/resource/{namespace}/{app}/{kind}/{name}/deployment", core.CreateDeploymentHandler) // PUT
+	apiV1.PUT("/resource/{namespace}/{app}/{kind}/deployment", core.CreateDeploymentHandler)        // PUT
+	apiV1.PUT("/resource/{namespace}/{app}/{kind}/{name}/deployment", core.CreateDeploymentHandler) // PUT
 
-	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/deploy", core.DeployResourceHandler)        // POST
-	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/{name}/deploy", core.DeployResourceHandler) // POST
+	apiV1.POST("/resource/{namespace}/{app}/{kind}/deploy", core.DeployResourceHandler)        // POST
+	apiV1.POST("/resource/{namespace}/{app}/{kind}/{name}/deploy", core.DeployResourceHandler) // POST
 
-	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/setting", core.UpdateResourceSetting)
-	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/{name}/setting", core.UpdateResourceSetting)
+	apiV1.POST("/resource/{namespace}/{app}/{kind}/setting", core.UpdateResourceSetting)
+	apiV1.POST("/resource/{namespace}/{app}/{kind}/{name}/setting", core.UpdateResourceSetting)
 
-	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/setting", core.GetResourceSetting)
-	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/{name}/setting", core.GetResourceSetting)
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/setting", core.GetResourceSetting)
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}/setting", core.GetResourceSetting)
 
 	// SCHEMA
-	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/schema", core.UpdateResourceSchemaHandler)
-	r.POST("/api/v1/resource/{namespace}/{app}/{kind}/{name}/schema", core.UpdateResourceSchemaHandler)
+	apiV1.POST("/resource/{namespace}/{app}/{kind}/schema", core.UpdateResourceSchemaHandler)
+	apiV1.POST("/resource/{namespace}/{app}/{kind}/{name}/schema", core.UpdateResourceSchemaHandler)
 
-	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/schema", core.GetResourceSchemaHandler)
-	r.GET("/api/v1/resource/{namespace}/{app}/{kind}/{name}/schema", core.GetResourceSchemaHandler)
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/schema", core.GetResourceSchemaHandler)
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}/schema", core.GetResourceSchemaHandler)
 
 	// mux.HandleFunc("/api/v1/resource/{kind}/{name}", sh.SailorStateHandler)         // GET
 	// mux.HandleFunc("/api/v1/resource/{kind}/{name}/version", sh.SailorStateHandler) // GET
