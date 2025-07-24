@@ -119,7 +119,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					}
 
 					if err != nil {
-						sc.log.Error("error while deploying configmap",
+						sc.Log.Error("error while deploying configmap",
 							zap.String("ns", ns),
 							zap.String("app", app),
 							zap.String("resource", resourceKey),
@@ -128,7 +128,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						return tx.Rollback()
 					}
 				} else {
-					sc.log.Error("k8s client uninitialized, cannot deploy config to k8s",
+					sc.Log.Error("k8s client uninitialized, cannot deploy config to k8s",
 						zap.String("ns", ns),
 						zap.String("app", app),
 						zap.String("resource", resourceKey),
@@ -155,7 +155,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						_, err = kubeSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{})
 					}
 					if err != nil {
-						sc.log.Error("error while deploying configmap",
+						sc.Log.Error("error while deploying configmap",
 							zap.String("ns", ns),
 							zap.String("app", app),
 							zap.String("resource", resourceKey),
@@ -164,7 +164,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						return tx.Rollback()
 					}
 				} else {
-					sc.log.Error("k8s client uninitialized, cannot deploy config to k8s",
+					sc.Log.Error("k8s client uninitialized, cannot deploy config to k8s",
 						zap.String("ns", ns),
 						zap.String("app", app),
 						zap.String("resource", resourceKey),

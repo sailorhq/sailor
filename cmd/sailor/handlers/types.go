@@ -3,10 +3,9 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
+	"time"
 
 	bolt "go.etcd.io/bbolt"
 
@@ -14,6 +13,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/codekidx/sailor/internal/types"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
@@ -24,36 +24,66 @@ import (
 type ResourceKind string
 
 const (
-	// buckets used by sailor
-	BUCKET_ADMIN       = "_admin"
-	BUCKET_META        = "_meta"
-	BUCKET_AUDIT       = "_audit"
-	BUCKET_USERS       = "users"
-	BUCKET_PROJECTS    = "projects"
+	// -- ADMIN --
+	BUCKET_ADMIN = "_admin"
+
+	// BUCKET_PROJECTS will have list of all projects inside a
+	// sailor instance, this bucket lives inside [BUCKET_ADMIN]
+	BUCKET_PROJECTS = "projects"
+
+	// BUCKET_USERS is used to store all the users and their
+	// roles and permissions, this bucket lives inside [BUCKET_ADMIN]
+	BUCKET_USERS = "users"
+
+	// -- PROJECT --
+	// BUCKET_META contains meta information about a project.
+	// Each project will have a meta bucket and it will contain:
+	//
+	// 1. access key
+	// 2. secret key
+	// 3. current deployed version of all resources
+	BUCKET_META = "_meta"
+
+	// KEY_ACCESS_KEY has the access key for a sailor project
+	// this key lives inside [BUCKET_META]
+	KEY_ACCESS_KEY = "access_key"
+
+	// KEY_SECRET_KEY has the secret key for a sailor project
+	// which is mainly used to encrypt and decrypt a secret
+	// resource
+	KEY_SECRET_KEY = "secret_key"
+
+	// BUCKET_RESOURCE contains all the resources present in a project
+	BUCKET_RESOURCE = "resource"
+
+	// BUCKET_DEPLOYMENT contains buckets for each resource
+	// 		- config
+	// 		- secret
+	// 		- {key}-misc
+	// and each sub-bucket will contain list of deployments per resource
+	BUCKET_DEPLOYMENT = "deployments"
+
+	// --- AUDIT ---
+	// BUCKET_AUDIT contains audit trail of each action taken
+	// by an user
+	BUCKET_AUDIT = "_audit"
+
+	// BUCKET_AUDIT_TRAIL is a bucket inside the AUDIT sail
 	BUCKET_AUDIT_TRAIL = "audit_trail"
 
-	// buckets used by sailor apps
-	BUCKET_RESOURCE   = "resource"
-	BUCKET_CONFIGS    = "configs"
-	BUCKET_SECRETS    = "secrets"
-	BUCKET_MISC       = "misc"
-	BUCKET_DEPLOYMENT = "deployments"
-	BUCKET_BACKUP     = "backup"
+	BUCKET_BACKUP = "backup"
 
-	// kind of resource in sailor
-	KindConfig = "config"
-	KindSecret = "secret"
-	KindMisc   = "misc"
-
-	// keys used by sailor
-	KEY_ACCESS_KEY       = "access_key"
-	KEY_SECRET_KEY       = "secret_key"
-	KEY_DEPLOYED_VERSION = "deploy_ver"
-	KEY_RULES            = "rules"
-	KEY_S3               = "s3"
+	KEY_S3 = "s3"
 
 	// db extension used by sailor
 	DB_EXT = "sail"
+)
+
+// -- RESOURCE TYPES INSIDE SAILOR --
+const (
+	KindConfig = "config"
+	KindSecret = "secret"
+	KindMisc   = "misc"
 )
 
 // DBUser is the user object stored in the database
@@ -82,15 +112,33 @@ type SailorCore struct {
 
 	kube *kubernetes.Clientset
 
-	log *zap.Logger
+	Log *zap.Logger
+}
+
+func initializeLogger() *zap.Logger {
+	var logger *zap.Logger
+	var productionLogging = os.Getenv("SAILOR_PROD_LOGGING")
+	if productionLogging == "" {
+		logCfg := zap.NewDevelopmentConfig()
+		logCfg.EncoderConfig.EncodeTime = func(t time.Time, pae zapcore.PrimitiveArrayEncoder) {
+			pae.AppendString(t.Format(time.UnixDate))
+		}
+		logCfg.DisableStacktrace = true
+		logCfg.DisableCaller = true
+
+		logger, _ = logCfg.Build()
+	} else {
+		logger, _ = zap.NewProduction()
+	}
+
+	return logger
 }
 
 func NewSailorCore() *SailorCore {
-	logger, _ := zap.NewProduction()
 	sc := SailorCore{
 		dbconns:  make(map[string]*bolt.DB),
 		versions: make(map[string]string),
-		log:      logger,
+		Log:      initializeLogger(),
 	}
 
 	if err := sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
@@ -118,18 +166,20 @@ func NewSailorCore() *SailorCore {
 
 			sc.dbconns[projectKey] = db
 
+			sc.Log.Info("loaded project...", zap.String("name", projectKey))
+
 			// if err := backup.BackupState(projectKey, db); err != nil {
 			// 	return err
 			// }
 
 			// fmt.Println("uploaded state to s3 for: ", projectKey)
 
-			db.View(func(tx *bolt.Tx) error {
-				metaBucket := tx.Bucket([]byte(BUCKET_META))
-				version := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
-				sc.versions[projectKey] = string(version)
-				return nil
-			})
+			// db.View(func(tx *bolt.Tx) error {
+			// 	metaBucket := tx.Bucket([]byte(BUCKET_META))
+			// 	version := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
+			// 	sc.versions[projectKey] = string(version)
+			// 	return nil
+			// })
 
 			return nil
 		})
@@ -150,13 +200,14 @@ func NewSailorCore() *SailorCore {
 	if err == nil {
 		clientset, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			logger.Warn("error while initializing kubernetes client", zap.String("error", err.Error()))
+			sc.Log.Warn("error while initializing kubernetes client", zap.String("error", err.Error()))
 			return nil
 		}
 
 		sc.kube = clientset
 	} else {
-		logger.Warn("cannot get cluster config, is sailor running inside kubernetes?", zap.String("error", err.Error()))
+		sc.Log.Warn("cannot get cluster config, is sailor running inside kubernetes?", zap.String("error", err.Error()))
+		sc.Log.Warn("deploying resources to kubernetes will not work")
 	}
 
 	return &sc
@@ -167,7 +218,7 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 	if f, _ := os.Stat(dbPath); f == nil {
 		db, err := bolt.Open(dbPath, 0600, nil)
 		if err != nil {
-			// TODO :: log error
+			sc.Log.Error(fmt.Sprintf("error during first load %s sail", dbName), zap.Error(err))
 			return nil
 		}
 
@@ -212,64 +263,16 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 	} else {
 		db, err := bolt.Open(dbPath, 0600, nil)
 		if err != nil {
-			// TODO :: log error
+			sc.Log.Error(fmt.Sprintf("error while loading %s sail", dbName), zap.Error(err))
 			return nil
 		}
 
 		sc.dbconns[dbName] = db
 	}
 
+	sc.Log.Info(fmt.Sprintf("initialized %s sail", dbName))
+
 	return nil
-}
-
-// extractSailorParams extracts the sailor params from the request
-// TODO ::it should not ideally give back errors, it should be a function
-// which blindly extracts the params and returns a sailor params object
-func (sc *SailorCore) extractSailorParams(r *http.Request) (*SailorParams, error) {
-	ns := r.URL.Query().Get("ns")
-	app := r.URL.Query().Get("app")
-	deployVer := r.URL.Query().Get("deploy_ver")
-	accessKey := r.URL.Query().Get("key")
-	deploymentDescription := r.URL.Query().Get("d_desc")
-
-	if ns == "" || app == "" {
-		return nil, errors.New("namespace or app is empty")
-	}
-
-	username := r.Header.Get("x-username")
-	password := r.Header.Get("x-password")
-
-	return &SailorParams{
-		ProjectKey:            fmt.Sprintf("%s-%s", ns, app),
-		Ns:                    ns,
-		App:                   app,
-		AccessKey:             accessKey,
-		DeployVersion:         deployVer,
-		Username:              username,
-		Password:              password,
-		DeploymentDescription: deploymentDescription,
-	}, nil
-}
-
-func (sc *SailorCore) getDBConn(params *SailorParams) (*bolt.DB, error) {
-	key := fmt.Sprintf("%s-%s", params.Ns, params.App)
-
-	if conn, ok := sc.dbconns[key]; ok {
-		return conn, nil
-	}
-
-	dbpath := fmt.Sprintf("./configs/%s-%s.%s", params.Ns, params.App, DB_EXT)
-	if f, _ := os.Stat(dbpath); f == nil {
-		return nil, errors.New("app not present in this namespace")
-	}
-
-	db, err := bolt.Open(dbpath, 0600, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	sc.dbconns[key] = db
-	return db, nil
 }
 
 type SailorParams struct {
@@ -291,13 +294,12 @@ type ResponseMessage struct {
 	Message string `json:"message"`
 }
 
-// TODO :: we need to move rules checking to the frontend
+// TODO :: make it a sailor core method
 func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
 	// OPT :: instead of throwing error one by one , we can get all the missing rule keys
 	// and then form a single error at one time
 	for key := range mainMap {
 		keyPath := fmt.Sprintf("%s.%s", parent, key)
-		// TODO :: do zap logging
 		if _, ok := subMap[key]; !ok {
 			return fmt.Errorf("rule for %s not present in schema", keyPath)
 		} else if nestedMap, ok := mainMap[key].(map[string]any); ok {
@@ -309,6 +311,7 @@ func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
 	return nil
 }
 
+// TODO :: make it a sailor core method
 func validateWithRules(data, rules map[string]any) []string {
 	validate := validator.New()
 
@@ -336,32 +339,6 @@ func validateWithRules(data, rules map[string]any) []string {
 	}
 
 	return messages
-}
-
-func (sc *SailorCore) getConfig(w http.ResponseWriter, r *http.Request) {
-	enc := json.NewEncoder(w)
-
-	params, err := sc.extractSailorParams(r)
-	if err != nil {
-		// TODO: log here!
-		enc.Encode(ResponseMessage{Message: err.Error()})
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	db, err := sc.getDBConn(params)
-	if err != nil {
-		enc.Encode(ResponseMessage{Message: err.Error()})
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	configJson := buildResource(db, "", KEY_DEPLOYED_VERSION)
-	var builtConfig map[string]any
-	json.Unmarshal([]byte(configJson), &builtConfig)
-	w.Header().Set("Content-Type", "application/json")
-	enc.Encode(builtConfig)
-
 }
 
 func buildResource(db *bolt.DB, resourceKey, versionKey string) string {
