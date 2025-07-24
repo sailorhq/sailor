@@ -18,9 +18,10 @@ import (
 )
 
 type CreateDeploymentRequest struct {
-	Description string         `json:"desc"`
-	Data        map[string]any `json:"data"`
-	StringData  string         `json:"string_data"`
+	Description string            `json:"desc"`
+	ConfigData  map[string]any    `json:"config_data"`
+	MiscData    string            `json:"misc_data"`
+	SecretData  map[string]string `json:"secret_data"`
 }
 
 func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
@@ -60,21 +61,21 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if kind == KindMisc && deployment.StringData == "" {
+	if deployment.Description == "" {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "description is required to create a deployment"})
+		return
+	}
+
+	if kind == KindMisc && deployment.MiscData == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "cannot create deployment with empty string_data for kind misc"})
 		return
 	}
 
-	if len(deployment.Data) == 0 {
+	if len(deployment.ConfigData) == 0 && len(deployment.SecretData) == 0 {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "cannot create deployment with empty data"})
-		return
-	}
-
-	if deployment.Description == "" {
-		ctx.SetStatusCode(http.StatusBadRequest)
-		enc.Encode(ResponseMessage{Message: "description is required to create a deployment"})
 		return
 	}
 
@@ -103,12 +104,13 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
+		// TODO :: make schema work for secrets as well
 		// if strict schema validation is enabled then we check it!
-		if resource.Setting.Schema.Strict {
-			if err := hasRuleForAllKeys(deployment.Data, resource.Schema, "$root"); err != nil {
+		if resource.Setting.Schema.Strict && kind == KindConfig {
+			if err := hasRuleForAllKeys(deployment.ConfigData, resource.Schema, "$root"); err != nil {
 				return err
 			}
-			if errs := validateWithRules(deployment.Data, resource.Schema); len(errs) > 0 {
+			if errs := validateWithRules(deployment.ConfigData, resource.Schema); len(errs) > 0 {
 				// TODO :: we need to define a proper error struct with the validation
 				// `errs` as []string!
 				return errors.New(strings.Join(errs, ","))
@@ -120,9 +122,15 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			return errors.New("deployment not available, was the resource created?")
 		}
 
-		var resourceData = deployment.StringData
+		var resourceData = deployment.MiscData
 		if kind != KindMisc {
-			b, err := json.Marshal(&deployment.Data)
+			var b []byte
+			switch kind {
+			case KindConfig:
+				b, err = json.Marshal(&deployment.ConfigData)
+			case KindSecret:
+				b, err = json.Marshal(&deployment.SecretData)
+			}
 			if err != nil {
 				return err
 			}
