@@ -2,7 +2,7 @@
 
 # Set the image name and tag
 IMAGE_NAME="sailor"
-TAG="latest"
+TAG="0.0.2"
 
 echo "Building Docker image with embedded Sailor Console..."
 

@@ -22,8 +22,8 @@ bun run build
 # Copy the built files to the console directory for embedding
 echo "Copying built files to console directory..."
 cd ../sailor
-rm -rf cmd/sailor/console
-cp -r admin/dist cmd/sailor/console
+rm -rf cmd/sailor/ui
+cp -r admin/dist cmd/sailor/ui
 
 echo "Build complete! The console is now ready to be embedded."
 echo "Make sure to rebuild the Go application to include the new console files."
