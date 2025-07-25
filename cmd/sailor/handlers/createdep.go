@@ -92,6 +92,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	}
 	differ := diffmod.New()
 
+	var version int = 1
 	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
 		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
 		resBytes := resourceBucket.Get([]byte(resourceKey))
@@ -161,6 +162,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		} else {
 			next, _ := strconv.Atoi(string(ver))
 			next += 1
+			version = next
 
 			versionKey := fmt.Sprintf("%s_version", resourceKey)
 			resourceJSON := buildResource(sc.dbconns[projectKey], resourceKey, versionKey)
@@ -191,6 +193,6 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	enc.Encode(ResponseMessage{Message: "ok"})
-
+	// TODO :: maybe we give proper deployment creation response afterwards..
+	enc.Encode(ResponseMessage{Message: fmt.Sprintf("version %d created", version)})
 }
