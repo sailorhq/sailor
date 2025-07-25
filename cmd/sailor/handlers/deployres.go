@@ -175,7 +175,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 							zap.String("resource", resourceKey),
 							zap.Error(err),
 						)
-						return tx.Rollback()
+						return err
 					}
 				} else {
 					sc.Log.Error("k8s client uninitialized, cannot deploy config to k8s",
