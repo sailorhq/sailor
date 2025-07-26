@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -32,7 +33,7 @@ func (sh *SailorCore) CreateUserHandler(w http.ResponseWriter, r *http.Request) 
 
 		user := DBUser{
 			Username:    r.URL.Query().Get("username"),
-			Password:    r.URL.Query().Get("password"),
+			Password:    sha256.Sum256([]byte(r.URL.Query().Get("password"))),
 			Roles:       []string{r.URL.Query().Get("role")},
 			Permissions: strings.Split(r.URL.Query().Get("permissions"), "|"),
 			AllowedApps: strings.Split(r.URL.Query().Get("allowed_apps"), "|"),

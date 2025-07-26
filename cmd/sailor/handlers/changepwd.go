@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,7 +40,7 @@ func (sc *SailorCore) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 			return fmt.Errorf("User is not an admin")
 		}
 
-		user.Password = password
+		user.Password = sha256.Sum256([]byte(password))
 		adminBytes, err := json.Marshal(user)
 		if err != nil {
 			return err

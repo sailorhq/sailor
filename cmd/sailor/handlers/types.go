@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -115,7 +116,7 @@ const (
 type DBUser struct {
 	Email       string   `json:"email"`
 	Username    string   `json:"username"`
-	Password    string   `json:"password"`
+	Password    [32]byte `json:"password"`
 	Permissions []string `json:"permissions"`
 	Roles       []string `json:"roles"`
 	AllowedApps []string `json:"allowed_apps"`
@@ -263,10 +264,11 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 					return err
 				}
 
+				hashedpwd := sha256.Sum256([]byte("admin"))
 				user := DBUser{
 					Email:       "admin@sailor.com",
 					Username:    "admin",
-					Password:    "admin", // TODO :: hash password
+					Password:    hashedpwd,
 					Permissions: []string{"admin"},
 					Roles:       []string{"admin"},
 				}
@@ -353,9 +355,7 @@ func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
 		if _, ok := subMap[key]; !ok {
 			return fmt.Errorf("rule for %s not present in schema", keyPath)
 		} else if nestedMap, ok := mainMap[key].(map[string]any); ok {
-			return hasRuleForAllKeys(nestedMap,
-				subMap[key].(map[string]any),
-				keyPath)
+			return hasRuleForAllKeys(nestedMap, subMap[key].(map[string]any), keyPath)
 		}
 	}
 	return nil
@@ -365,14 +365,10 @@ func hasRuleForAllKeys(mainMap, subMap map[string]any, parent string) error {
 func validateWithRules(data, rules map[string]any) []string {
 	validate := validator.New()
 
-	fmt.Println("rules: ", rules)
-
 	errMap := validate.ValidateMap(data, rules)
 	if len(errMap) == 0 {
 		return nil
 	}
-
-	fmt.Println("errMap: ", errMap)
 
 	var messages = []string{}
 	for field, verr := range errMap {
