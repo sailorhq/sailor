@@ -23,30 +23,28 @@ type FirstConfig struct {
 func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
-	ns := ctx.UserValue("namespace").(string)
-	app := ctx.UserValue("app").(string)
+	params := extractSailorParams(ctx)
 
-	if ns == "" || app == "" {
+	if params.Ns == "" || params.App == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "namespace or app should not be empty"})
 		return
 	}
 
-	projectKey := fmt.Sprintf("%s-%s", ns, app)
-	if _, ok := sc.dbconns[projectKey]; ok {
+	if _, ok := sc.dbconns[params.ProjectKey]; ok {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: "project already exists"})
 		return
 	}
 
-	db, err := bolt.Open(fmt.Sprintf("./configs/%s.%s", projectKey, DB_EXT), 0600, nil)
+	db, err := bolt.Open(fmt.Sprintf("./configs/%s.%s", params.ProjectKey, DB_EXT), 0600, nil)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
 
-	sc.dbconns[projectKey] = db
+	sc.dbconns[params.ProjectKey] = db
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		var metaBucket *bolt.Bucket
@@ -75,11 +73,11 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 	adminDB := sc.dbconns[BUCKET_ADMIN]
 	adminDB.Update(func(tx *bolt.Tx) error {
 		projectBucket := tx.Bucket([]byte(BUCKET_PROJECTS))
-		projectBytes, err := json.Marshal(Project{Ns: ns, App: app})
+		projectBytes, err := json.Marshal(Project{Ns: params.Ns, App: params.App})
 		if err != nil {
 			return err
 		}
-		return projectBucket.Put([]byte(projectKey), projectBytes)
+		return projectBucket.Put([]byte(params.ProjectKey), projectBytes)
 	})
 
 	if err != nil {
@@ -87,7 +85,7 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	enc.Encode(ResponseMessage{Message: fmt.Sprintf("created namespace: %s | app: %s", ns, app)})
+	enc.Encode(ResponseMessage{Message: fmt.Sprintf("created namespace: %s | app: %s", params.Ns, params.App)})
 }
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

@@ -11,52 +11,42 @@ import (
 func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
-	ns := ctx.UserValue("namespace").(string)
-	app := ctx.UserValue("app").(string)
-	kind := ctx.UserValue("kind").(string)
-	var name string
-	if n, ok := ctx.UserValue("name").(string); ok {
-		name = n
-	}
+	params := extractSailorParams(ctx)
 
-	if ns == "" || app == "" || kind == "" {
+	if params.Ns == "" || params.App == "" || params.Kind == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "namespace or app should not be empty"})
 		return
 	}
 
-	if kind != KindConfig && kind != KindSecret && kind != KindMisc {
+	if !params.Kind.IsOneOf(KindConfig, KindMisc, KindSecret) {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "unknown resource kind"})
 		return
 	}
 
-	if kind == KindMisc && name == "" {
+	if params.Kind.IsMisc() && params.ResourceName == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "missing resource name"})
 		return
 	}
 
-	projectKey := fmt.Sprintf("%s-%s", ns, app)
-	if _, ok := sc.dbconns[projectKey]; !ok {
+	if _, ok := sc.dbconns[params.ProjectKey]; !ok {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: "no such project in sailor"})
 		return
 	}
 
-	var resourceKey = kind
-	if kind == KindMisc {
-		resourceKey = name
-	}
+	resourceKey := params.Kind.ResourceKey(params.ResourceName)
 	versionKey := fmt.Sprintf("%s_version", resourceKey)
 
-	resStr := buildResource(sc.dbconns[projectKey], resourceKey, versionKey)
+	resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
 	if resStr == "" {
 		ctx.SetStatusCode(http.StatusNotFound)
 		return
 	}
 
-	if kind == KindMisc {
+	if params.Kind.IsMisc() {
 		enc.Encode(resStr)
 		return
 	}

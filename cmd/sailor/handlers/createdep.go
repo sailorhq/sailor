@@ -27,34 +27,28 @@ type CreateDeploymentRequest struct {
 func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
-	ns := ctx.UserValue("namespace").(string)
-	app := ctx.UserValue("app").(string)
-	kind := ctx.UserValue("kind").(string)
-	var name string
-	if n, ok := ctx.UserValue("name").(string); ok {
-		name = n
-	}
+	params := extractSailorParams(ctx)
 
-	if ns == "" || app == "" || kind == "" {
+	if params.Ns == "" || params.App == "" || params.Kind == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "namespace or app should not be empty"})
 		return
 	}
 
-	if kind != KindConfig && kind != KindSecret && kind != KindMisc {
+	if params.Kind != KindConfig && params.Kind != KindSecret && params.Kind != KindMisc {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "unknown resource kind"})
 		return
 	}
 
-	if kind == KindMisc && name == "" {
+	if params.Kind == KindMisc && params.ResourceName == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "missing resource name"})
 		return
 	}
 
 	var deployment CreateDeploymentRequest
-	err := json.Unmarshal(ctx.Request.Body(), &deployment)
+	err := json.Unmarshal(params.Body, &deployment)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
@@ -67,7 +61,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if kind == KindMisc && deployment.MiscData == "" {
+	if params.Kind == KindMisc && deployment.MiscData == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "cannot create deployment with empty string_data for kind misc"})
 		return
@@ -79,21 +73,17 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	projectKey := fmt.Sprintf("%s-%s", ns, app)
-	if _, ok := sc.dbconns[projectKey]; !ok {
+	if _, ok := sc.dbconns[params.ProjectKey]; !ok {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: "sailor project was not created"})
 		return
 	}
 
-	var resourceKey = kind
-	if kind == KindMisc {
-		resourceKey = name
-	}
+	resourceKey := params.Kind.ResourceKey(params.ResourceName)
 	differ := diffmod.New()
 
 	var version int = 1
-	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
+	err = sc.dbconns[params.ProjectKey].Update(func(tx *bolt.Tx) error {
 		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
 		resBytes := resourceBucket.Get([]byte(resourceKey))
 		if resBytes == nil {
@@ -107,7 +97,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 
 		// TODO :: make schema work for secrets as well
 		// if strict schema validation is enabled then we check it!
-		if resource.Setting.Schema.Strict && kind == KindConfig {
+		if resource.Setting.Schema.Strict && params.Kind.IsConfig() {
 			if err := hasRuleForAllKeys(deployment.ConfigData, resource.Schema, "$root"); err != nil {
 				return err
 			}
@@ -124,9 +114,9 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		}
 
 		var resourceData = deployment.MiscData
-		if kind != KindMisc {
+		if !params.Kind.IsMisc() {
 			var b []byte
-			switch kind {
+			switch params.Kind {
 			case KindConfig:
 				b, err = json.Marshal(&deployment.ConfigData)
 			case KindSecret:
@@ -165,7 +155,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			version = next
 
 			versionKey := fmt.Sprintf("%s_version", resourceKey)
-			resourceJSON := buildResource(sc.dbconns[projectKey], resourceKey, versionKey)
+			resourceJSON := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
 
 			diff := differ.DiffMain(resourceJSON, resourceData, true)
 			patchList := differ.PatchMake(resourceJSON, resourceData, diff)

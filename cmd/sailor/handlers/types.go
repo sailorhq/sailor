@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -17,11 +18,35 @@ import (
 
 	"github.com/codekidx/sailor/internal/types"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/valyala/fasthttp"
 
 	"github.com/go-playground/validator/v10"
 )
 
 type ResourceKind string
+
+func (rk ResourceKind) IsOneOf(kinds ...ResourceKind) bool {
+	return slices.Contains(kinds, rk)
+}
+
+func (rk ResourceKind) IsConfig() bool {
+	return rk == KindConfig
+}
+
+func (rk ResourceKind) IsSecret() bool {
+	return rk == KindSecret
+}
+
+func (rk ResourceKind) IsMisc() bool {
+	return rk == KindMisc
+}
+
+func (rk ResourceKind) ResourceKey(name string) string {
+	if rk == KindMisc {
+		return name
+	}
+	return string(name)
+}
 
 const (
 	// -- ADMIN --
@@ -276,18 +301,43 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 }
 
 type SailorParams struct {
-	ProjectKey    string
-	Ns            string
-	App           string
-	AccessKey     string
-	Body          []byte
-	DeployVersion string
+	ProjectKey string
+	Ns         string
+	App        string
 
-	DeploymentDescription string
+	// ResourceName is used incase of Misc Resource
+	ResourceName string
+	Kind         ResourceKind
+	Body         []byte
 
-	// auth params
-	Username string
-	Password string
+	// authentication
+	Token string
+
+	// authorization
+	AccessKey string
+	SecretKey string
+}
+
+func extractSailorParams(ctx *fasthttp.RequestCtx) SailorParams {
+	sp := SailorParams{
+		Ns:        ctx.UserValue("namespace").(string),
+		App:       ctx.UserValue("app").(string),
+		Kind:      ResourceKind(ctx.UserValue("kind").(string)),
+		Body:      ctx.Request.Body(),
+		Token:     string(ctx.Request.Header.Peek("x-token")),
+		AccessKey: string(ctx.Request.Header.Peek("x-access-key")),
+		SecretKey: string(ctx.Request.Header.Peek("x-secret-key")),
+	}
+
+	sp.ProjectKey = fmt.Sprintf("%s-%s", sp.Ns, sp.App)
+
+	// name produces nil value if the path does not contain name, so
+	// we explicity check if name is castable to string
+	if n, ok := ctx.UserValue("name").(string); ok {
+		sp.ResourceName = n
+	}
+
+	return sp
 }
 
 type ResponseMessage struct {

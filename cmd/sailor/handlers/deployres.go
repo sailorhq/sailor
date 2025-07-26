@@ -21,27 +21,21 @@ type DeployResourceRequest struct {
 func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
-	ns := ctx.UserValue("namespace").(string)
-	app := ctx.UserValue("app").(string)
-	kind := ctx.UserValue("kind").(string)
-	var name string
-	if n, ok := ctx.UserValue("name").(string); ok {
-		name = n
-	}
+	params := extractSailorParams(ctx)
 
-	if ns == "" || app == "" || kind == "" {
+	if params.Ns == "" || params.App == "" || params.Kind == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "namespace or app should not be empty"})
 		return
 	}
 
-	if kind != KindConfig && kind != KindSecret && kind != KindMisc {
+	if !params.Kind.IsOneOf(KindConfig, KindMisc, KindSecret) {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "unknown resource kind"})
 		return
 	}
 
-	if kind == KindMisc && name == "" {
+	if params.Kind.IsMisc() && params.ResourceName == "" {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "missing resource name"})
 		return
@@ -61,18 +55,14 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	projectKey := fmt.Sprintf("%s-%s", ns, app)
-	if _, ok := sc.dbconns[projectKey]; !ok {
+	if _, ok := sc.dbconns[params.ProjectKey]; !ok {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: "sailor project was not created"})
 		return
 	}
 
-	err = sc.dbconns[projectKey].Update(func(tx *bolt.Tx) error {
-		var resourceKey = kind
-		if kind == KindMisc {
-			resourceKey = name
-		}
+	err = sc.dbconns[params.ProjectKey].Update(func(tx *bolt.Tx) error {
+		resourceKey := params.Kind.ResourceKey(params.ResourceName)
 		versionKey := fmt.Sprintf("%s_version", resourceKey)
 
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
@@ -99,22 +89,22 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		// here we will get the resource setting and do k8s deployment
 		// if k8s is marked true .. if k8s deployment fails then we will
 		// rollback all the operations under tx and return error to the user
-		resourceName := fmt.Sprintf("%s-%s", app, resourceKey)
+		resourceName := fmt.Sprintf("%s-%s", params.App, resourceKey)
 		if resource.Setting.Deploy.K8s {
-			switch kind {
+			switch params.Kind {
 			case KindConfig, KindMisc:
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: ns,
+						Namespace: params.Ns,
 					},
 					Data: map[string]string{
-						"_content": buildResource(sc.dbconns[projectKey], resourceKey, versionKey),
+						"_content": buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey),
 					},
 				}
 
 				if sc.kube != nil {
-					kubeConfigMap := sc.kube.CoreV1().ConfigMaps(ns)
+					kubeConfigMap := sc.kube.CoreV1().ConfigMaps(params.Ns)
 					var err error
 
 					_, err = kubeConfigMap.Get(context.TODO(), resourceName, metav1.GetOptions{})
@@ -129,8 +119,8 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 
 					if err != nil {
 						sc.Log.Error("error while deploying configmap",
-							zap.String("ns", ns),
-							zap.String("app", app),
+							zap.String("ns", params.Ns),
+							zap.String("app", params.App),
 							zap.String("resource", resourceKey),
 							zap.Error(err),
 						)
@@ -138,13 +128,13 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					}
 				} else {
 					sc.Log.Error("k8s client uninitialized, cannot deploy config to k8s",
-						zap.String("ns", ns),
-						zap.String("app", app),
+						zap.String("ns", params.Ns),
+						zap.String("app", params.App),
 						zap.String("resource", resourceKey),
 					)
 				}
 			case KindSecret:
-				resStr := buildResource(sc.dbconns[projectKey], resourceKey, versionKey)
+				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
 				var resMap map[string]string
 				if err := json.Unmarshal([]byte(resStr), &resMap); err != nil {
 					return err
@@ -152,13 +142,13 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: ns,
+						Namespace: params.Ns,
 					},
 					StringData: resMap,
 				}
 
 				if sc.kube != nil {
-					kubeSecrets := sc.kube.CoreV1().Secrets(ns)
+					kubeSecrets := sc.kube.CoreV1().Secrets(params.Ns)
 
 					_, err := kubeSecrets.Get(context.TODO(), resourceName, metav1.GetOptions{})
 					if err != nil {
@@ -170,8 +160,8 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					}
 					if err != nil {
 						sc.Log.Error("error while deploying configmap",
-							zap.String("ns", ns),
-							zap.String("app", app),
+							zap.String("ns", params.Ns),
+							zap.String("app", params.App),
 							zap.String("resource", resourceKey),
 							zap.Error(err),
 						)
@@ -179,8 +169,8 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					}
 				} else {
 					sc.Log.Error("k8s client uninitialized, cannot deploy config to k8s",
-						zap.String("ns", ns),
-						zap.String("app", app),
+						zap.String("ns", params.Ns),
+						zap.String("app", params.App),
 						zap.String("resource", resourceKey),
 					)
 				}
