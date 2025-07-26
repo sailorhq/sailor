@@ -264,11 +264,10 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 					return err
 				}
 
-				hashedpwd := sha256.Sum256([]byte("admin"))
 				user := DBUser{
 					Email:       "admin@sailor.com",
 					Username:    "admin",
-					Password:    hashedpwd,
+					Password:    sha256.Sum256([]byte("admin")),
 					Permissions: []string{"admin"},
 					Roles:       []string{"admin"},
 				}
