@@ -24,7 +24,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
 	var ss SailorSetting
-	if err := json.Unmarshal(ctx.Response.Body(), &ss); err != nil {
+	if err := json.Unmarshal(ctx.Request.Body(), &ss); err != nil {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
