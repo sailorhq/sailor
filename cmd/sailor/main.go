@@ -36,6 +36,9 @@ func main() {
 	// this block contains APIs which is responsible of core working of sailor
 	// like obtaining a sailor token or providing the access key and secret key
 	// to an authorized party!
+	apiV1.POST("/setting", core.SailorSettingHandler)
+	apiV1.POST("/auth", core.AuthHandler)
+	apiV1.POST("/auth/callback", core.AuthCallbackHandler)
 
 	// PROJECT
 	//

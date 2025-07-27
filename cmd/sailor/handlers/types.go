@@ -61,6 +61,14 @@ const (
 	// roles and permissions, this bucket lives inside [BUCKET_ADMIN]
 	BUCKET_USERS = "users"
 
+	// BUCKET_SETTING is collection of sailor wide settings this
+	// buckect lives inside [BUCKET_ADMIN]
+	BUCKET_SETTING = "settings"
+
+	// KEY_SETTING is used to save sailor wide settings this
+	// key lives inside [BUCKET_ADMIN]
+	KEY_SETTING = "settings"
+
 	// -- PROJECT --
 	// BUCKET_META contains meta information about a project.
 	// Each project will have a meta bucket and it will contain:
@@ -255,6 +263,11 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 		case BUCKET_ADMIN:
 			db.Update(func(tx *bolt.Tx) error {
 				_, err := tx.CreateBucketIfNotExists([]byte(BUCKET_BACKUP))
+				if err != nil {
+					return err
+				}
+
+				_, err = tx.CreateBucket([]byte(BUCKET_SETTING))
 				if err != nil {
 					return err
 				}
