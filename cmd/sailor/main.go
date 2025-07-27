@@ -37,7 +37,7 @@ func main() {
 	// like obtaining a sailor token or providing the access key and secret key
 	// to an authorized party!
 	apiV1.POST("/setting", core.SailorSettingHandler)
-	apiV1.POST("/auth", core.AuthHandler)
+	apiV1.GET("/auth", core.AuthHandler)
 	apiV1.POST("/auth/callback", core.AuthCallbackHandler)
 
 	// PROJECT
