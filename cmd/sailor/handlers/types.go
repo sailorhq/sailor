@@ -46,7 +46,7 @@ func (rk ResourceKind) ResourceKey(name string) string {
 	if rk == KindMisc {
 		return name
 	}
-	return string(name)
+	return string(rk)
 }
 
 const (
