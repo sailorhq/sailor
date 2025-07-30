@@ -93,13 +93,14 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		if resource.Setting.Deploy.K8s {
 			switch params.Kind {
 			case KindConfig, KindMisc:
+				contentKey := fmt.Sprintf("_%s", resourceKey)
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: params.Ns,
 					},
 					Data: map[string]string{
-						"_content": buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey),
+						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey),
 					},
 				}
 
@@ -134,17 +135,16 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					)
 				}
 			case KindSecret:
+				contentKey := fmt.Sprintf("_%s", resourceKey)
 				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
-				var resMap map[string]string
-				if err := json.Unmarshal([]byte(resStr), &resMap); err != nil {
-					return err
-				}
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: params.Ns,
 					},
-					StringData: resMap,
+					Data: map[string][]byte{
+						contentKey: []byte(resStr),
+					},
 				}
 
 				if sc.kube != nil {
