@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -17,7 +18,8 @@ type OIDCSetting struct {
 }
 
 type SailorSetting struct {
-	OIDC *OIDCSetting `json:"oidc"`
+	OIDC     *OIDCSetting `json:"oidc"`
+	TokenKey string       `json:"token_key"`
 }
 
 func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
@@ -37,6 +39,12 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	if !slices.Contains(ss.OIDC.Scopes, "email") {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "oidc:scopes must contain email"})
+		return
+	}
+
 	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		b, err := json.Marshal(&ss)
 		if err != nil {
@@ -51,5 +59,14 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	// we update the sailor settings inside our own core memory lookup
+	sc.setting = &ss
+
 	enc.Encode(ResponseMessage{Message: "ok"})
+}
+
+func (sc *SailorCore) GetSailorSettingHandler(ctx *fasthttp.RequestCtx) {
+	enc := json.NewEncoder(ctx)
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	enc.Encode(sc.setting)
 }

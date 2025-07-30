@@ -4,39 +4,49 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
 
+	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sh *SailorCore) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+func (sc *SailorCore) CreateUserHandler(ctx *fasthttp.RequestCtx) {
+	enc := json.NewEncoder(ctx)
+
+	db := sc.dbconns[BUCKET_ADMIN]
+
+	var user User
+	if err := json.Unmarshal(ctx.Request.Body(), &user); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "input format not accepted"})
 		return
 	}
 
-	enc := json.NewEncoder(w)
+	if user.Email == "" {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "email is required"})
+		return
+	}
 
-	db := sh.dbconns[BUCKET_ADMIN]
-
+	var pwd string
 	err := db.Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))
 		if userBucket == nil {
 			return fmt.Errorf("user bucket not found")
 		}
 
-		userBytes := userBucket.Get([]byte(r.URL.Query().Get("username")))
+		userBytes := userBucket.Get([]byte(user.Email))
 		if userBytes != nil {
 			return fmt.Errorf("user already exists")
 		}
 
+		pwd = generateUniqueKey("su", 8)
 		user := DBUser{
-			Username:    r.URL.Query().Get("username"),
-			Password:    sha256.Sum256([]byte(r.URL.Query().Get("password"))),
-			Roles:       []string{r.URL.Query().Get("role")},
-			Permissions: strings.Split(r.URL.Query().Get("permissions"), "|"),
-			AllowedApps: strings.Split(r.URL.Query().Get("allowed_apps"), "|"),
+			Email:       user.Email,
+			Username:    user.Email,
+			Password:    sha256.Sum256([]byte(pwd)), // su- prefix stands for sailor user
+			Roles:       user.Roles,
+			Permissions: user.Permissions,
+			AllowedApps: user.AllowedApps,
 		}
 
 		userBytes, err := json.Marshal(user)
@@ -44,14 +54,17 @@ func (sh *SailorCore) CreateUserHandler(w http.ResponseWriter, r *http.Request) 
 			return err
 		}
 
-		return userBucket.Put([]byte(r.URL.Query().Get("username")), userBytes)
+		return userBucket.Put([]byte(user.Email), userBytes)
 	})
 
 	if err != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.Write([]byte("User created successfully"))
+	enc.Encode(map[string]any{
+		"note": "sailor user password are only generated once, make sure pass is not misplaced.",
+		"pass": pwd,
+	})
 }

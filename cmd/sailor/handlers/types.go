@@ -18,6 +18,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/codekidx/sailor/internal/types"
+	"github.com/golang-jwt/jwt/v5"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/valyala/fasthttp"
 
@@ -128,11 +129,13 @@ type DBUser struct {
 	Permissions []string `json:"permissions"`
 	Roles       []string `json:"roles"`
 	AllowedApps []string `json:"allowed_apps"`
+	Token       string   `json:"token"`
 }
 
 // User is the user object returned to the client
 type User struct {
-	Username    string   `json:"username"`
+	Email       string   `json:"email"`
+	Password    string   `json:"pass"`
 	Permissions []string `json:"permissions"`
 	Roles       []string `json:"roles"`
 	AllowedApps []string `json:"allowed_apps"`
@@ -145,6 +148,8 @@ type SailorCore struct {
 	versions map[string]string
 
 	kube *kubernetes.Clientset
+
+	setting *SailorSetting
 
 	Log *zap.Logger
 }
@@ -176,14 +181,20 @@ func NewSailorCore() *SailorCore {
 	}
 
 	if err := sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
+		sc.Log.Error("error while initializing admin sail", zap.Error(err))
 		return nil
 	}
 
-	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
-		projectsBucket, err := tx.CreateBucketIfNotExists([]byte(BUCKET_PROJECTS))
-		if err != nil {
-			return err
-		}
+	sc.Log.Info("trying to get sailor settings")
+	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
+	if err != nil {
+		// sailor exits here... because tokenkey is required for authentication
+		sc.Log.Fatal("unable to load settings", zap.Error(err))
+	}
+	sc.setting = ss
+
+	err = sc.dbconns[BUCKET_ADMIN].View(func(tx *bolt.Tx) error {
+		projectsBucket := tx.Bucket([]byte(BUCKET_PROJECTS))
 
 		projectsBucket.ForEach(func(k []byte, v []byte) error {
 			var project Project
@@ -221,11 +232,13 @@ func NewSailorCore() *SailorCore {
 	})
 
 	if err != nil {
+		sc.Log.Error("error while loading sails", zap.Error(err))
 		return nil
 	}
 
 	// load audit bucket
 	if err = sc.initInternalDatabase(BUCKET_AUDIT); err != nil {
+		sc.Log.Error("error while initializing audit sail", zap.Error(err))
 		return nil
 	}
 
@@ -267,21 +280,38 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 					return err
 				}
 
-				_, err = tx.CreateBucket([]byte(BUCKET_SETTING))
+				// initialize basic setting, it creates a token key for creating
+				// sailor token
+				settingBucket, err := tx.CreateBucket([]byte(BUCKET_SETTING))
 				if err != nil {
 					return err
 				}
+				setting := SailorSetting{
+					TokenKey: generateUniqueKey("token", 16),
+				}
+				settingb, _ := json.Marshal(&setting)
+				if err := settingBucket.Put([]byte(KEY_SETTING), settingb); err != nil {
+					return err
+				}
+				sc.setting = &setting
 
+				// initialize projects bucket where all the projects will be stored
+				// for listing
+				if _, err := tx.CreateBucket([]byte(BUCKET_PROJECTS)); err != nil {
+					return err
+				}
+
+				// initialize user related things...
 				usersBucket, err := tx.CreateBucket([]byte(BUCKET_USERS))
 				if err != nil {
 					return err
 				}
 
 				user := DBUser{
-					Email:       "admin@sailor.com",
+					Email:       "admin@super.sailor",
 					Username:    "admin",
 					Password:    sha256.Sum256([]byte("admin")),
-					Permissions: []string{"admin"},
+					Permissions: []string{"super:*"},
 					Roles:       []string{"admin"},
 				}
 				json, err := json.Marshal(user)
@@ -289,7 +319,7 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 					return err
 				}
 
-				return usersBucket.Put([]byte("admin"), json)
+				return usersBucket.Put([]byte(user.Email), json)
 			})
 		case BUCKET_AUDIT:
 			db.Update(func(tx *bolt.Tx) error {
@@ -334,16 +364,28 @@ type SailorParams struct {
 
 func extractSailorParams(ctx *fasthttp.RequestCtx) SailorParams {
 	sp := SailorParams{
-		Ns:        ctx.UserValue("namespace").(string),
-		App:       ctx.UserValue("app").(string),
-		Kind:      ResourceKind(ctx.UserValue("kind").(string)),
 		Body:      ctx.Request.Body(),
 		Token:     string(ctx.Request.Header.Peek("x-token")),
 		AccessKey: string(ctx.Request.Header.Peek("x-access-key")),
 		SecretKey: string(ctx.Request.Header.Peek("x-secret-key")),
 	}
 
-	sp.ProjectKey = fmt.Sprintf("%s-%s", sp.Ns, sp.App)
+	if ns, ok := ctx.UserValue("namespace").(string); ok {
+		sp.Ns = ns
+	}
+
+	if app, ok := ctx.UserValue("app").(string); ok {
+		sp.App = app
+	}
+
+	if sp.Ns != "" && sp.App != "" {
+		sp.ProjectKey = fmt.Sprintf("%s-%s", sp.Ns, sp.App)
+	}
+
+	// kind is not available while creating a project
+	if k, ok := ctx.UserValue("kind").(string); ok {
+		sp.Kind = ResourceKind(k)
+	}
 
 	// name produces nil value if the path does not contain name, so
 	// we explicity check if name is castable to string
@@ -429,4 +471,24 @@ func buildResource(db *bolt.DB, resourceKey, versionKey string) string {
 	})
 
 	return configJson
+}
+
+// TODO :: the accesskey here is sailor level, so it should be set by Super Admin!
+func jwtFromClaims(claims jwt.MapClaims, accessKey string) (string, error) {
+	// Create a new token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, getMapClaims(claims))
+	// Sign and get the complete encoded token as a string
+	tokenString, err := token.SignedString([]byte(accessKey))
+	if err != nil {
+		return "", err
+	}
+	return tokenString, nil
+}
+
+func getMapClaims(fromClaims map[string]any) jwt.MapClaims {
+	mc := jwt.MapClaims{}
+	for k, v := range fromClaims {
+		mc[k] = v
+	}
+	return mc
 }

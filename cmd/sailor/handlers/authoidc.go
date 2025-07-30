@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
-func (sc *SailorCore) AuthHandler(ctx *fasthttp.RequestCtx) {
+func (sc *SailorCore) AuthOIDCHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
 	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
@@ -36,6 +36,7 @@ func (sc *SailorCore) AuthHandler(ctx *fasthttp.RequestCtx) {
 		Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
 	}
 
+	// TODO :: think about the state which should be passed as part of OIDC request
 	ctx.Redirect(oauth2Config.AuthCodeURL("state-ash"), http.StatusFound)
 }
 
