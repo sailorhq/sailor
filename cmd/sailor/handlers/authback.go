@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/coreos/go-oidc"
 	"github.com/valyala/fasthttp"
@@ -87,6 +88,7 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	var sailorToken string
 	err = sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))
 		if userBucket == nil {
@@ -114,24 +116,25 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 			claims["permissions"] = user.Permissions
 			claims["allowed_apps"] = user.AllowedApps
 
-			token, err := jwtFromClaims(getMapClaims(claims), sc.setting.TokenKey)
+			var err error
+			sailorToken, err = jwtFromClaims(getMapClaims(claims), sc.setting.TokenKey)
 			if err != nil {
 				return errors.New("error while generating token")
 			}
-			user.Token = token
+			user.Token = sailorToken
 		} else {
-			token, err := jwtFromClaims(getMapClaims(claims), sc.setting.TokenKey)
+			sailorToken, err = jwtFromClaims(getMapClaims(claims), sc.setting.TokenKey)
 			if err != nil {
 				return errors.New("error while generating token")
 			}
 			user = DBUser{
 				Email:    email,
 				Username: email,
-				Token:    token,
+				Token:    sailorToken,
 			}
 		}
 
-		userBytes, err := json.Marshal(user)
+		userBytes, err = json.Marshal(user)
 		if err != nil {
 			return err
 		}
@@ -144,5 +147,21 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	// set secure cookie for frontend to take charge
+	cookie := fasthttp.AcquireCookie()
+	defer fasthttp.ReleaseCookie(cookie)
+
+	cookie.SetKey("__sailor_token")
+	cookie.SetValue(sailorToken)
+	cookie.SetSecure(true)
+	cookie.SetHTTPOnly(true)
+	cookie.SetPath("/")
+	cookie.SetDomain(string(ctx.Host()))
+	cookie.SetMaxAge(int(time.Until(idToken.Expiry)))
+	cookie.SetSameSite(fasthttp.CookieSameSiteLaxMode)
+
+	ctx.Response.Header.SetCookie(cookie)
+
+	// TODO :: we will redirect this to the console page
 	enc.Encode(ResponseMessage{Message: "ok"})
 }
