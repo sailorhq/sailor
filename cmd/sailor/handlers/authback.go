@@ -22,6 +22,12 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	if ss.OIDC == nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		enc.Encode(ResponseMessage{Message: "oidc sailor settings not present"})
+		return
+	}
+
 	oidcConfig := &oidc.Config{
 		ClientID: ss.OIDC.ClientID,
 	}

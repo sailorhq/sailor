@@ -21,6 +21,12 @@ func (sc *SailorCore) AuthOIDCHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	if ss.OIDC == nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		enc.Encode(ResponseMessage{Message: "oidc sailor settings not present"})
+		return
+	}
+
 	provider, err := oidc.NewProvider(ctx, ss.OIDC.IssuerURL)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)

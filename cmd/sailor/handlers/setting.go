@@ -18,6 +18,8 @@ type OIDCSetting struct {
 }
 
 type SailorSetting struct {
+	OIDC        *OIDCSetting `json:"oidc"`
+	TokenKey    string       `json:"token_key"`
 	OIDC     *OIDCSetting `json:"oidc"`
 	TokenKey string       `json:"token_key"`
 }
@@ -32,7 +34,12 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if ss.OIDC == nil || ss.OIDC.ClientID == "" ||
+	if ss.OIDC == nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		enc.Encode(ResponseMessage{Message: "oidc sailor settings not present"})
+	}
+
+	if ss.OIDC.ClientID == "" || ss.OIDC.ClientSecret == "" ||
 		ss.OIDC.IssuerURL == "" || ss.OIDC.RedirectURL == "" || len(ss.OIDC.Scopes) == 0 {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "oidc validations failed, some required fields are empty"})
