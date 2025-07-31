@@ -52,7 +52,14 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
-		b, err := json.Marshal(&ss)
+		var currSetting SailorSetting
+		currSettingBytes := tx.Bucket([]byte(BUCKET_SETTING)).Get([]byte(KEY_SETTING))
+		if err := json.Unmarshal(currSettingBytes, &currSetting); err != nil {
+			return nil
+		}
+
+		currSetting.OIDC = ss.OIDC
+		b, err := json.Marshal(&currSetting)
 		if err != nil {
 			return err
 		}
