@@ -20,8 +20,7 @@ type OIDCSetting struct {
 type SailorSetting struct {
 	OIDC        *OIDCSetting `json:"oidc"`
 	TokenKey    string       `json:"token_key"`
-	OIDC     *OIDCSetting `json:"oidc"`
-	TokenKey string       `json:"token_key"`
+	RBACWebhook string       `json:"rbac_webhook"`
 }
 
 func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
