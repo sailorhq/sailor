@@ -2,7 +2,6 @@ package v1
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -35,12 +34,7 @@ func (c *CoreAPIClient) GetToken(user string) (*TokenResponse, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		var errMsg map[string]any
-		if err := json.Unmarshal(b, &errMsg); err != nil {
-			return nil, err
-		}
-
-		return nil, errors.New(errMsg["message"].(string))
+		return nil, serverMessageToErr(b)
 	}
 
 	var tokResp TokenResponse

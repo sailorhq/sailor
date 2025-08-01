@@ -3,7 +3,6 @@ package v1
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -45,12 +44,8 @@ func (c *CoreAPIClient) CreateUser(user, token string) (*CreateUserResponse, err
 		return nil, err
 	}
 
-	var errMsg map[string]string
 	if resp.StatusCode != 200 {
-		if err := json.Unmarshal(b, &errMsg); err != nil {
-			return nil, err
-		}
-		return nil, errors.New(errMsg["message"])
+		return nil, serverMessageToErr(b)
 	}
 
 	var cur CreateUserResponse

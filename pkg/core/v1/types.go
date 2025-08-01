@@ -1,5 +1,10 @@
 package v1
 
+import (
+	"encoding/json"
+	"errors"
+)
+
 // EnvConfig has name
 type EnvConfig struct {
 	Name string `json:"name"`
@@ -10,4 +15,12 @@ type EnvConfig struct {
 // Right now we only have environment mentioned here
 type SailorManifest struct {
 	Envs []EnvConfig `json:"envs"`
+}
+
+func serverMessageToErr(b []byte) error {
+	var errMsg map[string]string
+	if err := json.Unmarshal(b, &errMsg); err != nil {
+		return err
+	}
+	return errors.New(errMsg["message"])
 }

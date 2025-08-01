@@ -37,6 +37,10 @@ func (c *CoreAPIClient) CreateProject(namespace, app, token string) (*ProjectRes
 		return nil, err
 	}
 
+	if resp.StatusCode != 200 {
+		return nil, serverMessageToErr(b)
+	}
+
 	var projectResp ProjectResponse
 	if err := json.Unmarshal(b, &projectResp); err != nil {
 		return nil, err
