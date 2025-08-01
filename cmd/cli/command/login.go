@@ -2,11 +2,16 @@ package command
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"syscall"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
-func LoginCommand() *cobra.Command {
+func LoginCommand(cfg *CLIConfig) *cobra.Command {
 	var role string
 	var oidc bool
 	login := &cobra.Command{
@@ -21,7 +26,7 @@ func LoginCommand() *cobra.Command {
 
 			switch role {
 			case "admin":
-				return adminLoginFlow()
+				return adminLoginFlow(cfg)
 			case "user":
 				return userLoginFlow()
 			}
@@ -38,7 +43,28 @@ func LoginCommand() *cobra.Command {
 	return login
 }
 
-func adminLoginFlow() error {
+func adminLoginFlow(cfg *CLIConfig) error {
+	var user string
+	fmt.Print("sailor username: ")
+	fmt.Scan(&user)
+
+	fmt.Print("sailor pass: ")
+	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return err
+	}
+
+	pass := string(bytePassword)
+	tokenResp, err := cfg.SailorClient.LoginBasic(user, pass)
+	if err != nil {
+		return err
+	}
+
+	if err = os.WriteFile(filepath.Join(cfg.SailorRoot, "tok"), []byte(tokenResp.Token), 0755); err != nil {
+		return err
+	}
+
+	fmt.Println("logged in as: ", user)
 	return nil
 }
 
