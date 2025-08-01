@@ -8,6 +8,7 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 )
 
@@ -85,7 +86,9 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	enc.Encode(ResponseMessage{Message: fmt.Sprintf("created namespace: %s | app: %s", params.Ns, params.App)})
+	enc.Encode(v1.ProjectResponse{
+		Key: params.ProjectKey,
+	})
 }
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

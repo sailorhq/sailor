@@ -57,6 +57,18 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "project",
 		Short: "Helps you create a sailor project | admin",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if ns != "" && app != "" {
+				projResp, err := cfg.SailorClient.CreateProject(ns, app, cfg.Token)
+				if err != nil {
+					return err
+				}
+
+				fmt.Println("created project: ", projResp.Key)
+				return nil
+			}
+
+			fmt.Println("missing namespace or app flags")
+
 			return nil
 		},
 	}
