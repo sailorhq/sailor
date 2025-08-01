@@ -6,9 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
+
+	"github.com/pkg/browser"
 )
 
 func LoginCommand(cfg *CLIConfig) *cobra.Command {
@@ -18,18 +21,53 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "login",
 		Short: "Helps you login to a Sailor Instance",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if role == "" {
-				return errors.New("role is required")
-			} else if role != "admin" && role != "user" {
-				return errors.New("not a valid role")
+			if role != "" {
+				if role != "admin" && role != "user" {
+					return errors.New("not a valid role")
+				}
+
+				switch role {
+				case "admin":
+					return adminLoginFlow(cfg)
+				case "user":
+					return userLoginFlow()
+				}
+
+				return nil
 			}
 
-			switch role {
-			case "admin":
-				return adminLoginFlow(cfg)
-			case "user":
-				return userLoginFlow()
+			if oidc {
+				var user string
+				fmt.Print("sailor user: ")
+				fmt.Scan(&user)
+
+				url := fmt.Sprintf("%s/api/v1/auth/oidc", cfg.SailorHost)
+				if err := browser.OpenURL(url); err != nil {
+					return err
+				}
+
+				// TODO :: ideally the client should create a tiny server and the client should
+				// be redirected to the server created by client
+				fmt.Println("\nsailor will wait for 20s to finish logging in...")
+				time.Sleep(20 * time.Second)
+
+				// TODO (Security) :: right now token can be fetched by anyone who knows the proper sailor
+				// user name and can gain access to the sailor APIs .. this is a threat and should be solved
+				// by passing OIDC API a secure key which can identify the token created, the token
+				// should not be provided if this secure key is not given during request
+				tokenResp, err := cfg.SailorClient.GetToken(user)
+				if err != nil {
+					return err
+				}
+
+				if err = os.WriteFile(filepath.Join(cfg.SailorRoot, "tok"), []byte(tokenResp.Token), 0755); err != nil {
+					return err
+				}
+
+				fmt.Println("logged in as: ", user)
 			}
+
+			fmt.Println("nothing to do...")
 
 			return nil
 		},
@@ -45,7 +83,7 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 
 func adminLoginFlow(cfg *CLIConfig) error {
 	var user string
-	fmt.Print("sailor username: ")
+	fmt.Print("sailor user: ")
 	fmt.Scan(&user)
 
 	fmt.Print("sailor pass: ")
