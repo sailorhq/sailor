@@ -93,7 +93,8 @@ func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr RBACConstr
 		)
 
 		params := extractSailorParams(ctx)
-		if params.ProjectKey != "" {
+		isProjectCreationPath := strings.HasPrefix(string(ctx.Path()), "/api/v1/project")
+		if params.ProjectKey != "" && !isProjectCreationPath {
 			// we will do validations only if we got the project key
 			// if we don't have it we let the main handler throw an error
 			isAllowedToPerformAction := validateRBAC(mc, "allowed_apps", []string{
