@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 )
@@ -17,10 +18,14 @@ type OIDCSetting struct {
 	RedirectURL  string   `json:"redirect_url"`
 }
 
+type Webhook struct {
+	OnOIDCSuccess string `json:"on_oidc_success"`
+}
 type SailorSetting struct {
-	OIDC        *OIDCSetting `json:"oidc"`
-	TokenKey    string       `json:"token_key"`
-	RBACWebhook string       `json:"rbac_webhook"`
+	OIDC     *OIDCSetting      `json:"oidc"`
+	TokenKey string            `json:"token_key"`
+	Webhook  Webhook           `json:"webhook"`
+	Manifest v1.SailorManifest `json:"manifest"`
 }
 
 func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {

@@ -63,6 +63,13 @@ func main() {
 		Permissions: []string{PermissionSuperAdmin},
 	}))
 
+	apiV1.POST("/setting/manifest", core.Authenticated(core.UpdateManifestHandler, handlers.RBACConstraints{
+		Roles:       []string{RoleAdmin},
+		Permissions: []string{PermissionSuperAdmin},
+	}))
+
+	apiV1.GET("/setting/manifest", core.GetManifestHandler)
+
 	// AUTH
 	//
 	// this block contains APIs which uses OIDC module to authenticate user and fetch a
