@@ -2,11 +2,12 @@ package command
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-func CreateCommand() *cobra.Command {
+func CreateCommand(cfg *CLIConfig) *cobra.Command {
 	var setting string
 	var ns string
 	var app string
@@ -60,9 +61,29 @@ func CreateCommand() *cobra.Command {
 		},
 	}
 
+	user := &cobra.Command{
+		Use:   "user",
+		Short: "Helps you create a sailor user | admin",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var user string
+			fmt.Print("sailor user: ")
+			fmt.Scan(&user)
+
+			cur, err := cfg.SailorClient.CreateUser(user, cfg.Token)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(cur.Note)
+			fmt.Println("password: ", cur.Pass)
+			return nil
+		},
+	}
+
 	createCmd.AddCommand(config)
 	createCmd.AddCommand(secret)
 	createCmd.AddCommand(misc)
 	createCmd.AddCommand(project)
+	createCmd.AddCommand(user)
 	return createCmd
 }
