@@ -12,6 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/codekidx/sailor/internal/types"
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
@@ -90,7 +91,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			return fmt.Errorf("%s resource not created", resourceKey)
 		}
 
-		var resource SailorResource
+		var resource v1.SailorResource
 		if err := json.Unmarshal(resBytes, &resource); err != nil {
 			return err
 		}

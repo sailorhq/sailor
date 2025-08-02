@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 )
@@ -38,7 +39,7 @@ func (sc *SailorCore) GetResourceSetting(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var setting ResourceSetting
+	var setting v1.ResourceSetting
 	err := sc.dbconns[params.ProjectKey].View(func(tx *bolt.Tx) error {
 		resourceKey := params.Kind.ResourceKey(params.ResourceName)
 
@@ -48,7 +49,7 @@ func (sc *SailorCore) GetResourceSetting(ctx *fasthttp.RequestCtx) {
 			return fmt.Errorf("%s is not created", resourceKey)
 		}
 
-		var sailorRes SailorResource
+		var sailorRes v1.SailorResource
 		if err := json.Unmarshal(resBytes, &sailorRes); err != nil {
 			return err
 		}
