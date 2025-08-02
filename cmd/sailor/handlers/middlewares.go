@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -14,13 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
-type RBACConstraints struct {
-	Permissions []string `json:"permissions"`
-	Roles       []string `json:"roles"`
-	AllowedApps []string `json:"allowed_apps"`
-}
-
-func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr RBACConstraints) fasthttp.RequestHandler {
+func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr v1.RBACConstraints) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		enc := json.NewEncoder(ctx)
 		token := string(ctx.Request.Header.Peek("x-token"))
