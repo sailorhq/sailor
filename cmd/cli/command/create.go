@@ -4,14 +4,15 @@ import (
 	"errors"
 	"fmt"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/spf13/cobra"
 )
 
 func CreateCommand(cfg *CLIConfig) *cobra.Command {
-	var setting string
+	// var setting string
 	var ns string
 	var app string
-	var def bool
+	// var def bool
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Helps you create a sailor resource",
@@ -24,8 +25,9 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 
-	createCmd.PersistentFlags().BoolVarP(&def, "default", "", false, "use default setting for this resource")
-	createCmd.PersistentFlags().StringVarP(&setting, "setting", "s", "", "resource settings")
+	// createCmd.PersistentFlags().BoolVarP(&def, "default", "", false, "use default setting for this resource")
+	// TODO :: enable this once we have vim flow done and dusted!
+	// createCmd.PersistentFlags().StringVarP(&setting, "setting", "s", "", "resource settings")
 	createCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "create a resource in this namespace")
 	createCmd.PersistentFlags().StringVarP(&app, "app", "", "", "create a resource for this app")
 
@@ -33,6 +35,20 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "config",
 		Short: "Helps you create config sailor resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if ns != "" && app != "" {
+				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, "", "config", v1.ResourceSetting{
+					Deploy: v1.DeploySetting{K8s: false},
+					Schema: v1.SchemaSetting{Strict: false},
+				})
+				if err != nil {
+					return err
+				}
+
+				fmt.Println("resource created!")
+				return nil
+			}
+
+			fmt.Println("namespace and app are required to create a resource.")
 			return nil
 		},
 	}
@@ -41,6 +57,20 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "secret",
 		Short: "Helps you create secret sailor resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if ns != "" && app != "" {
+				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, "", "secret", v1.ResourceSetting{
+					Deploy: v1.DeploySetting{K8s: false},
+					Schema: v1.SchemaSetting{Strict: false},
+				})
+				if err != nil {
+					return err
+				}
+
+				fmt.Println("resource created!")
+				return nil
+			}
+
+			fmt.Println("namespace and app are required to create a resource.")
 			return nil
 		},
 	}
@@ -49,6 +79,28 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "misc",
 		Short: "Helps you create misc sailor resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var resourceName string
+			fmt.Print("resource name: ")
+			fmt.Scan(&resourceName)
+			if resourceName == "" {
+				return errors.New("misc resource name is mandatory")
+			}
+
+			if ns != "" && app != "" {
+				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, resourceName, "misc", v1.ResourceSetting{
+					Deploy: v1.DeploySetting{K8s: false},
+					Schema: v1.SchemaSetting{Strict: false},
+				})
+				if err != nil {
+					return err
+				}
+
+				fmt.Println("resource created!")
+				return nil
+			}
+
+			fmt.Println("namespace and app are required to create a resource.")
+
 			return nil
 		},
 	}
