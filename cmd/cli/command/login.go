@@ -1,7 +1,6 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,21 +20,6 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "login",
 		Short: "Helps you login to a Sailor Instance",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if role != "" {
-				if role != "admin" && role != "user" {
-					return errors.New("not a valid role")
-				}
-
-				switch role {
-				case "admin":
-					return adminLoginFlow(cfg)
-				case "user":
-					return userLoginFlow()
-				}
-
-				return nil
-			}
-
 			if oidc {
 				var user string
 				fmt.Print("sailor user: ")
@@ -64,10 +48,13 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 					return err
 				}
 
-				fmt.Println("logged in as: ", user)
+				fmt.Println("logged in as:", user)
 			}
 
-			fmt.Println("nothing to do...")
+			err := basicLoginFlow(cfg)
+			if err != nil {
+				return err
+			}
 
 			return nil
 		},
@@ -81,7 +68,7 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 	return login
 }
 
-func adminLoginFlow(cfg *CLIConfig) error {
+func basicLoginFlow(cfg *CLIConfig) error {
 	var user string
 	fmt.Print("sailor user: ")
 	fmt.Scan(&user)
