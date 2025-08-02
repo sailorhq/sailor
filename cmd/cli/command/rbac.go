@@ -26,7 +26,7 @@ func RBACCommand(cfg *CLIConfig) *cobra.Command {
 
 	addCmd := &cobra.Command{
 		Use:   "add",
-		Short: "Helps update RBAC of sailor user",
+		Short: "Helps add constraints to a sailor user",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if user != "" {
 				var domains = []string{}
