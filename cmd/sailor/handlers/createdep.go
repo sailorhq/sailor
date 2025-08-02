@@ -185,5 +185,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	// TODO :: maybe we give proper deployment creation response afterwards..
-	enc.Encode(ResponseMessage{Message: fmt.Sprintf("version %d created", version)})
+	enc.Encode(map[string]int{
+		"version": version,
+	})
 }
