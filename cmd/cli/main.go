@@ -19,6 +19,9 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "sailor",
 		Short: "Sailor is a resource management and delivery system for cloud-native apps",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return nil
+		},
 	}
 
 	cfg, err := loadConfig()
