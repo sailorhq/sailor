@@ -155,8 +155,19 @@ func validateRBAC(claims jwt.MapClaims, key string, target []string) bool {
 
 func (sc *SailorCore) ClientCallable(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		enc := json.NewEncoder(ctx)
+		// we identified that a token is passed, this is passed only when a client like CLI
+		// or dashboard asks for resource, we check if the token is valid and user is
+		// allowed to access this namespace and app
 		params := extractSailorParams(ctx)
+		if params.ProjectKey != "" && params.Token != "" {
+			sc.Authenticated(next, v1.RBACConstraints{
+				Roles:       []string{"user"}, // TODO :: pick from constant
+				AllowedApps: []string{params.ProjectKey, fmt.Sprintf("%s-*", params.Ns)},
+			})(ctx)
+			return
+		}
+
+		enc := json.NewEncoder(ctx)
 		if params.ProjectKey == "" {
 			// this case will be handled by the main API handler
 			// we cannot check for access-key and secret-key without
