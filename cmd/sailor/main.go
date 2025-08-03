@@ -129,6 +129,13 @@ func main() {
 	apiV1.PUT("/resource/{namespace}/{app}/{kind}/deployment", createDeploymentHandler)
 	apiV1.PUT("/resource/{namespace}/{app}/{kind}/{name}/deployment", createDeploymentHandler)
 
+	getDeploymentHandler := core.Authenticated(core.GetDeploymentHandler, v1.RBACConstraints{
+		Roles:       []string{RoleUser},
+		Permissions: []string{PermissionCreateDeployment},
+	})
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/deployment", getDeploymentHandler)
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}/deployment", getDeploymentHandler)
+
 	deployResourceHandler := core.Authenticated(core.DeployResourceHandler, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
 		Permissions: []string{PermissionDeploy},

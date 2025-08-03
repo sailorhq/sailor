@@ -360,6 +360,9 @@ type SailorParams struct {
 	// authorization
 	AccessKey string
 	SecretKey string
+
+	// deployment related
+	RequestedVersion string
 }
 
 func extractSailorParams(ctx *fasthttp.RequestCtx) SailorParams {
