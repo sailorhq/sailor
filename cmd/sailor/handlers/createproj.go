@@ -47,6 +47,8 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 
 	sc.dbconns[params.ProjectKey] = db
 
+	var accessKey string
+	var secretKey string
 	err = db.Update(func(tx *bolt.Tx) error {
 		var metaBucket *bolt.Bucket
 		metaBucket, err := tx.CreateBucket([]byte(BUCKET_META))
@@ -64,11 +66,13 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
-		if err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(generateUniqueKey("sailor", 16))); err != nil {
+		accessKey = generateUniqueKey("sailor", 16)
+		if err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(accessKey)); err != nil {
 			return err
 		}
 
-		return metaBucket.Put([]byte(KEY_SECRET_KEY), []byte(generateUniqueKey("secret", 32)))
+		secretKey = generateUniqueKey("secret", 32)
+		return metaBucket.Put([]byte(KEY_SECRET_KEY), []byte(secretKey))
 	})
 
 	adminDB := sc.dbconns[BUCKET_ADMIN]
@@ -87,7 +91,9 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	enc.Encode(v1.ProjectResponse{
-		Key: params.ProjectKey,
+		Key:       params.ProjectKey,
+		AccessKey: accessKey,
+		SecretKey: secretKey,
 	})
 }
 

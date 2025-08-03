@@ -8,7 +8,9 @@ import (
 )
 
 type ProjectResponse struct {
-	Key string `json:"key"`
+	Key       string `json:"key"`
+	AccessKey string `json:"access_key"`
+	SecretKey string `json:"secret_key"`
 }
 
 func (c *CoreAPIClient) CreateProject(namespace, app, token string) (*ProjectResponse, error) {
