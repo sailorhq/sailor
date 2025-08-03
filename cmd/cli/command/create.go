@@ -115,7 +115,9 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 					return err
 				}
 
-				fmt.Println("created project: ", projResp.Key)
+				fmt.Println("Project Created: ", projResp.Key)
+				fmt.Println("Access Key: ", projResp.AccessKey)
+				fmt.Println("Secret Key: ", projResp.SecretKey)
 				return nil
 			}
 
