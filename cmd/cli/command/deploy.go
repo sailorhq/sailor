@@ -63,15 +63,27 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 
 				// -- validations over --
 
-				// TODO :: this should be different according to the kind
-				var data map[string]any
+				var data any
 				b, err := os.ReadFile(file)
 				if err != nil {
 					return err
 				}
 
-				if err := json.Unmarshal(b, &data); err != nil {
-					return err
+				switch kind {
+				case "config":
+					var d map[string]any
+					if err := json.Unmarshal(b, &d); err != nil {
+						return err
+					}
+					data = d
+				case "secret":
+					var d map[string]string
+					if err := json.Unmarshal(b, &d); err != nil {
+						return err
+					}
+					data = d
+				case "misc":
+					data = string(b)
 				}
 
 				version, err := cfg.SailorClient.CreateDeployment(ns, app, kind, name, cfg.Token, strings.TrimSpace(desc), data)
