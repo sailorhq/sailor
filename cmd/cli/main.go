@@ -60,7 +60,7 @@ func main() {
 	rootCmd.AddCommand(command.DeployCommand(cfg))
 	rootCmd.AddCommand(command.SchemaCommand())
 	rootCmd.AddCommand(command.SettingCommand())
-	rootCmd.AddCommand(command.GetCommand())
+	rootCmd.AddCommand(command.GetCommand(cfg))
 	rootCmd.AddCommand(command.RBACCommand(cfg))
 
 	if err := rootCmd.Execute(); err != nil {
