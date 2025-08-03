@@ -57,7 +57,7 @@ func main() {
 	rootCmd.AddCommand(command.ApplyCommand(cfg))
 	rootCmd.AddCommand(command.LoginCommand(cfg))
 	rootCmd.AddCommand(command.CreateCommand(cfg))
-	rootCmd.AddCommand(command.DeployCommand())
+	rootCmd.AddCommand(command.DeployCommand(cfg))
 	rootCmd.AddCommand(command.SchemaCommand())
 	rootCmd.AddCommand(command.SettingCommand())
 	rootCmd.AddCommand(command.GetCommand())

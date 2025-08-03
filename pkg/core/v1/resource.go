@@ -29,7 +29,7 @@ type SailorResource struct {
 
 // CreateResource creates a resource inside sailor instance
 //
-// TODO :: kind to be of type ResourceKind
+// TODO :: kind to be of type ResourceKind and token should be the last parameter
 func (c *CoreAPIClient) CreateResource(ns, app, token, name string, kind string, setting ResourceSetting) error {
 	// Construct the URL
 	var url string
