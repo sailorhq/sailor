@@ -68,7 +68,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if len(deployment.ConfigData) == 0 && len(deployment.SecretData) == 0 {
+	if len(deployment.ConfigData) == 0 && len(deployment.SecretData) == 0 && len(deployment.MiscData) == 0 {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "cannot create deployment with empty data"})
 		return
