@@ -12,6 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/codekidx/sailor/internal/types"
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
@@ -67,7 +68,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if len(deployment.ConfigData) == 0 && len(deployment.SecretData) == 0 {
+	if len(deployment.ConfigData) == 0 && len(deployment.SecretData) == 0 && len(deployment.MiscData) == 0 {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "cannot create deployment with empty data"})
 		return
@@ -90,7 +91,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			return fmt.Errorf("%s resource not created", resourceKey)
 		}
 
-		var resource SailorResource
+		var resource v1.SailorResource
 		if err := json.Unmarshal(resBytes, &resource); err != nil {
 			return err
 		}
@@ -150,12 +151,12 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			}
 			return deploymentBucket.Put(ver, depBytes)
 		} else {
-			next, _ := strconv.Atoi(string(ver))
-			next += 1
+			last, _ := strconv.Atoi(string(ver))
+			next := last + 1
 			version = next
 
 			versionKey := fmt.Sprintf("%s_version", resourceKey)
-			resourceJSON := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
+			resourceJSON := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, true)
 
 			diff := differ.DiffMain(resourceJSON, resourceData, true)
 			patchList := differ.PatchMake(resourceJSON, resourceData, diff)
@@ -184,5 +185,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	// TODO :: maybe we give proper deployment creation response afterwards..
-	enc.Encode(ResponseMessage{Message: fmt.Sprintf("version %d created", version)})
+	enc.Encode(map[string]int{
+		"version": version,
+	})
 }

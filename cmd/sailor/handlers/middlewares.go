@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -14,13 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
-type RBACConstraints struct {
-	Permissions []string `json:"permissions"`
-	Roles       []string `json:"roles"`
-	AllowedApps []string `json:"allowed_apps"`
-}
-
-func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr RBACConstraints) fasthttp.RequestHandler {
+func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr v1.RBACConstraints) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		enc := json.NewEncoder(ctx)
 		token := string(ctx.Request.Header.Peek("x-token"))
@@ -93,7 +88,8 @@ func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr RBACConstr
 		)
 
 		params := extractSailorParams(ctx)
-		if params.ProjectKey != "" {
+		isProjectCreationPath := strings.HasPrefix(string(ctx.Path()), "/api/v1/project")
+		if params.ProjectKey != "" && !isProjectCreationPath {
 			// we will do validations only if we got the project key
 			// if we don't have it we let the main handler throw an error
 			isAllowedToPerformAction := validateRBAC(mc, "allowed_apps", []string{
@@ -126,6 +122,12 @@ func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr RBACConstr
 }
 
 func validateRBAC(claims jwt.MapClaims, key string, target []string) bool {
+	if len(target) == 0 {
+		// this just means that there is no permission needed to perform this
+		// action.
+		return true
+	}
+
 	var (
 		dst []string
 		ok  bool
@@ -153,8 +155,19 @@ func validateRBAC(claims jwt.MapClaims, key string, target []string) bool {
 
 func (sc *SailorCore) ClientCallable(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		enc := json.NewEncoder(ctx)
+		// we identified that a token is passed, this is passed only when a client like CLI
+		// or dashboard asks for resource, we check if the token is valid and user is
+		// allowed to access this namespace and app
 		params := extractSailorParams(ctx)
+		if params.ProjectKey != "" && params.Token != "" {
+			sc.Authenticated(next, v1.RBACConstraints{
+				Roles:       []string{"user"}, // TODO :: pick from constant
+				AllowedApps: []string{params.ProjectKey, fmt.Sprintf("%s-*", params.Ns)},
+			})(ctx)
+			return
+		}
+
+		enc := json.NewEncoder(ctx)
 		if params.ProjectKey == "" {
 			// this case will be handled by the main API handler
 			// we cannot check for access-key and secret-key without

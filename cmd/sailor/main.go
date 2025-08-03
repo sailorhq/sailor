@@ -5,6 +5,7 @@ import (
 
 	"github.com/codekidx/sailor/cmd/sailor/console"
 	"github.com/codekidx/sailor/cmd/sailor/handlers"
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"go.uber.org/zap"
 
 	"github.com/fasthttp/router"
@@ -53,15 +54,22 @@ func main() {
 	// this block contains APIs which is responsible of core working of sailor
 	// like obtaining a sailor token or providing the access key and secret key
 	// to an authorized party!
-	apiV1.GET("/setting", core.Authenticated(core.GetSailorSettingHandler, handlers.RBACConstraints{
+	apiV1.GET("/setting", core.Authenticated(core.GetSailorSettingHandler, v1.RBACConstraints{
 		Roles:       []string{RoleAdmin},
 		Permissions: []string{PermissionSuperAdmin},
 	}))
 
-	apiV1.POST("/setting", core.Authenticated(core.SailorSettingHandler, handlers.RBACConstraints{
+	apiV1.POST("/setting", core.Authenticated(core.SailorSettingHandler, v1.RBACConstraints{
 		Roles:       []string{RoleAdmin},
 		Permissions: []string{PermissionSuperAdmin},
 	}))
+
+	apiV1.POST("/setting/manifest", core.Authenticated(core.UpdateManifestHandler, v1.RBACConstraints{
+		Roles:       []string{RoleAdmin},
+		Permissions: []string{PermissionSuperAdmin},
+	}))
+
+	apiV1.GET("/setting/manifest", core.GetManifestHandler)
 
 	// AUTH
 	//
@@ -72,16 +80,16 @@ func main() {
 	apiV1.GET("/auth/token", core.GetTokenHandler)
 
 	apiV1.POST("/auth/basic", core.AuthBasicHandler)
-	apiV1.POST("/auth/rbac", core.Authenticated(core.AuthRBACHandler, handlers.RBACConstraints{
+	apiV1.POST("/auth/rbac", core.Authenticated(core.AuthRBACHandler, v1.RBACConstraints{
 		Roles:       []string{RoleAdmin},
 		Permissions: []string{PermissionSuperAdmin},
 	}))
 
-	apiV1.PUT("/auth/user", core.Authenticated(core.CreateUserHandler, handlers.RBACConstraints{
+	apiV1.PUT("/auth/user", core.Authenticated(core.CreateUserHandler, v1.RBACConstraints{
 		Roles:       []string{RoleAdmin},
 		Permissions: []string{PermissionSuperAdmin},
 	}))
-	apiV1.GET("/auth/user/{user}", core.Authenticated(core.GetUserHandler, handlers.RBACConstraints{
+	apiV1.GET("/auth/user/{user}", core.Authenticated(core.GetUserHandler, v1.RBACConstraints{
 		Roles:       []string{RoleAdmin},
 		Permissions: []string{PermissionSuperAdmin},
 	}))
@@ -90,7 +98,7 @@ func main() {
 	//
 	// this block contains APIs that work on project. A project is a collection of
 	// resources, and a project should contain a namespace and an app value.
-	apiV1.PUT("/project/{namespace}/{app}", core.Authenticated(core.CreateProjectHandler, handlers.RBACConstraints{
+	apiV1.PUT("/project/{namespace}/{app}", core.Authenticated(core.CreateProjectHandler, v1.RBACConstraints{
 		Roles:       []string{RoleAdmin, RoleUser},
 		Permissions: []string{PermissionSuperAdmin, PermissionCreateProject},
 	}))
@@ -104,7 +112,7 @@ func main() {
 	// secret - a key value pair with value as string and is encrypted
 	// misc   - a text value which cannot be interpretted at the moment, but the
 	//          user knows how to make sense of it.
-	createResourceHandler := core.Authenticated(core.CreateResourceHandler, handlers.RBACConstraints{
+	createResourceHandler := core.Authenticated(core.CreateResourceHandler, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
 		Permissions: []string{PermissionCreateResource},
 	})
@@ -114,42 +122,49 @@ func main() {
 	apiV1.GET("/resource/{namespace}/{app}/{kind}", core.ClientCallable(core.GetResourceHandler))
 	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}", core.ClientCallable(core.GetResourceHandler))
 
-	createDeploymentHandler := core.Authenticated(core.CreateDeploymentHandler, handlers.RBACConstraints{
+	createDeploymentHandler := core.Authenticated(core.CreateDeploymentHandler, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
 		Permissions: []string{PermissionCreateDeployment},
 	})
 	apiV1.PUT("/resource/{namespace}/{app}/{kind}/deployment", createDeploymentHandler)
 	apiV1.PUT("/resource/{namespace}/{app}/{kind}/{name}/deployment", createDeploymentHandler)
 
-	deployResourceHandler := core.Authenticated(core.DeployResourceHandler, handlers.RBACConstraints{
+	getDeploymentHandler := core.Authenticated(core.GetDeploymentHandler, v1.RBACConstraints{
+		Roles:       []string{RoleUser},
+		Permissions: []string{PermissionCreateDeployment},
+	})
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/deployment", getDeploymentHandler)
+	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}/deployment", getDeploymentHandler)
+
+	deployResourceHandler := core.Authenticated(core.DeployResourceHandler, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
 		Permissions: []string{PermissionDeploy},
 	})
 	apiV1.POST("/resource/{namespace}/{app}/{kind}/deploy", deployResourceHandler)
 	apiV1.POST("/resource/{namespace}/{app}/{kind}/{name}/deploy", deployResourceHandler)
 
-	updateResourceSetting := core.Authenticated(core.UpdateResourceSetting, handlers.RBACConstraints{
+	updateResourceSetting := core.Authenticated(core.UpdateResourceSetting, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
 		Permissions: []string{PermissionEditSetting},
 	})
 	apiV1.POST("/resource/{namespace}/{app}/{kind}/setting", updateResourceSetting)
 	apiV1.POST("/resource/{namespace}/{app}/{kind}/{name}/setting", updateResourceSetting)
 
-	getResourceSetting := core.Authenticated(core.GetResourceSetting, handlers.RBACConstraints{
+	getResourceSetting := core.Authenticated(core.GetResourceSetting, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
 		Permissions: []string{PermissionViewSetting},
 	})
 	apiV1.GET("/resource/{namespace}/{app}/{kind}/setting", getResourceSetting)
 	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}/setting", getResourceSetting)
 
-	updateResourceSchemaHandler := core.Authenticated(core.UpdateResourceSchemaHandler, handlers.RBACConstraints{
+	updateResourceSchemaHandler := core.Authenticated(core.UpdateResourceSchemaHandler, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
 		Permissions: []string{PermissionEditSchema},
 	})
 	apiV1.POST("/resource/{namespace}/{app}/{kind}/schema", updateResourceSchemaHandler)
 	apiV1.POST("/resource/{namespace}/{app}/{kind}/{name}/schema", updateResourceSchemaHandler)
 
-	getResourceSchemaHandler := core.Authenticated(core.GetResourceSchemaHandler, handlers.RBACConstraints{
+	getResourceSchemaHandler := core.Authenticated(core.GetResourceSchemaHandler, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
 		Permissions: []string{PermissionViewSchema},
 	})

@@ -6,14 +6,10 @@ import (
 	"slices"
 	"strings"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 )
-
-type RBACRequest struct {
-	Addition RBACConstraints `json:"add"`
-	Deletion RBACConstraints `json:"del"`
-}
 
 func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
@@ -27,7 +23,7 @@ func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var req RBACRequest
+	var req v1.RBACRequest
 	if err := json.Unmarshal(ctx.Request.Body(), &req); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "cannot parse constraints"})
@@ -43,7 +39,7 @@ func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 		var user DBUser
 		json.Unmarshal(userBytes, &user)
 
-		userConstraints := RBACConstraints{
+		userConstraints := v1.RBACConstraints{
 			Roles:       user.Roles,
 			Permissions: user.Permissions,
 			AllowedApps: user.AllowedApps,
@@ -72,7 +68,7 @@ func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 	enc.Encode(ResponseMessage{Message: "ok"})
 }
 
-func updateRBACConstraints(current RBACConstraints, patch RBACRequest) RBACConstraints {
+func updateRBACConstraints(current v1.RBACConstraints, patch v1.RBACRequest) v1.RBACConstraints {
 	// addition
 	for _, pr := range patch.Addition.Roles {
 		if !slices.Contains(current.Roles, pr) {

@@ -5,27 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 )
-
-type DeploySetting struct {
-	K8s bool `json:"k8s"`
-}
-
-type SchemaSetting struct {
-	Strict bool `json:"strict"`
-}
-
-type ResourceSetting struct {
-	Deploy DeploySetting `json:"deploy"`
-	Schema SchemaSetting `json:"schema"`
-}
-
-type SailorResource struct {
-	Schema  map[string]any   `json:"schema"`
-	Setting *ResourceSetting `json:"setting"`
-}
 
 func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
@@ -56,7 +39,7 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var resource SailorResource
+	var resource v1.SailorResource
 	err := json.Unmarshal(ctx.Request.Body(), &resource)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
@@ -66,9 +49,9 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 
 	// if setting is not present add default setting
 	if resource.Setting == nil {
-		resource.Setting = &ResourceSetting{
-			Deploy: DeploySetting{K8s: false},
-			Schema: SchemaSetting{
+		resource.Setting = &v1.ResourceSetting{
+			Deploy: v1.DeploySetting{K8s: false},
+			Schema: v1.SchemaSetting{
 				Strict: false,
 			},
 		}

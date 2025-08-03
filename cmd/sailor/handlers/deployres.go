@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 	"go.uber.org/zap"
@@ -77,7 +78,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		}
 
 		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
-		var resource SailorResource
+		var resource v1.SailorResource
 		resBytes := resourceBucket.Get([]byte(resourceKey))
 		if err := json.Unmarshal(resBytes, &resource); err != nil {
 			return err
@@ -100,7 +101,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						Namespace: params.Ns,
 					},
 					Data: map[string]string{
-						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey),
+						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false),
 					},
 				}
 
@@ -136,7 +137,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 				}
 			case KindSecret:
 				contentKey := fmt.Sprintf("_%s", resourceKey)
-				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
+				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false)
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,

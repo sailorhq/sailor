@@ -16,7 +16,7 @@ func (sc *SailorCore) GetTokenHandler(ctx *fasthttp.RequestCtx) {
 	// but depending upon your requirements & security measures/flow you should
 	// ideally change this using sailor settings, which should be added later
 	enc := json.NewEncoder(ctx)
-	username := string(ctx.Request.Header.Peek("x-username"))
+	username := string(ctx.Request.Header.Peek("x-user"))
 	if username == "" {
 		// TODO :: should there be source IP here?
 		sc.Log.Error("token request was called without username")
