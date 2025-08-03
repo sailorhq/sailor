@@ -122,6 +122,12 @@ func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr v1.RBACCon
 }
 
 func validateRBAC(claims jwt.MapClaims, key string, target []string) bool {
+	if len(target) == 0 {
+		// this just means that there is no permission needed to perform this
+		// action.
+		return true
+	}
+
 	var (
 		dst []string
 		ok  bool
