@@ -444,16 +444,23 @@ func validateWithRules(data, rules map[string]any) []string {
 	return messages
 }
 
-func buildResource(db *bolt.DB, resourceKey, versionKey string) string {
+func buildResource(db *bolt.DB, resourceKey, versionKey string, onTopOfLastDeployment bool) string {
 	var configJson string
 	db.View(func(tx *bolt.Tx) error {
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 
 		min := []byte("0")
-		max := metaBucket.Get([]byte(versionKey))
-		// max is the current deployed version, if this is nil then
-		// it means that this resource was never deployed
+
+		var max []byte
+		if onTopOfLastDeployment {
+			max, _ = deploymentBucket.Cursor().Last()
+		} else {
+			max = metaBucket.Get([]byte(versionKey))
+		}
+
+		// if the key is still nil from deployment bucket, the reosurce was neither
+		// deployed nor had any deployments created
 		if max == nil {
 			return nil
 		}

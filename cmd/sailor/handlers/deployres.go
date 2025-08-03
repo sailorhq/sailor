@@ -101,7 +101,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						Namespace: params.Ns,
 					},
 					Data: map[string]string{
-						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey),
+						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false),
 					},
 				}
 
@@ -137,7 +137,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 				}
 			case KindSecret:
 				contentKey := fmt.Sprintf("_%s", resourceKey)
-				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
+				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false)
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,

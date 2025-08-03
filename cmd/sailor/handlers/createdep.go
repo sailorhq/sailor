@@ -151,12 +151,12 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			}
 			return deploymentBucket.Put(ver, depBytes)
 		} else {
-			next, _ := strconv.Atoi(string(ver))
-			next += 1
+			last, _ := strconv.Atoi(string(ver))
+			next := last + 1
 			version = next
 
 			versionKey := fmt.Sprintf("%s_version", resourceKey)
-			resourceJSON := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
+			resourceJSON := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, true)
 
 			diff := differ.DiffMain(resourceJSON, resourceData, true)
 			patchList := differ.PatchMake(resourceJSON, resourceData, diff)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
 )
 
 func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
@@ -40,9 +41,10 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 	resourceKey := params.Kind.ResourceKey(params.ResourceName)
 	versionKey := fmt.Sprintf("%s_version", resourceKey)
 
-	resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey)
+	resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false)
 	if resStr == "" {
 		ctx.SetStatusCode(http.StatusNotFound)
+		enc.Encode(ResponseMessage{"this resource was never deployed!"})
 		return
 	}
 
@@ -53,6 +55,7 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 
 	var data map[string]any
 	if err := json.Unmarshal([]byte(resStr), &data); err != nil {
+		sc.Log.Error("resource get has failed", zap.Error(err), zap.String("built_res", resStr))
 		ctx.SetStatusCode(http.StatusNotFound)
 		enc.Encode(ResponseMessage{Message: "error while parsing resource json!"})
 		return
