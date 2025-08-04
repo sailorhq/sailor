@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	v1 "github.com/codekidx/sailor/pkg/core/v1"
@@ -31,7 +31,7 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 				env := args[0]
 				for _, envConfig := range cfg.Manifest.Envs {
 					if strings.EqualFold(env, envConfig.Name) {
-						if err := os.WriteFile(filepath.Join(cfg.SailorRoot, "env"), []byte(envConfig.Name), 0655); err != nil {
+						if err := updateEnv(envConfig.Name, cfg.SailorRoot); err != nil {
 							return err
 						}
 						fmt.Printf("switched to %s\n", envConfig.Name)
@@ -45,7 +45,7 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 			}
 
 			if host != "" {
-				manifestURL := fmt.Sprintf("%s/api/v1/setting/manifest", host)
+				manifestURL := fmt.Sprintf("%s/api/v1/setting/manifest", strings.TrimRight(host, "/"))
 				resp, err := http.Get(manifestURL)
 				if err != nil {
 					return err
@@ -66,11 +66,9 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 					return err
 				}
 
-				// since it is parsable as sailor manifest, we save it!
-				if err := os.WriteFile(filepath.Join(cfg.SailorRoot, "config"), b, 0755); err != nil {
+				if err := updateManifest(&manifest, cfg.SailorRoot); err != nil {
 					return err
 				}
-
 				fmt.Println("sailor manifest loaded!")
 				return nil
 			}
@@ -86,11 +84,9 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 					return err
 				}
 
-				// since it is parsable as sailor manifest, we save it!
-				if err := os.WriteFile(filepath.Join(cfg.SailorRoot, "config"), b, 0755); err != nil {
+				if err := updateManifest(&manifest, cfg.SailorRoot); err != nil {
 					return err
 				}
-
 				fmt.Println("sailor manifest loaded!")
 				return nil
 			}
@@ -103,4 +99,67 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 	applyCmd.Flags().StringVarP(&file, "file", "f", "", "configuration file")
 
 	return applyCmd
+}
+
+func updateManifest(manifest *v1.SailorManifest, basePath string) error {
+	readCfg, _ := GetConfig(basePath)
+	if readCfg == nil {
+		return UpdateConfig(&CLIConfig{
+			Manifest: *manifest,
+		}, basePath)
+	}
+
+	readCfg.Manifest = *manifest
+	return UpdateConfig(readCfg, basePath)
+}
+
+func updateTokenAndKeyPairs(token string, keyPairs map[string]v1.KeyPair, basePath string) error {
+	readCfg, _ := GetConfig(basePath)
+	if readCfg == nil {
+		return UpdateConfig(&CLIConfig{
+			Token:    token,
+			KeyPairs: keyPairs,
+		}, basePath)
+	}
+
+	readCfg.Token = token
+	readCfg.KeyPairs = keyPairs
+	return UpdateConfig(readCfg, basePath)
+}
+
+func updateEnv(env string, basePath string) error {
+	readCfg, _ := GetConfig(basePath)
+	if readCfg == nil {
+		return UpdateConfig(&CLIConfig{
+			Env: env,
+		}, basePath)
+	}
+
+	readCfg.Env = env
+	return UpdateConfig(readCfg, basePath)
+}
+
+func GetConfig(basePath string) (*CLIConfig, error) {
+	configPath := path.Join(basePath, "config")
+	b, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var cliConfig CLIConfig
+	if err := json.Unmarshal(b, &cliConfig); err != nil {
+		return nil, err
+	}
+
+	return &cliConfig, nil
+}
+
+func UpdateConfig(config *CLIConfig, basePath string) error {
+	configPath := path.Join(basePath, "config")
+
+	b, err := json.Marshal(&config)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(configPath, b, 0755)
 }

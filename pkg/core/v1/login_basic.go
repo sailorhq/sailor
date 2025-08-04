@@ -11,7 +11,17 @@ type TokenResponse struct {
 	Token string `json:"token"`
 }
 
-func (c *CoreAPIClient) LoginBasic(user, pass string) (*TokenResponse, error) {
+type KeyPair struct {
+	AccessKey string `json:"access_key"`
+	SecretKey string `json:"secret_key"`
+}
+
+type LoginResponse struct {
+	Token    string             `json:"token"`
+	KeyPairs map[string]KeyPair `json:"key_pairs"`
+}
+
+func (c *CoreAPIClient) LoginBasic(user, pass string) (*LoginResponse, error) {
 	// Construct the URL
 	url := fmt.Sprintf("%s/api/v1/auth/basic", c.BaseURL)
 
@@ -38,10 +48,10 @@ func (c *CoreAPIClient) LoginBasic(user, pass string) (*TokenResponse, error) {
 		return nil, err
 	}
 
-	var tokResp TokenResponse
-	if err := json.Unmarshal(b, &tokResp); err != nil {
+	var loginResp LoginResponse
+	if err := json.Unmarshal(b, &loginResp); err != nil {
 		return nil, err
 	}
 
-	return &tokResp, nil
+	return &loginResp, nil
 }

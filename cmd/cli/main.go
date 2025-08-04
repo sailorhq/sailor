@@ -24,33 +24,12 @@ func main() {
 		},
 	}
 
-	cfg, err := loadConfig()
+	cfg, err := loadConfig(env)
 	if err != nil {
 		panic(err.Error())
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&env, "env", "", "", "Helps set explicit environment")
-
-	if env != "" {
-		cfg.Env = env
-	} else {
-		b, err := os.ReadFile(filepath.Join(cfg.SailorRoot, "env"))
-		if err != nil {
-			fmt.Println("no environment mentioned")
-			return
-		}
-		cfg.Env = string(b)
-	}
-
-	for _, envConfig := range cfg.Manifest.Envs {
-		if strings.EqualFold(envConfig.Name, cfg.Env) {
-			cfg.SailorHost = envConfig.Host
-		}
-	}
-
-	if cfg.SailorHost != "" {
-		cfg.SailorClient = v1.CoreV1(cfg.SailorHost)
-	}
 
 	fmt.Println("🐧 working on: ", cfg.Env)
 
@@ -68,7 +47,7 @@ func main() {
 	}
 }
 
-func loadConfig() (*command.CLIConfig, error) {
+func loadConfig(overrideEnv string) (*command.CLIConfig, error) {
 	home, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -81,32 +60,45 @@ func loadConfig() (*command.CLIConfig, error) {
 		}
 	}
 
-	sailorManifestFilePath := filepath.Join(sailorRoot, "config")
-	var manifest v1.SailorManifest
-	if f, _ := os.Stat(sailorManifestFilePath); f != nil {
+	sailorConfig := filepath.Join(sailorRoot, "config")
+	var config command.CLIConfig
+	if f, _ := os.Stat(sailorConfig); f != nil {
 
-		b, err := os.ReadFile(sailorManifestFilePath)
+		b, err := os.ReadFile(sailorConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		if err := json.Unmarshal(b, &manifest); err != nil {
+		if err := json.Unmarshal(b, &config); err != nil {
 			return nil, err
 		}
 	} else {
 		fmt.Println("manifest not loaded do [ sailor apply --file ] or [ sailor apply --host ]")
 	}
 
-	sailorUserTokenPath := filepath.Join(sailorRoot, "tok")
-	var token string
-	if f, _ := os.Stat(sailorUserTokenPath); f != nil {
-		b, err := os.ReadFile(sailorUserTokenPath)
-		if err != nil {
-			return nil, err
-		}
+	config.SailorRoot = sailorRoot
 
-		token = string(b)
+	if config.Env != "" {
+		for _, envConfig := range config.Manifest.Envs {
+			if strings.EqualFold(envConfig.Name, config.Env) {
+				config.SailorHost = envConfig.Host
+			}
+		}
 	}
 
-	return &command.CLIConfig{Manifest: manifest, SailorRoot: sailorRoot, Token: token}, nil
+	// this means that user has overriden the env with flag
+	if overrideEnv != "" {
+		config.Env = overrideEnv
+		for _, envConfig := range config.Manifest.Envs {
+			if strings.EqualFold(envConfig.Name, config.Env) {
+				config.SailorHost = envConfig.Host
+			}
+		}
+	}
+
+	if config.SailorHost != "" {
+		config.SailorClient = v1.CoreV1(config.SailorHost)
+	}
+
+	return &config, nil
 }

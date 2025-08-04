@@ -58,7 +58,12 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 					return errors.New("resource name is required for misc kind")
 				}
 
-				dataBytes, err := cfg.SailorClient.GetResource(ns, app, kind, name, cfg.Token)
+				projectKey := fmt.Sprintf("%s-%s", ns, app)
+				if _, ok := cfg.KeyPairs[projectKey]; !ok {
+					return errors.New("access not available, re-login to get fresh access")
+				}
+
+				dataBytes, err := cfg.SailorClient.GetResource(ns, app, kind, name, cfg.Token, cfg.KeyPairs[projectKey])
 				if err != nil {
 					return err
 				}

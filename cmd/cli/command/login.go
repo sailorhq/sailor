@@ -80,19 +80,15 @@ func basicLoginFlow(cfg *CLIConfig) error {
 	}
 
 	pass := string(bytePassword)
-	tokenResp, err := cfg.SailorClient.LoginBasic(user, pass)
+	loginResp, err := cfg.SailorClient.LoginBasic(user, pass)
 	if err != nil {
 		return err
 	}
 
-	if err = os.WriteFile(filepath.Join(cfg.SailorRoot, "tok"), []byte(tokenResp.Token), 0755); err != nil {
+	if err := updateTokenAndKeyPairs(loginResp.Token, loginResp.KeyPairs, cfg.SailorRoot); err != nil {
 		return err
 	}
 
 	fmt.Println("logged in as: ", user)
-	return nil
-}
-
-func userLoginFlow() error {
 	return nil
 }
