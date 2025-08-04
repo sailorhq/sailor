@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/codekidx/sailor/internal/vault"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -48,19 +49,60 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if params.Kind.IsMisc() {
+	switch params.Kind {
+	case KindMisc:
 		enc.Encode(resStr)
 		return
-	}
-
-	var data map[string]any
-	if err := json.Unmarshal([]byte(resStr), &data); err != nil {
-		sc.Log.Error("resource get has failed", zap.Error(err), zap.String("built_res", resStr))
-		ctx.SetStatusCode(http.StatusNotFound)
-		enc.Encode(ResponseMessage{Message: "error while parsing resource json!"})
+	case KindConfig:
+		var data map[string]any
+		if err := json.Unmarshal([]byte(resStr), &data); err != nil {
+			sc.Log.Error("resource get has failed", zap.Error(err), zap.String("built_res", resStr))
+			ctx.SetStatusCode(http.StatusNotFound)
+			enc.Encode(ResponseMessage{Message: "error while parsing resource json!"})
+			return
+		}
+		ctx.Response.Header.Set("Content-Type", "application/json")
+		enc.Encode(data)
 		return
-	}
+	case KindSecret:
+		if params.AccessKey == "" || params.SecretKey == "" {
+			ctx.SetStatusCode(http.StatusBadRequest)
+			enc.Encode(ResponseMessage{"key pair not provided"})
+			return
+		}
 
-	ctx.Response.Header.Set("Content-Type", "application/json")
-	enc.Encode(data)
+		kek, err := vault.DeriveKEK(params.SecretKey, []byte(params.AccessKey))
+		if err != nil {
+			ctx.SetStatusCode(http.StatusInternalServerError)
+			enc.Encode(ResponseMessage{err.Error()})
+			return
+		}
+
+		var encSecrets map[string]vault.SecretRecord
+		if err := json.Unmarshal([]byte(resStr), &encSecrets); err != nil {
+			ctx.SetStatusCode(http.StatusInternalServerError)
+			enc.Encode(ResponseMessage{err.Error()})
+			return
+		}
+
+		var secrets = make(map[string]string, len(encSecrets))
+		for k, ev := range encSecrets {
+			dek, err := vault.DecryptDEK(ev.EncryptedDEK, kek)
+			if err != nil {
+				ctx.SetStatusCode(http.StatusInternalServerError)
+				enc.Encode(ResponseMessage{err.Error()})
+				return
+			}
+			v, err := vault.DecryptWithDEK(ev.EncryptedSecret, dek)
+			if err != nil {
+				ctx.SetStatusCode(http.StatusInternalServerError)
+				enc.Encode(ResponseMessage{err.Error()})
+				return
+			}
+
+			secrets[k] = v
+		}
+
+		enc.Encode(secrets)
+	}
 }

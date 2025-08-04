@@ -12,6 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/codekidx/sailor/internal/types"
+	"github.com/codekidx/sailor/internal/vault"
 	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 
@@ -121,7 +122,37 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			case KindConfig:
 				b, err = json.Marshal(&deployment.ConfigData)
 			case KindSecret:
-				b, err = json.Marshal(&deployment.SecretData)
+				metaBucket := tx.Bucket([]byte(BUCKET_META))
+				secretKey := metaBucket.Get([]byte(KEY_SECRET_KEY))
+				accessKey := metaBucket.Get([]byte(KEY_ACCESS_KEY))
+				kek, err := vault.DeriveKEK(string(secretKey), accessKey)
+				if err != nil {
+					return err
+				}
+
+				var secrets = make(map[string]vault.SecretRecord, len(deployment.SecretData))
+				for sk, sv := range deployment.SecretData {
+					dek, err := vault.GenerateDEK()
+					if err != nil {
+						return err
+					}
+
+					encryptedSv, _, err := vault.EncryptWithDEK(sv, dek)
+					if err != nil {
+						return err
+					}
+					encDEK, err := vault.EncryptDEK(dek, kek)
+					if err != nil {
+						return err
+					}
+
+					secrets[sk] = vault.SecretRecord{
+						EncryptedSecret: encryptedSv,
+						EncryptedDEK:    encDEK,
+					}
+				}
+
+				b, err = json.Marshal(&secrets)
 			}
 			if err != nil {
 				return err
