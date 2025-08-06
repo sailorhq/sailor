@@ -16,11 +16,13 @@
 package command
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"slices"
 
+	"github.com/sailorhq/sailor/pkg/vault"
 	"github.com/spf13/cobra"
 )
 
@@ -81,6 +83,37 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 				dataBytes, err := cfg.SailorClient.GetResource(ns, app, kind, name, cfg.Token, cfg.KeyPairs[projectKey])
 				if err != nil {
 					return err
+				}
+
+				if kind == "secret" {
+					var encSecrets map[string]vault.SecretRecord
+					if err := json.Unmarshal(dataBytes, &encSecrets); err != nil {
+						return err
+					}
+
+					kek, err := vault.DeriveKEK(cfg.KeyPairs[projectKey].SecretKey, []byte(cfg.KeyPairs[projectKey].AccessKey))
+					if err != nil {
+						return err
+					}
+
+					var secrets = make(map[string]string, len(encSecrets))
+					for k, ev := range encSecrets {
+						dek, err := vault.DecryptDEK(ev.EncryptedDEK, kek)
+						if err != nil {
+							return err
+						}
+						v, err := vault.DecryptWithDEK(ev.EncryptedSecret, dek)
+						if err != nil {
+							return err
+						}
+
+						secrets[k] = v
+					}
+
+					dataBytes, err = json.Marshal(&secrets)
+					if err != nil {
+						return err
+					}
 				}
 
 				if output != "" {
