@@ -86,13 +86,6 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 			return
 		}
 
-		kek, err := vault.DeriveKEK(params.SecretKey, []byte(params.AccessKey))
-		if err != nil {
-			ctx.SetStatusCode(http.StatusInternalServerError)
-			enc.Encode(ResponseMessage{err.Error()})
-			return
-		}
-
 		var encSecrets map[string]vault.SecretRecord
 		if err := json.Unmarshal([]byte(resStr), &encSecrets); err != nil {
 			ctx.SetStatusCode(http.StatusInternalServerError)
@@ -100,24 +93,6 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 			return
 		}
 
-		var secrets = make(map[string]string, len(encSecrets))
-		for k, ev := range encSecrets {
-			dek, err := vault.DecryptDEK(ev.EncryptedDEK, kek)
-			if err != nil {
-				ctx.SetStatusCode(http.StatusInternalServerError)
-				enc.Encode(ResponseMessage{err.Error()})
-				return
-			}
-			v, err := vault.DecryptWithDEK(ev.EncryptedSecret, dek)
-			if err != nil {
-				ctx.SetStatusCode(http.StatusInternalServerError)
-				enc.Encode(ResponseMessage{err.Error()})
-				return
-			}
-
-			secrets[k] = v
-		}
-
-		enc.Encode(secrets)
+		enc.Encode(encSecrets)
 	}
 }
