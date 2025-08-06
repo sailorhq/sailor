@@ -25,7 +25,7 @@ import (
 	"path"
 	"strings"
 
-	v1 "github.com/codekidx/sailor/pkg/core/v1"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/spf13/cobra"
 )
 

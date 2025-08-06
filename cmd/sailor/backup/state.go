@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/codekidx/sailor/internal/types"
+	"github.com/sailorhq/sailor/internal/types"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 	bolt "go.etcd.io/bbolt"
 )

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
-	v1 "github.com/codekidx/sailor/pkg/core/v1"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 	"go.uber.org/zap"

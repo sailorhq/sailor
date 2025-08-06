@@ -18,9 +18,9 @@ package main
 import (
 	"os"
 
-	"github.com/codekidx/sailor/cmd/sailor/console"
-	"github.com/codekidx/sailor/cmd/sailor/handlers"
-	v1 "github.com/codekidx/sailor/pkg/core/v1"
+	"github.com/sailorhq/sailor/cmd/sailor/console"
+	"github.com/sailorhq/sailor/cmd/sailor/handlers"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"go.uber.org/zap"
 
 	"github.com/fasthttp/router"

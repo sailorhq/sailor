@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/codekidx/sailor/internal/types"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sailorhq/sailor/internal/types"
 	bolt "go.etcd.io/bbolt"
 )
 

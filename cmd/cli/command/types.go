@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package command
 
-import v1 "github.com/codekidx/sailor/pkg/core/v1"
+import v1 "github.com/sailorhq/sailor/pkg/core/v1"
 
 type CLIConfig struct {
 	// Manifest is used to know details about different environment sailor is hosted in

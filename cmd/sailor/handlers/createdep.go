@@ -26,9 +26,9 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
-	"github.com/codekidx/sailor/internal/types"
-	v1 "github.com/codekidx/sailor/pkg/core/v1"
-	"github.com/codekidx/sailor/pkg/vault"
+	"github.com/sailorhq/sailor/internal/types"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
+	"github.com/sailorhq/sailor/pkg/vault"
 	"github.com/valyala/fasthttp"
 
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"

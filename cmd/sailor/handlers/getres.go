@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/codekidx/sailor/pkg/vault"
+	"github.com/sailorhq/sailor/pkg/vault"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )

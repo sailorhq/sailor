@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/codekidx/sailor/internal/types"
+	"github.com/sailorhq/sailor/internal/types"
 	bolt "go.etcd.io/bbolt"
 )
 

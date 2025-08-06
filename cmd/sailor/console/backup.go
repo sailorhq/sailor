@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/codekidx/sailor/cmd/sailor/backup"
+	"github.com/sailorhq/sailor/cmd/sailor/backup"
 	bolt "go.etcd.io/bbolt"
 )
 

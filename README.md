@@ -3,7 +3,7 @@
 > Configuration Management for Cloud Native Workloads
 
 <p align="center">
-    <img width="200" src="https://github.com/codekidX/sailor/blob/main/assets/sailor.png?raw=true">
+    <img width="200" src="https://github.com/sailorhq/sailor/blob/main/assets/sailor.png?raw=true">
 </p>
 
 **Sailor** is a configuration management service built for cloud workloads. It

@@ -32,8 +32,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/codekidx/sailor/internal/types"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sailorhq/sailor/internal/types"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/valyala/fasthttp"
 

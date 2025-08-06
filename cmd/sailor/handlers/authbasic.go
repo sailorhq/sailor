@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/golang-jwt/jwt/v5"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 )

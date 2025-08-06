@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/codekidx/sailor/cmd/cli/command"
-	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/mitchellh/go-homedir"
+	"github.com/sailorhq/sailor/cmd/cli/command"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/spf13/cobra"
 )
 
