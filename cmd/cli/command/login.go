@@ -1,3 +1,18 @@
+// sailor
+// Copyright (C) 2025 SailorHQ and Ashish Shekar (codekidX)
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package command
 
 import (
@@ -80,19 +95,15 @@ func basicLoginFlow(cfg *CLIConfig) error {
 	}
 
 	pass := string(bytePassword)
-	tokenResp, err := cfg.SailorClient.LoginBasic(user, pass)
+	loginResp, err := cfg.SailorClient.LoginBasic(user, pass)
 	if err != nil {
 		return err
 	}
 
-	if err = os.WriteFile(filepath.Join(cfg.SailorRoot, "tok"), []byte(tokenResp.Token), 0755); err != nil {
+	if err := updateTokenAndKeyPairs(loginResp.Token, loginResp.KeyPairs, cfg.SailorRoot); err != nil {
 		return err
 	}
 
 	fmt.Println("logged in as: ", user)
-	return nil
-}
-
-func userLoginFlow() error {
 	return nil
 }

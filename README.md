@@ -20,26 +20,14 @@ apply configurations for your containerized applications — effortlessly.
 - 🗿 Strict config validations
 - 🔐 Secure secrets and policy enforcement
 - 🔁 Versioning & rollback
-- 🧠 Developer-friendly UI & API
+- 🧠 Developer-friendly CLI
 
-## 🧭 Quick Start
+## ⚠️ Status
 
-```bash
-# Download Sailor Binary
-curl -sL https://getsailor.sh | bash
+## Although you can download the source-code, build `cmd/sailor/main.go` and checkout for yourself how Sailor works, the current version has not yet reached GA (General Availability). The status of this project is currently in battle testing mode.
 
-# Run Sailor
-./sailor
+### Supported Consumers
 
-[🐧] Running on port :7766
-admin: http://localhost:7766/_admin
-```
-
----
-
-### Supported Clients
-
-| Language | Support |
-| -------- | ------- |
-| Go       | ✅      |
-| NodeJs   | ⚠️      |
+| Language | Support | Link                                  |
+| -------- | ------- | ------------------------------------- |
+| Go       | ✅      | https://github.com/sailorhq/sailor-go |

@@ -1,3 +1,18 @@
+// sailor
+// Copyright (C) 2025 SailorHQ and Ashish Shekar (codekidX)
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package handlers
 
 import (
@@ -13,6 +28,7 @@ import (
 
 	"github.com/codekidx/sailor/internal/types"
 	v1 "github.com/codekidx/sailor/pkg/core/v1"
+	"github.com/codekidx/sailor/pkg/vault"
 	"github.com/valyala/fasthttp"
 
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
@@ -121,7 +137,37 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			case KindConfig:
 				b, err = json.Marshal(&deployment.ConfigData)
 			case KindSecret:
-				b, err = json.Marshal(&deployment.SecretData)
+				metaBucket := tx.Bucket([]byte(BUCKET_META))
+				secretKey := metaBucket.Get([]byte(KEY_SECRET_KEY))
+				accessKey := metaBucket.Get([]byte(KEY_ACCESS_KEY))
+				kek, err := vault.DeriveKEK(string(secretKey), accessKey)
+				if err != nil {
+					return err
+				}
+
+				var secrets = make(map[string]vault.SecretRecord, len(deployment.SecretData))
+				for sk, sv := range deployment.SecretData {
+					dek, err := vault.GenerateDEK()
+					if err != nil {
+						return err
+					}
+
+					encryptedSv, _, err := vault.EncryptWithDEK(sv, dek)
+					if err != nil {
+						return err
+					}
+					encDEK, err := vault.EncryptDEK(dek, kek)
+					if err != nil {
+						return err
+					}
+
+					secrets[sk] = vault.SecretRecord{
+						EncryptedSecret: encryptedSv,
+						EncryptedDEK:    encDEK,
+					}
+				}
+
+				b, err = json.Marshal(&secrets)
 			}
 			if err != nil {
 				return err

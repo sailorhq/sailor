@@ -1,3 +1,18 @@
+// sailor
+// Copyright (C) 2025 SailorHQ and Ashish Shekar (codekidX)
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package v1
 
 import (
@@ -81,7 +96,7 @@ func (c *CoreAPIClient) CreateResource(ns, app, token, name string, kind string,
 // GetResource gets a resource inside sailor instance
 //
 // TODO :: kind to be of type ResourceKind and token should be the last parameter
-func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string) ([]byte, error) {
+func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string, keyPair KeyPair) ([]byte, error) {
 	// Construct the URL
 	var url string
 
@@ -102,6 +117,8 @@ func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string) ([]byte, 
 	}
 
 	// Set headers
+	req.Header.Set("x-access-key", keyPair.AccessKey)
+	req.Header.Set("x-secret-key", keyPair.SecretKey)
 	req.Header.Set("x-token", token)
 	req.Header.Set("Content-Type", "application/json")
 

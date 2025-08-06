@@ -1,3 +1,18 @@
+// sailor
+// Copyright (C) 2025 SailorHQ and Ashish Shekar (codekidX)
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package handlers
 
 import (
@@ -5,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/codekidx/sailor/pkg/vault"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -48,19 +64,35 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if params.Kind.IsMisc() {
+	switch params.Kind {
+	case KindMisc:
 		enc.Encode(resStr)
 		return
-	}
-
-	var data map[string]any
-	if err := json.Unmarshal([]byte(resStr), &data); err != nil {
-		sc.Log.Error("resource get has failed", zap.Error(err), zap.String("built_res", resStr))
-		ctx.SetStatusCode(http.StatusNotFound)
-		enc.Encode(ResponseMessage{Message: "error while parsing resource json!"})
+	case KindConfig:
+		var data map[string]any
+		if err := json.Unmarshal([]byte(resStr), &data); err != nil {
+			sc.Log.Error("resource get has failed", zap.Error(err), zap.String("built_res", resStr))
+			ctx.SetStatusCode(http.StatusNotFound)
+			enc.Encode(ResponseMessage{Message: "error while parsing resource json!"})
+			return
+		}
+		ctx.Response.Header.Set("Content-Type", "application/json")
+		enc.Encode(data)
 		return
-	}
+	case KindSecret:
+		if params.AccessKey == "" || params.SecretKey == "" {
+			ctx.SetStatusCode(http.StatusBadRequest)
+			enc.Encode(ResponseMessage{"key pair not provided"})
+			return
+		}
 
-	ctx.Response.Header.Set("Content-Type", "application/json")
-	enc.Encode(data)
+		var encSecrets map[string]vault.SecretRecord
+		if err := json.Unmarshal([]byte(resStr), &encSecrets); err != nil {
+			ctx.SetStatusCode(http.StatusInternalServerError)
+			enc.Encode(ResponseMessage{err.Error()})
+			return
+		}
+
+		enc.Encode(encSecrets)
+	}
 }

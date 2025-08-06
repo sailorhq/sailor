@@ -1,11 +1,28 @@
+// sailor
+// Copyright (C) 2025 SailorHQ and Ashish Shekar (codekidX)
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package handlers
 
 import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
+	v1 "github.com/codekidx/sailor/pkg/core/v1"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -16,6 +33,7 @@ func (sc *SailorCore) AuthBasicHandler(ctx *fasthttp.RequestCtx) {
 	pass := ctx.Request.Header.Peek("x-pass")
 
 	var token string
+	var allowedApps []string
 	err := sc.dbconns[BUCKET_ADMIN].View(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))
 		userBytes := userBucket.Get([]byte(user))
@@ -46,6 +64,8 @@ func (sc *SailorCore) AuthBasicHandler(ctx *fasthttp.RequestCtx) {
 			return errors.New("error while creating token")
 		}
 
+		allowedApps = user.AllowedApps
+
 		return nil
 	})
 
@@ -57,8 +77,41 @@ func (sc *SailorCore) AuthBasicHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	var keyPairs = make(map[string]v1.KeyPair)
+	for _, app := range allowedApps {
+		// this is wildcard case
+		if strings.HasSuffix(app, "-*") {
+			for projectKey, conn := range sc.dbconns {
+				ns := strings.Split(app, "-")[0]
+				if strings.HasPrefix(projectKey, ns) {
+					conn.View(func(tx *bolt.Tx) error {
+						metaBucket := tx.Bucket([]byte(BUCKET_META))
+						keyPairs[projectKey] = v1.KeyPair{
+							AccessKey: string(metaBucket.Get([]byte(KEY_ACCESS_KEY))),
+							SecretKey: string(metaBucket.Get([]byte(KEY_SECRET_KEY))),
+						}
+						return nil
+					})
+				}
+			}
+		} else {
+			if conn, ok := sc.dbconns[app]; ok {
+				conn.View(func(tx *bolt.Tx) error {
+					metaBucket := tx.Bucket([]byte(BUCKET_META))
+					keyPairs[app] = v1.KeyPair{
+						AccessKey: string(metaBucket.Get([]byte(KEY_ACCESS_KEY))),
+						SecretKey: string(metaBucket.Get([]byte(KEY_SECRET_KEY))),
+					}
+
+					return nil
+				})
+			}
+		}
+	}
+
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	enc.Encode(map[string]any{
-		"token": token,
+	enc.Encode(v1.LoginResponse{
+		Token:    token,
+		KeyPairs: keyPairs,
 	})
 }
