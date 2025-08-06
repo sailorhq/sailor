@@ -24,7 +24,10 @@ apply configurations for your containerized applications — effortlessly.
 
 ## ⚠️ Status
 
-## Although you can download the source-code, build `cmd/sailor/main.go` and checkout for yourself how Sailor works, the current version has not yet reached GA (General Availability). The status of this project is currently in battle testing mode.
+> Although you can download the source-code, build `cmd/sailor/main.go` and
+> checkout for yourself how Sailor works, the current version has not yet
+> reached GA (General Availability). The status of this project is currently in
+> battle testing mode.
 
 ### Supported Consumers
 
