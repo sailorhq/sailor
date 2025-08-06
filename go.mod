@@ -1,4 +1,4 @@
-module github.com/codekidx/sailor
+module github.com/sailorhq/sailor
 
 go 1.24.0
 
@@ -20,6 +20,7 @@ require (
 	github.com/valyala/fasthttp v1.63.0
 	go.etcd.io/bbolt v1.4.1
 	go.uber.org/zap v1.27.0
+	golang.org/x/crypto v0.39.0
 	golang.org/x/oauth2 v0.27.0
 	golang.org/x/term v0.32.0
 	k8s.io/api v0.33.2
@@ -73,7 +74,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
