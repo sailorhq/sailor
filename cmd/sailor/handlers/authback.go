@@ -110,6 +110,10 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	// TODO :: we need to add security validation that the token issuer is the one
+	// which is defined in OIDC Setting, we need to add validation setting in sailor
+	// settings
+
 	var sailorToken string
 	err = sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))
@@ -134,6 +138,9 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 		var user DBUser
 		if userBytes != nil {
 			json.Unmarshal(userBytes, &user)
+			claims["iss"] = "sailor"
+			claims["sub"] = "sailor-oidc"
+			claims["aud"] = "sailor"
 			claims["roles"] = user.Roles
 			claims["permissions"] = user.Permissions
 			claims["allowed_apps"] = user.AllowedApps
@@ -146,6 +153,9 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 			user.Token = sailorToken
 			user.Fingerprint = string(state)
 		} else {
+			claims["iss"] = "sailor"
+			claims["sub"] = "sailor-oidc"
+			claims["aud"] = "sailor"
 			sailorToken, err = jwtFromClaims(getMapClaims(claims), sc.setting.TokenKey)
 			if err != nil {
 				return errors.New("error while generating token")
