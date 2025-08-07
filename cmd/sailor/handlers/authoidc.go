@@ -29,6 +29,13 @@ import (
 func (sc *SailorCore) AuthOIDCHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
+	fingerprint := ctx.QueryArgs().Peek("fp")
+	if len(fingerprint) == 0 {
+		ctx.SetStatusCode(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: "unknown caller"})
+		return
+	}
+
 	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
@@ -54,11 +61,11 @@ func (sc *SailorCore) AuthOIDCHandler(ctx *fasthttp.RequestCtx) {
 		ClientSecret: ss.OIDC.ClientSecret,
 		Endpoint:     provider.Endpoint(),
 		RedirectURL:  ss.OIDC.RedirectURL,
-		Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+		Scopes:       ss.OIDC.Scopes,
 	}
 
 	// TODO :: think about the state which should be passed as part of OIDC request
-	ctx.Redirect(oauth2Config.AuthCodeURL("state-ash"), http.StatusFound)
+	ctx.Redirect(oauth2Config.AuthCodeURL(string(fingerprint)), http.StatusFound)
 }
 
 func getSailorSetting(adminDB *bolt.DB) (*SailorSetting, error) {

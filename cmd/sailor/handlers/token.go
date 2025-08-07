@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 	"go.uber.org/zap"
@@ -31,6 +32,13 @@ func (sc *SailorCore) GetTokenHandler(ctx *fasthttp.RequestCtx) {
 	// but depending upon your requirements & security measures/flow you should
 	// ideally change this using sailor settings, which should be added later
 	enc := json.NewEncoder(ctx)
+	fingerprint := ctx.QueryArgs().Peek("fp")
+	if len(fingerprint) == 0 {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{"unknown caller"})
+		return
+	}
+
 	username := string(ctx.Request.Header.Peek("x-user"))
 	if username == "" {
 		// TODO :: should there be source IP here?
@@ -42,7 +50,8 @@ func (sc *SailorCore) GetTokenHandler(ctx *fasthttp.RequestCtx) {
 
 	var token string
 	var err error
-	err = sc.dbconns[BUCKET_ADMIN].View(func(tx *bolt.Tx) error {
+	var allowedApps []string
+	err = sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))
 		if userBucket == nil {
 			// this case should not happen because while creating _admin sail
@@ -60,8 +69,23 @@ func (sc *SailorCore) GetTokenHandler(ctx *fasthttp.RequestCtx) {
 			return errors.New("sailor user is not parsable")
 		}
 
+		if user.Fingerprint != string(fingerprint) {
+			return errors.New("unable to verify authenticity")
+		}
+
 		token = user.Token
-		return nil
+		allowedApps = user.AllowedApps
+
+		user.Token = ""
+		user.Fingerprint = ""
+
+		b, err := json.Marshal(&user)
+		if err != nil {
+			return err
+		}
+
+		// we reset the token and fingerprint fields
+		return userBucket.Put([]byte(username), b)
 	})
 
 	if err != nil {
@@ -71,5 +95,9 @@ func (sc *SailorCore) GetTokenHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	enc.Encode(map[string]any{"token": token})
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	enc.Encode(v1.LoginResponse{
+		Token:    token,
+		KeyPairs: sc.getKeyPairs(allowedApps),
+	})
 }

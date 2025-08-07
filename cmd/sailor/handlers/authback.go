@@ -31,6 +31,13 @@ import (
 func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
+	state := ctx.QueryArgs().Peek("state")
+	if len(state) == 0 {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{"unknown caller"})
+		return
+	}
+
 	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
@@ -137,15 +144,17 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 				return errors.New("error while generating token")
 			}
 			user.Token = sailorToken
+			user.Fingerprint = string(state)
 		} else {
 			sailorToken, err = jwtFromClaims(getMapClaims(claims), sc.setting.TokenKey)
 			if err != nil {
 				return errors.New("error while generating token")
 			}
 			user = DBUser{
-				Email:    email,
-				Username: email,
-				Token:    sailorToken,
+				Email:       email,
+				Username:    email,
+				Token:       sailorToken,
+				Fingerprint: string(state),
 			}
 		}
 

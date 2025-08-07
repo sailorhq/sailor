@@ -111,8 +111,6 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 	applyCmd.Flags().StringVarP(&host, "host", "", "", "host where sailor is hosted")
 	applyCmd.Flags().StringVarP(&file, "file", "f", "", "configuration file")
 
-	applyCmd.MarkFlagsOneRequired("host", "file")
-
 	return applyCmd
 }
 

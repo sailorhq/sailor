@@ -145,6 +145,7 @@ type DBUser struct {
 	Roles       []string `json:"roles"`
 	AllowedApps []string `json:"allowed_apps"`
 	Token       string   `json:"token"`
+	Fingerprint string   `json:"fp"`
 }
 
 // User is the user object returned to the client

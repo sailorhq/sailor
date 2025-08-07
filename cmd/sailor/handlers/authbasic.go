@@ -77,6 +77,14 @@ func (sc *SailorCore) AuthBasicHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	enc.Encode(v1.LoginResponse{
+		Token:    token,
+		KeyPairs: sc.getKeyPairs(allowedApps),
+	})
+}
+
+func (sc *SailorCore) getKeyPairs(allowedApps []string) map[string]v1.KeyPair {
 	var keyPairs = make(map[string]v1.KeyPair)
 	for _, app := range allowedApps {
 		// this is wildcard case
@@ -109,9 +117,5 @@ func (sc *SailorCore) AuthBasicHandler(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
-	ctx.Response.Header.Set("Content-Type", "application/json")
-	enc.Encode(v1.LoginResponse{
-		Token:    token,
-		KeyPairs: keyPairs,
-	})
+	return keyPairs
 }

@@ -17,8 +17,6 @@ package command
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -37,10 +35,11 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if oidc {
 				var user string
-				fmt.Print("sailor user: ")
+				fmt.Print("login as: ")
 				fmt.Scan(&user)
 
-				url := fmt.Sprintf("%s/api/v1/auth/oidc", cfg.SailorHost)
+				fp := time.Now().UnixNano()
+				url := fmt.Sprintf("%s/api/v1/auth/oidc?fp=%d", cfg.SailorHost, fp)
 				if err := browser.OpenURL(url); err != nil {
 					return err
 				}
@@ -54,16 +53,17 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 				// user name and can gain access to the sailor APIs .. this is a threat and should be solved
 				// by passing OIDC API a secure key which can identify the token created, the token
 				// should not be provided if this secure key is not given during request
-				tokenResp, err := cfg.SailorClient.GetToken(user)
+				loginResp, err := cfg.SailorClient.GetToken(user, fmt.Sprint(fp))
 				if err != nil {
 					return err
 				}
 
-				if err = os.WriteFile(filepath.Join(cfg.SailorRoot, "tok"), []byte(tokenResp.Token), 0755); err != nil {
+				if err = updateTokenAndKeyPairs(loginResp.Token, loginResp.KeyPairs, cfg.SailorRoot); err != nil {
 					return err
 				}
 
 				fmt.Println("logged in as:", user)
+				return nil
 			}
 
 			err := basicLoginFlow(cfg)

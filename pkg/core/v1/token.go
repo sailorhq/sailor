@@ -22,9 +22,9 @@ import (
 	"net/http"
 )
 
-func (c *CoreAPIClient) GetToken(user string) (*TokenResponse, error) {
+func (c *CoreAPIClient) GetToken(user, fingerprint string) (*LoginResponse, error) {
 	// Construct the URL
-	url := fmt.Sprintf("%s/api/v1/auth/token", c.BaseURL)
+	url := fmt.Sprintf("%s/api/v1/auth/token?fp=%s", c.BaseURL, fingerprint)
 
 	// Create the PUT request
 	req, err := http.NewRequest("GET", url, nil)
@@ -52,10 +52,10 @@ func (c *CoreAPIClient) GetToken(user string) (*TokenResponse, error) {
 		return nil, serverMessageToErr(b)
 	}
 
-	var tokResp TokenResponse
-	if err := json.Unmarshal(b, &tokResp); err != nil {
+	var loginResp LoginResponse
+	if err := json.Unmarshal(b, &loginResp); err != nil {
 		return nil, err
 	}
 
-	return &tokResp, nil
+	return &loginResp, nil
 }
