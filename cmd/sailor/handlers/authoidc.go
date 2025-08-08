@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/coreos/go-oidc"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/oauth2"
@@ -68,8 +69,8 @@ func (sc *SailorCore) AuthOIDCHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Redirect(oauth2Config.AuthCodeURL(string(fingerprint)), http.StatusFound)
 }
 
-func getSailorSetting(adminDB *bolt.DB) (*SailorSetting, error) {
-	var ss SailorSetting
+func getSailorSetting(adminDB *bolt.DB) (*v1.SailorSetting, error) {
+	var ss v1.SailorSetting
 	err := adminDB.View(func(tx *bolt.Tx) error {
 		settingBytes := tx.Bucket([]byte(BUCKET_SETTING)).Get([]byte(KEY_SETTING))
 		if settingBytes == nil {

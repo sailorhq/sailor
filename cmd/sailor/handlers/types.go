@@ -34,6 +34,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sailorhq/sailor/internal/types"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/valyala/fasthttp"
 
@@ -165,7 +166,7 @@ type SailorCore struct {
 
 	kube *kubernetes.Clientset
 
-	setting *SailorSetting
+	setting *v1.SailorSetting
 
 	Log *zap.Logger
 }
@@ -302,7 +303,7 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 				if err != nil {
 					return err
 				}
-				setting := SailorSetting{
+				setting := v1.SailorSetting{
 					TokenKey: generateUniqueKey("token", 16),
 				}
 				settingb, _ := json.Marshal(&setting)

@@ -56,8 +56,36 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 
 	setting := &cobra.Command{
 		Use:   "setting",
-		Short: "Helps you fetch setting for a resource",
+		Short: "Helps you fetch resource or sailor setting",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if ns != "" && app != "" && kind != "" {
+				if kind == "misc" && name == "" {
+					return errors.New("misc resource requires a name")
+				}
+
+			}
+
+			// get sailor settings
+			ss, err := cfg.SailorClient.GetSailorSetting(cfg.Token)
+			if err != nil {
+				return err
+			}
+
+			b, err := json.MarshalIndent(&ss, "", "    ")
+			if err != nil {
+				return nil
+			}
+
+			if output != "" {
+				if err := os.WriteFile(output, b, 0755); err != nil {
+					return err
+				}
+				fmt.Println("saved to", output)
+				return nil
+			}
+
+			fmt.Println(string(b))
+
 			return nil
 		},
 	}

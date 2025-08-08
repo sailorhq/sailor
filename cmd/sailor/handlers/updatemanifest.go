@@ -35,7 +35,7 @@ func (sc *SailorCore) UpdateManifestHandler(ctx *fasthttp.RequestCtx) {
 
 	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		settingBytes := tx.Bucket([]byte(BUCKET_SETTING)).Get([]byte(KEY_SETTING))
-		var setting SailorSetting
+		var setting v1.SailorSetting
 		if err := json.Unmarshal(settingBytes, &setting); err != nil {
 			return err
 		}

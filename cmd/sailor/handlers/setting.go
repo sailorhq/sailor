@@ -25,28 +25,10 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-type OIDCSetting struct {
-	ClientID     string   `json:"client_id"`
-	ClientSecret string   `json:"client_secret"`
-	IssuerURL    string   `json:"issuer_url"`
-	Scopes       []string `json:"scopes"`
-	RedirectURL  string   `json:"redirect_url"`
-}
-
-type Webhook struct {
-	OnOIDCSuccess string `json:"on_oidc_success"`
-}
-type SailorSetting struct {
-	OIDC     *OIDCSetting      `json:"oidc"`
-	TokenKey string            `json:"token_key"`
-	Webhook  Webhook           `json:"webhook"`
-	Manifest v1.SailorManifest `json:"manifest"`
-}
-
 func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 
-	var ss SailorSetting
+	var ss v1.SailorSetting
 	if err := json.Unmarshal(ctx.Request.Body(), &ss); err != nil {
 		ctx.SetStatusCode(http.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: err.Error()})
@@ -72,7 +54,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
-		var currSetting SailorSetting
+		var currSetting v1.SailorSetting
 		currSettingBytes := tx.Bucket([]byte(BUCKET_SETTING)).Get([]byte(KEY_SETTING))
 		if err := json.Unmarshal(currSettingBytes, &currSetting); err != nil {
 			return nil
