@@ -35,22 +35,19 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if ss.OIDC == nil {
-		ctx.SetStatusCode(http.StatusNotFound)
-		enc.Encode(ResponseMessage{Message: "oidc sailor settings not present"})
-	}
+	if ss.OIDC != nil {
+		if ss.OIDC.ClientID == "" || ss.OIDC.ClientSecret == "" ||
+			ss.OIDC.IssuerURL == "" || ss.OIDC.RedirectURL == "" || len(ss.OIDC.Scopes) == 0 {
+			ctx.SetStatusCode(http.StatusBadRequest)
+			enc.Encode(ResponseMessage{Message: "oidc validations failed, some required fields are empty"})
+			return
+		}
 
-	if ss.OIDC.ClientID == "" || ss.OIDC.ClientSecret == "" ||
-		ss.OIDC.IssuerURL == "" || ss.OIDC.RedirectURL == "" || len(ss.OIDC.Scopes) == 0 {
-		ctx.SetStatusCode(http.StatusBadRequest)
-		enc.Encode(ResponseMessage{Message: "oidc validations failed, some required fields are empty"})
-		return
-	}
-
-	if !slices.Contains(ss.OIDC.Scopes, "email") {
-		ctx.SetStatusCode(http.StatusBadRequest)
-		enc.Encode(ResponseMessage{Message: "oidc:scopes must contain email"})
-		return
+		if !slices.Contains(ss.OIDC.Scopes, "email") {
+			ctx.SetStatusCode(http.StatusBadRequest)
+			enc.Encode(ResponseMessage{Message: "oidc:scopes must contain email"})
+			return
+		}
 	}
 
 	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
@@ -61,6 +58,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 		}
 
 		currSetting.OIDC = ss.OIDC
+		currSetting.Webhook = ss.Webhook
 		b, err := json.Marshal(&currSetting)
 		if err != nil {
 			return err
