@@ -57,6 +57,23 @@ func SettingCommand(cfg *CLIConfig) *cobra.Command {
 				if kind == "misc" && name == "" {
 					return errors.New("misc resource requires a name")
 				}
+
+				// we will update sailor settings here
+				b, err := os.ReadFile(file)
+				if err != nil {
+					return nil
+				}
+				var rs v1.ResourceSetting
+				if err := json.Unmarshal(b, &rs); err != nil {
+					return err
+				}
+
+				if err := cfg.SailorClient.UpdateResourceSetting(rs, ns, app, kind, name, cfg.Token); err != nil {
+					return err
+				}
+
+				fmt.Println("updated resource settings!")
+
 				return nil
 			}
 

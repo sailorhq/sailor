@@ -63,6 +63,26 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 					return errors.New("misc resource requires a name")
 				}
 
+				rs, err := cfg.SailorClient.GetResourceSetting(ns, app, kind, name, cfg.Token)
+				if err != nil {
+					return err
+				}
+
+				b, err := json.MarshalIndent(&rs, "", "    ")
+				if err != nil {
+					return nil
+				}
+
+				if output != "" {
+					if err := os.WriteFile(output, b, 0755); err != nil {
+						return err
+					}
+					fmt.Println("saved to", output)
+					return nil
+				}
+
+				fmt.Println(string(b))
+				return nil
 			}
 
 			// get sailor settings
@@ -85,7 +105,6 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 			}
 
 			fmt.Println(string(b))
-
 			return nil
 		},
 	}
