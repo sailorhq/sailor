@@ -54,8 +54,8 @@ func (sc *SailorCore) UpdateResourceSetting(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var resource v1.SailorResource
-	err := json.Unmarshal(ctx.Request.Body(), &resource)
+	var setting v1.ResourceSetting
+	err := json.Unmarshal(ctx.Request.Body(), &setting)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
@@ -76,7 +76,7 @@ func (sc *SailorCore) UpdateResourceSetting(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
-		sailorRes.Setting = resource.Setting
+		sailorRes.Setting = &setting
 
 		if resBytes, err = json.Marshal(&sailorRes); err != nil {
 			return err
