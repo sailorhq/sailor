@@ -50,6 +50,34 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "schema",
 		Short: "Helps you fetch schema for a resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if ns != "" && app != "" && kind != "" {
+				if kind == "misc" && name == "" {
+					return errors.New("misc resource requires a name")
+				}
+
+				schema, err := cfg.SailorClient.GetSchema(ns, app, kind, name, cfg.Token)
+				if err != nil {
+					return err
+				}
+
+				b, err := json.MarshalIndent(schema, "", "	")
+				if err != nil {
+					return err
+				}
+
+				if output != "" {
+					if err = os.WriteFile(output, b, 0755); err != nil {
+						return err
+					}
+
+					fmt.Println("saved to:", output)
+				}
+
+				fmt.Println(string(b))
+				return nil
+			}
+
+			fmt.Println("missing ns, app, kind or name")
 			return nil
 		},
 	}
