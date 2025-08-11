@@ -54,8 +54,8 @@ func (sc *SailorCore) UpdateResourceSchemaHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var resource v1.SailorResource
-	err := json.Unmarshal(ctx.Request.Body(), &resource)
+	var schema map[string]any
+	err := json.Unmarshal(ctx.Request.Body(), &schema)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
@@ -76,7 +76,7 @@ func (sc *SailorCore) UpdateResourceSchemaHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
-		sailorRes.Schema = resource.Schema
+		sailorRes.Schema = schema
 
 		if resBytes, err = json.Marshal(&sailorRes); err != nil {
 			return err

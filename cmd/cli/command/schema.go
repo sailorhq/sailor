@@ -15,9 +15,20 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package command
 
-import "github.com/spf13/cobra"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
 
-func SchemaCommand() *cobra.Command {
+	"github.com/spf13/cobra"
+)
+
+func SchemaCommand(cfg *CLIConfig) *cobra.Command {
+	var ns string
+	var app string
+	var kind string
+	var name string
 	var file string
 	schemaCmd := &cobra.Command{
 		Use:   "schema",
@@ -27,7 +38,46 @@ func SchemaCommand() *cobra.Command {
 		},
 	}
 
-	schemaCmd.Flags().StringVarP(&file, "file", "f", "", "update schema from json file")
+	schemaCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "get resource from this namespace")
+	schemaCmd.PersistentFlags().StringVarP(&app, "app", "", "", "get resource from this app")
+	schemaCmd.PersistentFlags().StringVarP(&kind, "kind", "", "", "kind of resource")
+	schemaCmd.PersistentFlags().StringVarP(&name, "name", "", "", "name of the misc resource")
+	schemaCmd.PersistentFlags().StringVarP(&file, "file", "f", "", "update schema from json file")
+
+	applyCmd := &cobra.Command{
+		Use:   "apply",
+		Short: "Helps apply an update to resource schema",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if ns != "" && app != "" && kind != "" {
+				if kind == "misc" && name == "" {
+					return errors.New("misc resource requires a name")
+				}
+
+				b, err := os.ReadFile(file)
+				if err != nil {
+					return nil
+				}
+				var schema map[string]any
+				if err := json.Unmarshal(b, &schema); err != nil {
+					return errors.New("schema should be a valid json and value for each key must be a string")
+				}
+
+				if err := cfg.SailorClient.UpdateSchema(schema, ns, app, kind, name, cfg.Token); err != nil {
+					return err
+				}
+
+				fmt.Println("updated resource schema!")
+
+				return nil
+			}
+
+			fmt.Println("missing ns, app, kind or name")
+
+			return nil
+		},
+	}
+
+	schemaCmd.AddCommand(applyCmd)
 
 	return schemaCmd
 }
