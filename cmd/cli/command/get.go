@@ -26,10 +26,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// getResourceCommand creates a command for getting a specific resource type
+func getResourceCommand(cfg *CLIConfig, kind string, ns, app, name, output *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   kind,
+		Short: "Helps you get a sailor " + kind,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return getResource(cfg, kind, *ns, *app, *name, *output)
+		},
+	}
+}
+
 func GetCommand(cfg *CLIConfig) *cobra.Command {
 	var ns string
 	var app string
-	var kind string
 	var name string
 	var output string
 	getCmd := &cobra.Command{
@@ -42,15 +52,29 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 
 	getCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "get resource from this namespace")
 	getCmd.PersistentFlags().StringVarP(&app, "app", "", "", "get resource from this app")
-	getCmd.PersistentFlags().StringVarP(&kind, "kind", "", "", "kind of resource")
 	getCmd.PersistentFlags().StringVarP(&name, "name", "", "", "name of the misc resource")
 	getCmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output the resource data into a file")
+
+	// Config subcommand
+	config := getResourceCommand(cfg, "config", &ns, &app, &name, &output)
+
+	// Secret subcommand
+	secret := getResourceCommand(cfg, "secret", &ns, &app, &name, &output)
+
+	// Misc subcommand
+	misc := getResourceCommand(cfg, "misc", &ns, &app, &name, &output)
 
 	schema := &cobra.Command{
 		Use:   "schema",
 		Short: "Helps you fetch schema for a resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if ns != "" && app != "" && kind != "" {
+			if ns != "" && app != "" {
+				// Get kind from args
+				if len(args) == 0 {
+					return ErrKindArgumentMissing
+				}
+
+				kind := args[0]
 				if kind == "misc" && name == "" {
 					return errors.New("misc resource requires a name")
 				}
@@ -86,7 +110,8 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "setting",
 		Short: "Helps you fetch resource or sailor setting",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if ns != "" && app != "" && kind != "" {
+			if ns != "" && app != "" && len(args) > 0 {
+				kind := args[0]
 				if kind == "misc" && name == "" {
 					return errors.New("misc resource requires a name")
 				}
@@ -141,7 +166,13 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "resource",
 		Short: "Helps you fetch a specific resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if ns != "" && app != "" && kind != "" {
+			if ns != "" && app != "" {
+				// Get kind from args
+				if len(args) == 0 {
+					return ErrKindArgumentMissing
+				}
+
+				kind := args[0]
 				if !slices.Contains([]string{"config", "misc", "secret"}, kind) {
 					return errors.New("not a valid kind of resource")
 				}
@@ -150,54 +181,7 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 					return errors.New("resource name is required for misc kind")
 				}
 
-				projectKey := fmt.Sprintf("%s-%s", ns, app)
-				if _, ok := cfg.KeyPairs[projectKey]; !ok {
-					return errors.New("access not available, re-login to get fresh access")
-				}
-
-				dataBytes, err := cfg.SailorClient.GetResource(ns, app, kind, name, cfg.Token, cfg.KeyPairs[projectKey])
-				if err != nil {
-					return err
-				}
-
-				if kind == "secret" {
-					var encSecrets map[string]vault.SecretRecord
-					if err := json.Unmarshal(dataBytes, &encSecrets); err != nil {
-						return err
-					}
-
-					kek, err := vault.DeriveKEK(cfg.KeyPairs[projectKey].SecretKey, []byte(cfg.KeyPairs[projectKey].AccessKey))
-					if err != nil {
-						return err
-					}
-
-					var secrets = make(map[string]string, len(encSecrets))
-					for k, ev := range encSecrets {
-						dek, err := vault.DecryptDEK(ev.EncryptedDEK, kek)
-						if err != nil {
-							return err
-						}
-						v, err := vault.DecryptWithDEK(ev.EncryptedSecret, dek)
-						if err != nil {
-							return err
-						}
-
-						secrets[k] = v
-					}
-
-					dataBytes, err = json.Marshal(&secrets)
-					if err != nil {
-						return err
-					}
-				}
-
-				if output != "" {
-					fmt.Println("resource written to:", output)
-					return os.WriteFile(output, dataBytes, 0755)
-				}
-
-				fmt.Println(string(dataBytes))
-				return nil
+				return getResource(cfg, kind, ns, app, name, output)
 			}
 
 			fmt.Println("missing ns, app, kind or name")
@@ -205,8 +189,71 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 
+	getCmd.AddCommand(config)
+	getCmd.AddCommand(secret)
+	getCmd.AddCommand(misc)
 	getCmd.AddCommand(schema)
 	getCmd.AddCommand(setting)
 	getCmd.AddCommand(resource)
 	return getCmd
+}
+
+// Helper function for getting resources
+func getResource(cfg *CLIConfig, kind, ns, app, name, output string) error {
+	if ns == "" || app == "" {
+		return errors.New("namespace and app are required")
+	}
+
+	if kind == "misc" && name == "" {
+		return errors.New("resource name is required for misc kind")
+	}
+
+	projectKey := fmt.Sprintf("%s-%s", ns, app)
+	if _, ok := cfg.KeyPairs[projectKey]; !ok {
+		return errors.New("access not available, re-login to get fresh access")
+	}
+
+	dataBytes, err := cfg.SailorClient.GetResource(ns, app, kind, name, cfg.Token, cfg.KeyPairs[projectKey])
+	if err != nil {
+		return err
+	}
+
+	if kind == "secret" {
+		var encSecrets map[string]vault.SecretRecord
+		if err := json.Unmarshal(dataBytes, &encSecrets); err != nil {
+			return err
+		}
+
+		kek, err := vault.DeriveKEK(cfg.KeyPairs[projectKey].SecretKey, []byte(cfg.KeyPairs[projectKey].AccessKey))
+		if err != nil {
+			return err
+		}
+
+		var secrets = make(map[string]string, len(encSecrets))
+		for k, ev := range encSecrets {
+			dek, err := vault.DecryptDEK(ev.EncryptedDEK, kek)
+			if err != nil {
+				return err
+			}
+			v, err := vault.DecryptWithDEK(ev.EncryptedSecret, dek)
+			if err != nil {
+				return err
+			}
+
+			secrets[k] = v
+		}
+
+		dataBytes, err = json.Marshal(&secrets)
+		if err != nil {
+			return err
+		}
+	}
+
+	if output != "" {
+		fmt.Println("resource written to:", output)
+		return os.WriteFile(output, dataBytes, 0755)
+	}
+
+	fmt.Println(string(dataBytes))
+	return nil
 }
