@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
@@ -107,6 +108,13 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		// rollback all the operations under tx and return error to the user
 		resourceName := fmt.Sprintf("%s-%s", params.App, resourceKey)
 		if resource.Setting.Deploy.K8s {
+			// create k8s labels for marking sailor resource
+			k8sLabels := map[string]string{
+				"modifiedAt": fmt.Sprint(time.Now().Unix()),
+				"owner":      "sailor",
+				"project":    params.ProjectKey,
+			}
+
 			switch params.Kind {
 			case KindConfig, KindMisc:
 				contentKey := fmt.Sprintf("_%s", resourceKey)
@@ -114,6 +122,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: params.Ns,
+						Labels:    k8sLabels,
 					},
 					Data: map[string]string{
 						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, []byte(deployment.Version)),
@@ -157,10 +166,12 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: params.Ns,
+						Labels:    k8sLabels,
 					},
 					Data: map[string][]byte{
 						contentKey: []byte(resStr),
 					},
+					Type: corev1.SecretType(fmt.Sprintf("sailor/%s", resourceKey)),
 				}
 
 				if sc.kube != nil {
