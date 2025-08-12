@@ -26,6 +26,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// getResourceCommand creates a command for getting a specific resource type
+func getResourceCommand(cfg *CLIConfig, kind string, ns, app, name, output *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   kind,
+		Short: "Helps you get a sailor " + kind,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return getResource(cfg, kind, *ns, *app, *name, *output)
+		},
+	}
+}
+
 func GetCommand(cfg *CLIConfig) *cobra.Command {
 	var ns string
 	var app string
@@ -45,31 +56,13 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 	getCmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output the resource data into a file")
 
 	// Config subcommand
-	config := &cobra.Command{
-		Use:   "config",
-		Short: "Helps you get a sailor config",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return getResource(cfg, "config", ns, app, name, output)
-		},
-	}
+	config := getResourceCommand(cfg, "config", &ns, &app, &name, &output)
 
 	// Secret subcommand
-	secret := &cobra.Command{
-		Use:   "secret",
-		Short: "Helps you get a sailor secret",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return getResource(cfg, "secret", ns, app, name, output)
-		},
-	}
+	secret := getResourceCommand(cfg, "secret", &ns, &app, &name, &output)
 
 	// Misc subcommand
-	misc := &cobra.Command{
-		Use:   "misc",
-		Short: "Helps you get a misc resource",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return getResource(cfg, "misc", ns, app, name, output)
-		},
-	}
+	misc := getResourceCommand(cfg, "misc", &ns, &app, &name, &output)
 
 	schema := &cobra.Command{
 		Use:   "schema",
@@ -78,7 +71,7 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 			if ns != "" && app != "" {
 				// Get kind from args
 				if len(args) == 0 {
-					return errors.New("kind is required as argument (config, secret, misc)")
+					return ErrKindArgumentMissing
 				}
 
 				kind := args[0]
@@ -176,7 +169,7 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 			if ns != "" && app != "" {
 				// Get kind from args
 				if len(args) == 0 {
-					return errors.New("kind is required as argument (config, secret, misc)")
+					return ErrKindArgumentMissing
 				}
 
 				kind := args[0]

@@ -27,6 +27,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// deployResourceCommand creates a command for deploying a specific resource type
+func deployResourceCommand(cfg *CLIConfig, kind string, ns, app, name, file *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   kind,
+		Short: "Helps you deploy a sailor " + kind,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return deployResource(cfg, kind, *ns, *app, *name, *file)
+		},
+	}
+}
+
 func DeployCommand(cfg *CLIConfig) *cobra.Command {
 	var version string
 	var ns string
@@ -38,7 +49,7 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 		Short: "Helps you create and deploy a sailor resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				return errors.New("subcommand is required")
+				return ErrKindArgumentMissing
 			}
 
 			return nil
@@ -51,31 +62,13 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 	deployCmd.PersistentFlags().StringVarP(&name, "name", "", "", "name of the misc resource")
 
 	// Config subcommand
-	config := &cobra.Command{
-		Use:   "config",
-		Short: "Helps you deploy a sailor config",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return deployResource(cfg, "config", ns, app, name, file)
-		},
-	}
+	config := deployResourceCommand(cfg, "config", &ns, &app, &name, &file)
 
 	// Secret subcommand
-	secret := &cobra.Command{
-		Use:   "secret",
-		Short: "Helps you deploy a sailor secret",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return deployResource(cfg, "secret", ns, app, name, file)
-		},
-	}
+	secret := deployResourceCommand(cfg, "secret", &ns, &app, &name, &file)
 
 	// Misc subcommand
-	misc := &cobra.Command{
-		Use:   "misc",
-		Short: "Helps you deploy a misc resource",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return deployResource(cfg, "misc", ns, app, name, file)
-		},
-	}
+	misc := deployResourceCommand(cfg, "misc", &ns, &app, &name, &file)
 
 	create := &cobra.Command{
 		Use:   "create",
@@ -88,7 +81,7 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 			if ns != "" && app != "" {
 				// Get kind from args
 				if len(args) == 0 {
-					return errors.New("kind is required as argument (config, secret, misc)")
+					return ErrKindArgumentMissing
 				}
 
 				kind := args[0]
@@ -159,7 +152,7 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 			if ns != "" && app != "" && version != "" {
 				// Get kind from args
 				if len(args) == 0 {
-					return errors.New("kind is required as argument (config, secret, misc)")
+					return ErrKindArgumentMissing
 				}
 
 				kind := args[0]
@@ -204,7 +197,7 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 			if ns != "" && app != "" && version != "" {
 				// Get kind from args
 				if len(args) == 0 {
-					return errors.New("kind is required as argument (config, secret, misc)")
+					return ErrKindArgumentMissing
 				}
 
 				kind := args[0]
