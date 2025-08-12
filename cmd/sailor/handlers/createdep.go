@@ -202,7 +202,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			version = next
 
 			versionKey := fmt.Sprintf("%s_version", resourceKey)
-			resourceJSON := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, true)
+			resourceJSON := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, true, nil)
 
 			diff := differ.DiffMain(resourceJSON, resourceData, true)
 			patchList := differ.PatchMake(resourceJSON, resourceData, diff)

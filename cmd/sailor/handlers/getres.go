@@ -57,7 +57,7 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 	resourceKey := params.Kind.ResourceKey(params.ResourceName)
 	versionKey := fmt.Sprintf("%s_version", resourceKey)
 
-	resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false)
+	resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, nil)
 	if resStr == "" {
 		ctx.SetStatusCode(http.StatusNotFound)
 		enc.Encode(ResponseMessage{"this resource was never deployed!"})

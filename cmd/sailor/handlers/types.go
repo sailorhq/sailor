@@ -461,7 +461,9 @@ func validateWithRules(data, rules map[string]any) []string {
 	return messages
 }
 
-func buildResource(db *bolt.DB, resourceKey, versionKey string, onTopOfLastDeployment bool) string {
+func buildResource(db *bolt.DB, resourceKey, versionKey string,
+	onTopOfLastDeployment bool,
+	overrideMaxVersion []byte) string {
 	var configJson string
 	db.View(func(tx *bolt.Tx) error {
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
@@ -470,10 +472,14 @@ func buildResource(db *bolt.DB, resourceKey, versionKey string, onTopOfLastDeplo
 		min := []byte("0")
 
 		var max []byte
-		if onTopOfLastDeployment {
-			max, _ = deploymentBucket.Cursor().Last()
+		if overrideMaxVersion != nil {
+			max = overrideMaxVersion
 		} else {
-			max = metaBucket.Get([]byte(versionKey))
+			if onTopOfLastDeployment {
+				max, _ = deploymentBucket.Cursor().Last()
+			} else {
+				max = metaBucket.Get([]byte(versionKey))
+			}
 		}
 
 		// if the key is still nil from deployment bucket, the reosurce was neither
