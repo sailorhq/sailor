@@ -27,6 +27,12 @@ type CLIConfig struct {
 	// Env is the current selected environment by the user
 	Env string `json:"env"`
 
+    // Namespace is the namespace selected by the user for current session
+	Namespace string `json:"namespace,omitempty"`
+
+	// App is the application name selected by the user for current session
+	App string `json:"app,omitempty"`
+
 	// SailorHost is the host of the current selected environment, splatted for ease
 	// of use
 	SailorHost string `json:"-"`

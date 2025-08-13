@@ -32,6 +32,8 @@ import (
 func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 	var file string
 	var host string
+	var namespace string
+	var appName string	
 	applyCmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Helps configure your sailor environment",
@@ -47,7 +49,24 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 						if err := updateEnv(envConfig.Name, cfg.SailorRoot); err != nil {
 							return err
 						}
-						fmt.Printf("switched to %s\n", envConfig.Name)
+                        if namespace != "" {
+                            if err := updateNamespace(namespace, cfg.SailorRoot); err != nil {
+                                return err
+                            }
+                        }
+                        if appName != "" {
+                            if err := updateApp(appName, cfg.SailorRoot); err != nil {
+                                return err
+                            }
+                        }
+						fmt.Printf("switched to %s", envConfig.Name)
+						if namespace != "" {
+                            fmt.Printf(" | namespace: %s", namespace)
+                        }
+                        if appName != "" {
+                            fmt.Printf(" | app: %s", appName)
+                        }
+						fmt.Println()
 						return nil
 					}
 				}
@@ -110,6 +129,8 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 
 	applyCmd.Flags().StringVarP(&host, "host", "", "", "host where sailor is hosted")
 	applyCmd.Flags().StringVarP(&file, "file", "f", "", "configuration file")
+	applyCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to target")
+    applyCmd.Flags().StringVarP(&appName, "app", "a", "", "application name to target")
 
 	return applyCmd
 }
@@ -150,6 +171,28 @@ func updateEnv(env string, basePath string) error {
 
 	readCfg.Env = env
 	return UpdateConfig(readCfg, basePath)
+}
+
+func updateNamespace(ns string, basePath string) error {
+    readCfg, _ := GetConfig(basePath)
+    if readCfg == nil {
+        return UpdateConfig(&CLIConfig{
+            Namespace: ns,
+        }, basePath)
+    }
+    readCfg.Namespace = ns
+    return UpdateConfig(readCfg, basePath)
+}
+
+func updateApp(app string, basePath string) error {
+    readCfg, _ := GetConfig(basePath)
+    if readCfg == nil {
+        return UpdateConfig(&CLIConfig{
+            App: app,
+        }, basePath)
+    }
+    readCfg.App = app
+    return UpdateConfig(readCfg, basePath)
 }
 
 func GetConfig(basePath string) (*CLIConfig, error) {
