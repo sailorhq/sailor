@@ -26,6 +26,7 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/sailorhq/sailor/internal/types"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/sailorhq/sailor/pkg/vault"
@@ -100,6 +101,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	differ := diffmod.New()
 
 	var version int = 1
+	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
 	err = sc.dbconns[params.ProjectKey].Update(func(tx *bolt.Tx) error {
 		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
 		resBytes := resourceBucket.Get([]byte(resourceKey))
@@ -188,7 +190,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 				Version:     "1",
 				Deployed:    false,
 				CreatedAt:   time.Now().Format(time.RFC3339),
-				CreatedBy:   "--todo--",
+				CreatedBy:   claims["email"].(string),
 				Diff:        patch,
 			})
 
@@ -213,7 +215,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 				Version:     fmt.Sprint(next),
 				Deployed:    false,
 				CreatedAt:   time.Now().Format(time.RFC3339),
-				CreatedBy:   "--todo--",
+				CreatedBy:   claims["email"].(string),
 				Diff:        patch,
 			})
 
@@ -229,6 +231,18 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
+
+	go sc.addAuditEvent(&AuditEvent{
+		Namespace: params.Ns,
+		App:       params.App,
+		Username:  claims["email"].(string),
+		Action:    "create_deployment",
+		Timestamp: time.Now(),
+		Details: map[string]any{
+			"kind":    params.Kind,
+			"version": version,
+		},
+	})
 
 	// TODO :: maybe we give proper deployment creation response afterwards..
 	enc.Encode(map[string]int{

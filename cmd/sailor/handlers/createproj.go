@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"time"
 
 	bolt "go.etcd.io/bbolt"
 
+	"github.com/golang-jwt/jwt/v5"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 )
@@ -104,6 +106,15 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
+
+	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
+	go sc.addAuditEvent(&AuditEvent{
+		Namespace: params.Ns,
+		App:       params.App,
+		Username:  claims["email"].(string),
+		Action:    "create_project",
+		Timestamp: time.Now(),
+	})
 
 	enc.Encode(v1.ProjectResponse{
 		Key:       params.ProjectKey,

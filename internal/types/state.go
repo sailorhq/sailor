@@ -39,8 +39,6 @@ type Deployment struct {
 	Diff        string `json:"diff"`
 	CreatedAt   string `json:"created_at"`
 	CreatedBy   string `json:"created_by"`
-	DeployedAt  string `json:"deployed_at"`
-	DeployedBy  string `json:"deployed_by"`
 	Data        []byte `json:"data"`
 }
 

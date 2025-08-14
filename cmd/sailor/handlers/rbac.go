@@ -20,7 +20,9 @@ import (
 	"errors"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -45,6 +47,7 @@ func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	var updated v1.RBACConstraints
 	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))
 		userBytes := userBucket.Get([]byte(userKey))
@@ -60,7 +63,7 @@ func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 			AllowedApps: user.AllowedApps,
 		}
 
-		updated := updateRBACConstraints(userConstraints, req)
+		updated = updateRBACConstraints(userConstraints, req)
 
 		user.Roles = updated.Roles
 		user.Permissions = updated.Permissions
@@ -79,6 +82,17 @@ func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
+
+	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
+	go sc.addAuditEvent(&AuditEvent{
+		Username:  claims["email"].(string),
+		Action:    "update_rbac",
+		Timestamp: time.Now(),
+		Details: map[string]any{
+			"for_user": userKey,
+			"final":    updated,
+		},
+	})
 
 	enc.Encode(ResponseMessage{Message: "ok"})
 }

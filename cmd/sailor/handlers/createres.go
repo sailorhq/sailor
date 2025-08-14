@@ -19,7 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -99,6 +101,18 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
+
+	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
+	go sc.addAuditEvent(&AuditEvent{
+		Namespace: params.Ns,
+		App:       params.App,
+		Username:  claims["email"].(string),
+		Action:    "create_resource",
+		Timestamp: time.Now(),
+		Details: map[string]any{
+			"kind": params.Kind,
+		},
+	})
 
 	enc.Encode(ResponseMessage{Message: "ok"})
 
