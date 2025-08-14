@@ -18,7 +18,6 @@ package main
 import (
 	"os"
 
-	"github.com/sailorhq/sailor/cmd/sailor/console"
 	"github.com/sailorhq/sailor/cmd/sailor/handlers"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"go.uber.org/zap"
@@ -58,9 +57,6 @@ func main() {
 
 	r := router.New()
 	apiV1 := r.Group("/api/v1")
-	consoleV1 := r.Group("/console/v1")
-
-	console.Initialize(consoleV1)
 
 	core.Log.Info("initializing core routes")
 
