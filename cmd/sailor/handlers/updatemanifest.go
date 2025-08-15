@@ -17,7 +17,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -53,6 +55,14 @@ func (sc *SailorCore) UpdateManifestHandler(ctx *fasthttp.RequestCtx) {
 		enc.Encode(ResponseMessage{err.Error()})
 		return
 	}
+
+	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
+	go sc.addAuditEvent(&AuditEvent{
+		Username:  claims["email"].(string),
+		Action:    "update_manifest",
+		Timestamp: time.Now(),
+		Details:   manifest,
+	})
 
 	enc.Encode(ResponseMessage{"ok"})
 }

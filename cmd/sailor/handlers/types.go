@@ -128,6 +128,9 @@ const (
 
 	// db extension used by sailor
 	DB_EXT = "sail"
+
+	// decoded sailor claims from request
+	SAILOR_CLAIMS_KEY = "__sailor_claims"
 )
 
 // -- RESOURCE TYPES INSIDE SAILOR --

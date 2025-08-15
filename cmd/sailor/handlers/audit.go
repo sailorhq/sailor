@@ -26,10 +26,10 @@ import (
 type AuditEvent struct {
 	Timestamp time.Time `json:"timestamp"`
 	Username  string    `json:"username"`
-	Namespace string    `json:"namespace"`
-	App       string    `json:"app"`
+	Namespace string    `json:"namespace,omitempty"`
+	App       string    `json:"app,omitempty"`
 	Action    string    `json:"action"`
-	Details   any       `json:"details"`
+	Details   any       `json:"details,omitempty"`
 }
 
 func (c *SailorCore) getAuditEvents(w http.ResponseWriter) []AuditEvent {

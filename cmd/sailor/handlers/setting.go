@@ -19,7 +19,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -74,6 +76,13 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 
 	// we update the sailor settings inside our own core memory lookup
 	sc.setting = &ss
+
+	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
+	go sc.addAuditEvent(&AuditEvent{
+		Username:  claims["email"].(string),
+		Action:    "update_sailor_setting",
+		Timestamp: time.Now(),
+	})
 
 	enc.Encode(ResponseMessage{Message: "ok"})
 }
