@@ -84,7 +84,7 @@ func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
-	go sc.addAuditEvent(&AuditEvent{
+	go sc.addAuditEvent(&v1.AuditEvent{
 		Username:  claims["email"].(string),
 		Action:    "update_rbac",
 		Timestamp: time.Now(),

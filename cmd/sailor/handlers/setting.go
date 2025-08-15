@@ -78,7 +78,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 	sc.setting = &ss
 
 	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
-	go sc.addAuditEvent(&AuditEvent{
+	go sc.addAuditEvent(&v1.AuditEvent{
 		Username:  claims["email"].(string),
 		Action:    "update_sailor_setting",
 		Timestamp: time.Now(),

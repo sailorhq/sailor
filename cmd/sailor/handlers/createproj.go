@@ -108,7 +108,7 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
-	go sc.addAuditEvent(&AuditEvent{
+	go sc.addAuditEvent(&v1.AuditEvent{
 		Namespace: params.Ns,
 		App:       params.App,
 		Username:  claims["email"].(string),

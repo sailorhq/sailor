@@ -50,7 +50,7 @@ func (c *SailorCore) getAuditEvents(w http.ResponseWriter) []AuditEvent {
 	return events
 }
 
-func (c *SailorCore) addAuditEvent(ae *AuditEvent) error {
+func (c *SailorCore) addAuditEvent(ae *v1.AuditEvent) error {
 	db := c.dbconns[BUCKET_AUDIT]
 
 	return db.Update(func(tx *bolt.Tx) error {
