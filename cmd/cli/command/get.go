@@ -42,6 +42,7 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 	var app string
 	var name string
 	var output string
+	var limit int
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Helps fetching resource, schema or setting",
@@ -189,12 +190,34 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 
+	// audit command
+	audit := &cobra.Command{
+		Use:   "audit",
+		Short: "Helps you fetch audit logs",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			events, err := cfg.SailorClient.GetAuditLogEvents(limit, cfg.Token)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("\nEvents (n=%d):\n\n", limit)
+
+			for _, e := range *events {
+				eventjson, _ := json.Marshal(&e)
+				fmt.Println(string(eventjson))
+			}
+			return nil
+		},
+	}
+	audit.PersistentFlags().IntVarP(&limit, "limit", "", 10, "")
+
 	getCmd.AddCommand(config)
 	getCmd.AddCommand(secret)
 	getCmd.AddCommand(misc)
 	getCmd.AddCommand(schema)
 	getCmd.AddCommand(setting)
 	getCmd.AddCommand(resource)
+	getCmd.AddCommand(audit)
 	return getCmd
 }
 
