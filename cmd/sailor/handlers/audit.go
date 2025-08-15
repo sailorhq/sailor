@@ -17,37 +17,40 @@ package handlers
 
 import (
 	"encoding/json"
-	"net/http"
 	"time"
 
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
+	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 )
 
-type AuditEvent struct {
-	Timestamp time.Time `json:"timestamp"`
-	Username  string    `json:"username"`
-	Namespace string    `json:"namespace,omitempty"`
-	App       string    `json:"app,omitempty"`
-	Action    string    `json:"action"`
-	Details   any       `json:"details,omitempty"`
-}
-
-func (c *SailorCore) getAuditEvents(w http.ResponseWriter) []AuditEvent {
+func (c *SailorCore) GetAuditEvents(ctx *fasthttp.RequestCtx) {
+	limit := 10
+	if n, err := ctx.QueryArgs().GetUint("n"); err == nil {
+		limit = n
+	}
 	db := c.dbconns[BUCKET_AUDIT]
 
-	var events = []AuditEvent{}
+	var events = []v1.AuditEvent{}
+	counter := 0
 	db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket([]byte(BUCKET_AUDIT_TRAIL)).Cursor()
 
 		for k, v := c.Last(); k != nil; k, v = c.Prev() {
-			var ae AuditEvent
+			var ae v1.AuditEvent
 			json.Unmarshal(v, &ae)
 			events = append(events, ae)
+
+			counter += 1
+			if counter == limit {
+				break
+			}
 		}
 		return nil
 	})
 
-	return events
+	enc := json.NewEncoder(ctx)
+	enc.Encode(events)
 }
 
 func (c *SailorCore) addAuditEvent(ae *v1.AuditEvent) error {
