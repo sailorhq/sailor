@@ -182,10 +182,10 @@ func main() {
 	apiV1.GET("/resource/{namespace}/{app}/{kind}/schema", getResourceSchemaHandler)
 	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}/schema", getResourceSchemaHandler)
 
-	getAuditLogHanlder := core.Authenticated(core.GetAuditEvents, v1.RBACConstraints{
+	getAuditLogHandler := core.Authenticated(core.GetAuditEvents, v1.RBACConstraints{
 		Roles: []string{RoleAdmin},
 	})
-	apiV1.GET("/audit", getAuditLogHanlder)
+	apiV1.GET("/audit", getAuditLogHandler)
 
 	// it is best to take SAILOR_PORT through ENV because people have their own
 	// deployment flow
