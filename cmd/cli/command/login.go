@@ -18,6 +18,7 @@ package command
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"syscall"
 	"time"
 
@@ -39,8 +40,16 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 
 			if oidc {
 				var user string
-				fmt.Print("login as: ")
-				fmt.Scan(&user)
+				if cfg.User != "" {
+					user = cfg.User
+				} else {
+					fmt.Print("login as: ")
+					fmt.Scan(&user)
+				}
+
+				if strings.TrimSpace(user) == "" {
+					return errors.New("user cannot be empty")
+				}
 
 				fp := time.Now().UnixNano()
 				url := fmt.Sprintf("%s/api/v1/auth/oidc?fp=%d", cfg.SailorHost, fp)
@@ -53,10 +62,6 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 				fmt.Println("\nsailor will wait for 15s to finish logging in...")
 				time.Sleep(15 * time.Second)
 
-				// TODO (Security) :: right now token can be fetched by anyone who knows the proper sailor
-				// user name and can gain access to the sailor APIs .. this is a threat and should be solved
-				// by passing OIDC API a secure key which can identify the token created, the token
-				// should not be provided if this secure key is not given during request
 				loginResp, err := cfg.SailorClient.GetToken(user, fmt.Sprint(fp))
 				if err != nil {
 					return err
@@ -86,8 +91,16 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 
 func basicLoginFlow(cfg *CLIConfig) error {
 	var user string
-	fmt.Print("sailor user: ")
-	fmt.Scan(&user)
+	if cfg.User != "" {
+		user = cfg.User
+	} else {
+		fmt.Print("sailor user: ")
+		fmt.Scan(&user)
+	}
+
+	if strings.TrimSpace(user) == "" {
+		return errors.New("user cannot be empty")
+	}
 
 	fmt.Print("sailor pass: ")
 	bytePassword, err := term.ReadPassword(int(syscall.Stdin))

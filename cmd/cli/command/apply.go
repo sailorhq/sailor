@@ -32,12 +32,18 @@ import (
 func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 	var file string
 	var host string
+	var user string
+
 	applyCmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Helps configure your sailor environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if host == "" && file == "" && len(args) == 0 {
+			if user == "" && host == "" && file == "" && len(args) == 0 {
 				return errors.New("flags or env as argument is required")
+			}
+
+			if user != "" {
+				return updateUser(user, cfg.SailorRoot)
 			}
 
 			if host == "" && file == "" {
@@ -108,8 +114,9 @@ func ApplyCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 
-	applyCmd.Flags().StringVarP(&host, "host", "", "", "host where sailor is hosted")
-	applyCmd.Flags().StringVarP(&file, "file", "f", "", "configuration file")
+	applyCmd.Flags().StringVarP(&host, "host", "", "", "set the global config host where sailor is hosted")
+	applyCmd.Flags().StringVarP(&file, "file", "f", "", "set global config through a file")
+	applyCmd.Flags().StringVarP(&user, "user", "u", "", "set global config user")
 
 	return applyCmd
 }
@@ -137,6 +144,18 @@ func updateTokenAndKeyPairs(token string, keyPairs map[string]v1.KeyPair, basePa
 
 	readCfg.Token = token
 	readCfg.KeyPairs = keyPairs
+	return UpdateConfig(readCfg, basePath)
+}
+
+func updateUser(user, basePath string) error {
+	readCfg, _ := GetConfig(basePath)
+	if readCfg == nil {
+		return UpdateConfig(&CLIConfig{
+			User: user,
+		}, basePath)
+	}
+
+	readCfg.User = user
 	return UpdateConfig(readCfg, basePath)
 }
 

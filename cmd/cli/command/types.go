@@ -42,4 +42,8 @@ type CLIConfig struct {
 	// @key = combination of ns and app separated by '-'
 	// @value = has access key and secret key of the projects
 	KeyPairs map[string]v1.KeyPair `json:"key_pairs"`
+
+	// User is used for global set an email which can then be used for logging
+	// in to your sailor core server
+	User string `json:"user"`
 }
