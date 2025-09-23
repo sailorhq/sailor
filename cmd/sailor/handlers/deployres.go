@@ -20,9 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sailorhq/sailor/internal/bige"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -73,6 +75,13 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	intver, err := strconv.ParseUint(deployment.Version, 10, 32)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "version is not a number"})
+		return
+	}
+
 	if _, ok := sc.dbconns[params.ProjectKey]; !ok {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: "sailor project was not created"})
@@ -82,15 +91,16 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 	err = sc.dbconns[params.ProjectKey].Update(func(tx *bolt.Tx) error {
 		resourceKey := params.Kind.ResourceKey(params.ResourceName)
 		versionKey := fmt.Sprintf("%s_version", resourceKey)
+		bigeVer := bige.ByteFromUInt32(uint32(intver))
 
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
-		depBytes := deploymentBucket.Get([]byte(deployment.Version))
+		depBytes := deploymentBucket.Get(bigeVer)
 		if depBytes == nil {
 			return fmt.Errorf("no deployment with version: %s", deployment.Version)
 		}
 
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
-		if err := metaBucket.Put([]byte(versionKey), []byte(deployment.Version)); err != nil {
+		if err := metaBucket.Put([]byte(versionKey), bigeVer); err != nil {
 			return err
 		}
 
@@ -126,7 +136,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						Labels:    k8sLabels,
 					},
 					Data: map[string]string{
-						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, []byte(deployment.Version)),
+						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer),
 					},
 				}
 
@@ -162,7 +172,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 				}
 			case KindSecret:
 				contentKey := fmt.Sprintf("_%s", resourceKey)
-				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, []byte(deployment.Version))
+				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,

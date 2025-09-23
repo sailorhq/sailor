@@ -33,6 +33,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sailorhq/sailor/internal/bige"
 	"github.com/sailorhq/sailor/internal/types"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
@@ -472,7 +473,7 @@ func buildResource(db *bolt.DB, resourceKey, versionKey string,
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 
-		min := []byte("0")
+		min := bige.ByteFromUInt32(0)
 
 		var max []byte
 		if overrideMaxVersion != nil {
@@ -481,7 +482,7 @@ func buildResource(db *bolt.DB, resourceKey, versionKey string,
 			if onTopOfLastDeployment {
 				max, _ = deploymentBucket.Cursor().Last()
 			} else {
-				max = metaBucket.Get([]byte(versionKey))
+				max = metaBucket.Get([]byte(versionKey)) // also returns big-endian bytes back
 			}
 		}
 

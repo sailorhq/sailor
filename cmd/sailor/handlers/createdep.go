@@ -20,13 +20,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sailorhq/sailor/internal/bige"
 	"github.com/sailorhq/sailor/internal/types"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/sailorhq/sailor/pkg/vault"
@@ -100,7 +100,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	resourceKey := params.Kind.ResourceKey(params.ResourceName)
 	differ := diffmod.New()
 
-	var version int = 1
+	var version uint32 = 1
 	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
 	err = sc.dbconns[params.ProjectKey].Update(func(tx *bolt.Tx) error {
 		resourceBucket := tx.Bucket([]byte(BUCKET_RESOURCE))
@@ -179,7 +179,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 
 		ver, _ := deploymentBucket.Cursor().Last()
 		if ver == nil {
-			ver = []byte("1")
+			ver = bige.ByteFromUInt32(1)
 
 			diff := differ.DiffMain("", resourceData, true)
 			patchList := differ.PatchMake("", resourceData, diff)
@@ -199,7 +199,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			}
 			return deploymentBucket.Put(ver, depBytes)
 		} else {
-			last, _ := strconv.Atoi(string(ver))
+			last := bige.UInt32FromByte(ver)
 			next := last + 1
 			version = next
 
@@ -222,7 +222,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			if err != nil {
 				return err
 			}
-			return deploymentBucket.Put(fmt.Append(nil, next), depBytes)
+			return deploymentBucket.Put(bige.ByteFromUInt32(next), depBytes)
 		}
 	})
 
@@ -245,7 +245,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	})
 
 	// TODO :: maybe we give proper deployment creation response afterwards..
-	enc.Encode(map[string]int{
+	enc.Encode(map[string]uint32{
 		"version": version,
 	})
 }
