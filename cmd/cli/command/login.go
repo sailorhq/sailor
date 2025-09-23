@@ -28,8 +28,12 @@ import (
 	"github.com/pkg/browser"
 )
 
+var AdminUsername = "admin@super.sailor"
+
 func LoginCommand(cfg *CLIConfig) *cobra.Command {
 	var oidc bool
+	var isAdmin bool
+
 	login := &cobra.Command{
 		Use:   "login",
 		Short: "Helps you login to a Sailor Instance",
@@ -40,7 +44,9 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 
 			if oidc {
 				var user string
-				if cfg.User != "" {
+				if isAdmin {
+					user = AdminUsername
+				} else if cfg.User != "" {
 					user = cfg.User
 				} else {
 					fmt.Print("login as: ")
@@ -75,7 +81,7 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 				return nil
 			}
 
-			err := basicLoginFlow(cfg)
+			err := basicLoginFlow(cfg, isAdmin)
 			if err != nil {
 				return err
 			}
@@ -85,13 +91,16 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 	}
 
 	login.Flags().BoolVarP(&oidc, "oidc", "", false, "use oidc flow for user authentication")
+	login.Flags().BoolVarP(&isAdmin, "admin", "", false, "use admin user as login username")
 
 	return login
 }
 
-func basicLoginFlow(cfg *CLIConfig) error {
+func basicLoginFlow(cfg *CLIConfig, isAdmin bool) error {
 	var user string
-	if cfg.User != "" {
+	if isAdmin {
+		user = AdminUsername
+	} else if cfg.User != "" {
 		user = cfg.User
 	} else {
 		fmt.Print("sailor user: ")
