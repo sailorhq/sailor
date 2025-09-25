@@ -26,6 +26,7 @@ import (
 
 func (sc *SailorCore) GetUserHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
+	enc.SetEscapeHTML(false)
 
 	var (
 		userKey string

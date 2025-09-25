@@ -23,6 +23,7 @@ import (
 
 func (sc *SailorCore) GetManifestHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
+	enc.SetEscapeHTML(false)
 	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusInternalServerError)

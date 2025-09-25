@@ -27,6 +27,7 @@ import (
 
 func (sc *SailorCore) GetResourceSchemaHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
+	enc.SetEscapeHTML(false)
 
 	params := extractSailorParams(ctx)
 
