@@ -20,9 +20,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
+	"syscall"
 
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 func SettingCommand(cfg *CLIConfig) *cobra.Command {
@@ -98,6 +101,34 @@ func SettingCommand(cfg *CLIConfig) *cobra.Command {
 	}
 
 	settingCmd.AddCommand(applyCmd)
+
+	passwdCmd := &cobra.Command{
+		Use:   "passwd",
+		Short: "Helps update password for a sailor user",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var user string
+			fmt.Print("sailor user: ")
+			fmt.Scan(&user)
+			if strings.TrimSpace(user) == "" {
+				return errors.New("user value cannot be empty")
+			}
+
+			fmt.Print("sailor pass: ")
+			bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				return err
+			}
+
+			pass := string(bytePassword)
+			if err := cfg.SailorClient.ChangePassword(user, pass, cfg.Token); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	settingCmd.AddCommand(passwdCmd)
 
 	return settingCmd
 }
