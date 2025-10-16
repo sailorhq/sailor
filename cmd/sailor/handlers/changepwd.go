@@ -19,22 +19,16 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"slices"
 
+	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
 )
 
-func (sc *SailorCore) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
-	enc := json.NewEncoder(w)
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusBadRequest)
-		enc.Encode(ResponseMessage{Message: "Invalid request!"})
-		return
-	}
+func (sc *SailorCore) ChangePasswordHandler(ctx *fasthttp.RequestCtx) {
+	enc := json.NewEncoder(ctx)
 
-	username := r.Header.Get("x-username")
-	password := r.Header.Get("x-password")
+	username := ctx.Request.Header.Peek("x-user")
+	password := ctx.Request.Header.Peek("x-pass")
 
 	db := sc.dbconns[BUCKET_ADMIN]
 
@@ -51,10 +45,6 @@ func (sc *SailorCore) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 			return err
 		}
 
-		if !slices.Contains(user.Roles, "admin") {
-			return fmt.Errorf("User is not an admin")
-		}
-
 		user.Password = sha256.Sum256([]byte(password))
 		adminBytes, err := json.Marshal(user)
 		if err != nil {
@@ -65,7 +55,7 @@ func (sc *SailorCore) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 	})
 
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}

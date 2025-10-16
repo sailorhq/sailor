@@ -82,6 +82,12 @@ func main() {
 
 	apiV1.GET("/setting/manifest", core.GetManifestHandler)
 
+	updatePasswordHandler := core.Authenticated(core.ChangePasswordHandler, v1.RBACConstraints{
+		Roles:       []string{RoleAdmin},
+		Permissions: []string{PermissionSuperAdmin},
+	})
+	apiV1.POST("/setting/passwd", updatePasswordHandler)
+
 	// AUTH
 	//
 	// this block contains APIs which uses OIDC module to authenticate user and fetch a
