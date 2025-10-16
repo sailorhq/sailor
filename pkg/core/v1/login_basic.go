@@ -64,6 +64,10 @@ func (c *CoreAPIClient) LoginBasic(user, pass string) (*LoginResponse, error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, serverMessageToErr(b)
+	}
+
 	var loginResp LoginResponse
 	if err := json.Unmarshal(b, &loginResp); err != nil {
 		return nil, err

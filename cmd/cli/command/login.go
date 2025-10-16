@@ -127,6 +127,6 @@ func basicLoginFlow(cfg *CLIConfig, isAdmin bool) error {
 		return err
 	}
 
-	fmt.Println("logged in as: ", user)
+	fmt.Println("\n\nlogged in as: ", user)
 	return nil
 }
