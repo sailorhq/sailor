@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sailorhq/sailor/internal/types"
 	"github.com/spf13/cobra"
@@ -72,11 +73,13 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 		if err != nil {
 			return err
 		}
-		if err = os.WriteFile(sf.Config.File, resData.Data, 0644); err != nil {
+
+		replacedFilePath := strings.ReplaceAll(sf.Config.File, "$env", cfg.Env)
+		if err = os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
 			return err
 		}
 
-		fmt.Println("synced config file:", sf.Config.File)
+		fmt.Println("synced config file:", replacedFilePath)
 		fmt.Println("version:", resData.Version)
 	} else {
 		fmt.Println("config file path not specified, will not be synced...")
@@ -89,9 +92,12 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(sf.Secret.File, resData.Data, 0644); err != nil {
+		replacedFilePath := strings.ReplaceAll(sf.Secret.File, "$env", cfg.Env)
+		if err := os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
 			return err
 		}
+		fmt.Println("synced secret file:", replacedFilePath)
+		fmt.Println("version:", resData.Version)
 	} else {
 		fmt.Println("secret file path not specified, will not be synced...")
 	}
@@ -104,10 +110,12 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 			if err != nil {
 				return err
 			}
-
-			if err := os.WriteFile(misc.File, resData.Data, 0644); err != nil {
+			replacedFilePath := strings.ReplaceAll(misc.File, "$env", cfg.Env)
+			if err := os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
 				return err
 			}
+			fmt.Println("synced misc file:", replacedFilePath)
+			fmt.Println("version:", resData.Version)
 		}
 	} else {
 		fmt.Println("misc file paths not specified, will not be synced...")
