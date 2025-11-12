@@ -236,14 +236,14 @@ func getResource(cfg *CLIConfig, kind, ns, app, name, output string) error {
 		return errors.New("access not available, re-login to get fresh access")
 	}
 
-	dataBytes, err := cfg.SailorClient.GetResource(ns, app, kind, name, cfg.Token, cfg.KeyPairs[projectKey])
+	resData, err := cfg.SailorClient.GetResource(ns, app, kind, name, cfg.Token, cfg.KeyPairs[projectKey])
 	if err != nil {
 		return err
 	}
 
 	if kind == "secret" {
 		var encSecrets map[string]vault.SecretRecord
-		if err := json.Unmarshal(dataBytes, &encSecrets); err != nil {
+		if err := json.Unmarshal(resData.Data, &encSecrets); err != nil {
 			return err
 		}
 
@@ -266,7 +266,7 @@ func getResource(cfg *CLIConfig, kind, ns, app, name, output string) error {
 			secrets[k] = v
 		}
 
-		dataBytes, err = json.Marshal(&secrets)
+		resData.Data, err = json.Marshal(&secrets)
 		if err != nil {
 			return err
 		}
@@ -274,9 +274,9 @@ func getResource(cfg *CLIConfig, kind, ns, app, name, output string) error {
 
 	if output != "" {
 		fmt.Println("resource written to:", output)
-		return os.WriteFile(output, dataBytes, 0755)
+		return os.WriteFile(output, resData.Data, 0755)
 	}
 
-	fmt.Println(string(dataBytes))
+	fmt.Println(string(resData.Data))
 	return nil
 }

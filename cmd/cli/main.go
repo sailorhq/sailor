@@ -56,6 +56,8 @@ func main() {
 	rootCmd.AddCommand(command.SettingCommand(cfg))
 	rootCmd.AddCommand(command.GetCommand(cfg))
 	rootCmd.AddCommand(command.RBACCommand(cfg))
+	rootCmd.AddCommand(command.InitCommand(cfg))
+	rootCmd.AddCommand(command.SyncCommand(cfg))
 
 	if err := rootCmd.Execute(); err != nil {
 		panic(err.Error())
