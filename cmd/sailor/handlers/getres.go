@@ -58,21 +58,24 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 	resourceKey := params.Kind.ResourceKey(params.ResourceName)
 	versionKey := fmt.Sprintf("%s_version", resourceKey)
 
-	resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, nil)
-	if resStr == "" {
+	builtRes := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, nil)
+	if builtRes.Content == "" {
 		ctx.SetStatusCode(http.StatusNotFound)
 		enc.Encode(ResponseMessage{"this resource was never deployed!"})
 		return
 	}
 
+	// TODO :: move header key to a common place
+	ctx.Response.Header.Set("x-resource-version", fmt.Sprintf("%d", builtRes.Version))
+
 	switch params.Kind {
 	case KindMisc:
-		enc.Encode(resStr)
+		enc.Encode(builtRes)
 		return
 	case KindConfig:
 		var data map[string]any
-		if err := json.Unmarshal([]byte(resStr), &data); err != nil {
-			sc.Log.Error("resource get has failed", zap.Error(err), zap.String("built_res", resStr))
+		if err := json.Unmarshal([]byte(builtRes.Content), &data); err != nil {
+			sc.Log.Error("resource get has failed", zap.Error(err), zap.String("built_res", builtRes.Content))
 			ctx.SetStatusCode(http.StatusNotFound)
 			enc.Encode(ResponseMessage{Message: "error while parsing resource json!"})
 			return
@@ -88,7 +91,7 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 		}
 
 		var encSecrets map[string]vault.SecretRecord
-		if err := json.Unmarshal([]byte(resStr), &encSecrets); err != nil {
+		if err := json.Unmarshal([]byte(builtRes.Content), &encSecrets); err != nil {
 			ctx.SetStatusCode(http.StatusInternalServerError)
 			enc.Encode(ResponseMessage{err.Error()})
 			return

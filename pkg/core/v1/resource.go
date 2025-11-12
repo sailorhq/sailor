@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 type DeploySetting struct {
@@ -40,6 +41,11 @@ type ResourceSetting struct {
 type SailorResource struct {
 	Schema  map[string]any   `json:"schema"`
 	Setting *ResourceSetting `json:"setting"`
+}
+
+type ResourceData struct {
+	Version int    `json:"version"`
+	Data    []byte `json:"data"`
 }
 
 // CreateResource creates a resource inside sailor instance
@@ -96,7 +102,7 @@ func (c *CoreAPIClient) CreateResource(ns, app, token, name string, kind string,
 // GetResource gets a resource inside sailor instance
 //
 // TODO :: kind to be of type ResourceKind and token should be the last parameter
-func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string, keyPair KeyPair) ([]byte, error) {
+func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string, keyPair KeyPair) (*ResourceData, error) {
 	// Construct the URL
 	var url string
 
@@ -129,6 +135,10 @@ func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string, keyPair K
 	}
 	defer resp.Body.Close()
 
+	if resp.Header.Get("x-resource-version") == "" {
+		return nil, errors.New("resource version not found in response header")
+	}
+
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -138,5 +148,13 @@ func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string, keyPair K
 		return nil, serverMessageToErr(b)
 	}
 
-	return b, nil
+	version, err := strconv.Atoi(resp.Header.Get("x-resource-version"))
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResourceData{
+		Version: version,
+		Data:    b,
+	}, nil
 }

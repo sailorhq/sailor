@@ -465,17 +465,23 @@ func validateWithRules(data, rules map[string]any) []string {
 	return messages
 }
 
+type BuiltResource struct {
+	Content string `json:"content"`
+	Version uint32 `json:"version"`
+}
+
 func buildResource(db *bolt.DB, resourceKey, versionKey string,
 	onTopOfLastDeployment bool,
-	overrideMaxVersion []byte) string {
+	overrideMaxVersion []byte) BuiltResource {
 	var configJson string
+	var max []byte
+
 	db.View(func(tx *bolt.Tx) error {
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 
 		min := bige.ByteFromUInt32(0)
 
-		var max []byte
 		if overrideMaxVersion != nil {
 			max = overrideMaxVersion
 		} else {
@@ -507,7 +513,10 @@ func buildResource(db *bolt.DB, resourceKey, versionKey string,
 		return nil
 	})
 
-	return configJson
+	return BuiltResource{
+		Content: configJson,
+		Version: bige.UInt32FromByte(max),
+	}
 }
 
 // TODO :: the accesskey here is sailor level, so it should be set by Super Admin!

@@ -136,7 +136,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						Labels:    k8sLabels,
 					},
 					Data: map[string]string{
-						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer),
+						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer).Content,
 					},
 				}
 
@@ -172,7 +172,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 				}
 			case KindSecret:
 				contentKey := fmt.Sprintf("_%s", resourceKey)
-				resStr := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
+				builtRes := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
@@ -180,7 +180,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						Labels:    k8sLabels,
 					},
 					Data: map[string][]byte{
-						contentKey: []byte(resStr),
+						contentKey: []byte(builtRes.Content),
 					},
 					Type: corev1.SecretType(fmt.Sprintf("sailor/%s", resourceKey)),
 				}
