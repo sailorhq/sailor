@@ -38,8 +38,8 @@ func SchemaCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 
-	schemaCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "get resource from this namespace")
-	schemaCmd.PersistentFlags().StringVarP(&app, "app", "", "", "get resource from this app")
+	schemaCmd.PersistentFlags().StringVarP(&ns, "namespace", "", cfg.CwdSailorFile.Project.Namespace, "get resource from this namespace")
+	schemaCmd.PersistentFlags().StringVarP(&app, "app", "", cfg.CwdSailorFile.Project.App, "get resource from this app")
 	schemaCmd.PersistentFlags().StringVarP(&kind, "kind", "", "", "kind of resource")
 	schemaCmd.PersistentFlags().StringVarP(&name, "name", "", "", "name of the misc resource")
 	schemaCmd.PersistentFlags().StringVarP(&file, "file", "f", "", "update schema from json file")
@@ -53,21 +53,49 @@ func SchemaCommand(cfg *CLIConfig) *cobra.Command {
 					return errors.New("misc resource requires a name")
 				}
 
-				b, err := os.ReadFile(file)
-				if err != nil {
-					return nil
-				}
-				var schema map[string]any
-				if err := json.Unmarshal(b, &schema); err != nil {
-					return errors.New("schema should be a valid json and value for each key must be a string")
+				if file != "" {
+					b, err := os.ReadFile(file)
+					if err != nil {
+						return nil
+					}
+					var schema map[string]any
+
+					if err := json.Unmarshal(b, &schema); err != nil {
+						return errors.New("schema should be a valid json and value for each key must be a string")
+					}
+					if err := cfg.SailorClient.UpdateSchema(schema, ns, app, kind, name, cfg.Token); err != nil {
+						return err
+					}
+					fmt.Println("updated resource schema!")
 				}
 
-				if err := cfg.SailorClient.UpdateSchema(schema, ns, app, kind, name, cfg.Token); err != nil {
-					return err
+				switch kind {
+				case "config":
+					if cfg.CwdSailorFile.Config.Schema == nil {
+						return errors.New("config.schema is required in sailor file")
+					}
+					if err := cfg.SailorClient.UpdateSchema(*cfg.CwdSailorFile.Config.Schema, ns, app, kind, name, cfg.Token); err != nil {
+						return err
+					}
+				case "secret":
+					if cfg.CwdSailorFile.Secret.Schema == nil {
+						return errors.New("secret.schema is required in sailor file")
+					}
+					if err := cfg.SailorClient.UpdateSchema(*cfg.CwdSailorFile.Secret.Schema, ns, app, kind, name, cfg.Token); err != nil {
+						return err
+					}
+				case "misc":
+					if rfile, ok := cfg.CwdSailorFile.Misc[name]; ok && rfile.Schema == nil {
+						if err := cfg.SailorClient.UpdateSchema(*rfile.Schema, ns, app, kind, name, cfg.Token); err != nil {
+							return err
+						}
+					}
+					return errors.New("misc.schema is required in sailor file")
+				default:
+					return errors.New("unknown kind")
 				}
 
 				fmt.Println("updated resource schema!")
-
 				return nil
 			}
 

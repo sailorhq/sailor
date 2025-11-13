@@ -1,10 +1,10 @@
 package types
 
 type SailorFile struct {
-	Project ProjectDetails `json:"project"`
-	Config  ResourceFile   `json:"config"`
-	Secret  ResourceFile   `json:"secret"`
-	Misc    []ResourceFile `json:"misc"`
+	Project ProjectDetails          `json:"project"`
+	Config  ResourceFile            `json:"config"`
+	Secret  ResourceFile            `json:"secret"`
+	Misc    map[string]ResourceFile `json:"misc"`
 }
 
 type ProjectDetails struct {
@@ -13,8 +13,9 @@ type ProjectDetails struct {
 }
 
 type ResourceFile struct {
-	File string `json:"file"`
-	Name string `json:"name,omitempty"`
+	File   string          `json:"file"`
+	Name   string          `json:"name,omitempty"`
+	Schema *map[string]any `json:"schema,omitempty"`
 }
 
 type SailorLockFile struct {

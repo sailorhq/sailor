@@ -76,8 +76,8 @@ func InitCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 
-	initCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "get resource from this namespace")
-	initCmd.PersistentFlags().StringVarP(&app, "app", "", "", "get resource from this app")
+	initCmd.PersistentFlags().StringVarP(&ns, "namespace", "", cfg.CwdSailorFile.Project.Namespace, "get resource from this namespace")
+	initCmd.PersistentFlags().StringVarP(&app, "app", "", cfg.CwdSailorFile.Project.App, "get resource from this app")
 	initCmd.MarkPersistentFlagRequired("namespace")
 	initCmd.MarkPersistentFlagRequired("app")
 

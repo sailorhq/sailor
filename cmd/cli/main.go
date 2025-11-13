@@ -25,6 +25,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/sailorhq/sailor/cmd/cli/command"
+	"github.com/sailorhq/sailor/internal/types"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/spf13/cobra"
 )
@@ -115,6 +116,26 @@ func loadConfig(overrideEnv string) (*command.CLIConfig, error) {
 
 	if config.SailorHost != "" {
 		config.SailorClient = v1.CoreV1(config.SailorHost)
+	}
+
+	// check if sailor.json is there in current path
+	if f, _ := os.Stat("./sailor.json"); f != nil {
+		b, err := os.ReadFile("./sailor.json")
+		if err != nil {
+			return nil, err
+		}
+
+		var sf types.SailorFile
+		if err := json.Unmarshal(b, &sf); err != nil {
+			return nil, err
+		}
+
+		fmt.Println("🐧 namespace: ", sf.Project.Namespace)
+		fmt.Println("🐧 app: ", sf.Project.App)
+
+		config.CwdSailorFile = sf
+	} else {
+		config.CwdSailorFile = types.SailorFile{}
 	}
 
 	return &config, nil

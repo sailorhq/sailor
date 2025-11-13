@@ -57,8 +57,8 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 	}
 
 	deployCmd.PersistentFlags().StringVarP(&file, "file", "", "", "resource data file")
-	deployCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "resource from this namespace")
-	deployCmd.PersistentFlags().StringVarP(&app, "app", "", "", "resource for this app")
+	deployCmd.PersistentFlags().StringVarP(&ns, "namespace", "", cfg.CwdSailorFile.Project.Namespace, "resource from this namespace")
+	deployCmd.PersistentFlags().StringVarP(&app, "app", "", cfg.CwdSailorFile.Project.App, "resource for this app")
 	deployCmd.PersistentFlags().StringVarP(&name, "name", "", "", "name of the misc resource")
 
 	// Config subcommand

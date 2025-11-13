@@ -45,8 +45,8 @@ func SettingCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 
-	settingCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "create a resource in this namespace")
-	settingCmd.PersistentFlags().StringVarP(&app, "app", "", "", "create a resource for this app")
+	settingCmd.PersistentFlags().StringVarP(&ns, "namespace", "", cfg.CwdSailorFile.Project.Namespace, "create a resource in this namespace")
+	settingCmd.PersistentFlags().StringVarP(&app, "app", "", cfg.CwdSailorFile.Project.App, "create a resource for this app")
 	settingCmd.PersistentFlags().StringVarP(&kind, "kind", "", "", "kind of this resource")
 	settingCmd.PersistentFlags().StringVarP(&name, "name", "", "", "name of this misc resource")
 	settingCmd.PersistentFlags().StringVarP(&file, "file", "f", "", "update setting from json file")

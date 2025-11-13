@@ -51,8 +51,8 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 
-	getCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "get resource from this namespace")
-	getCmd.PersistentFlags().StringVarP(&app, "app", "", "", "get resource from this app")
+	getCmd.PersistentFlags().StringVarP(&ns, "namespace", "", cfg.CwdSailorFile.Project.Namespace, "get resource from this namespace")
+	getCmd.PersistentFlags().StringVarP(&app, "app", "", cfg.CwdSailorFile.Project.App, "get resource from this app")
 	getCmd.PersistentFlags().StringVarP(&name, "name", "", "", "name of the misc resource")
 	getCmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output the resource data into a file")
 

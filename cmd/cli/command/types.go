@@ -15,7 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package command
 
-import v1 "github.com/sailorhq/sailor/pkg/core/v1"
+import (
+	"github.com/sailorhq/sailor/internal/types"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
+)
 
 type CLIConfig struct {
 	// Manifest is used to know details about different environment sailor is hosted in
@@ -46,4 +49,7 @@ type CLIConfig struct {
 	// User is used for global set an email which can then be used for logging
 	// in to your sailor core server
 	User string `json:"user"`
+
+	// CwdSailorFile is the sailor file in the current working directory
+	CwdSailorFile types.SailorFile `json:"-"`
 }

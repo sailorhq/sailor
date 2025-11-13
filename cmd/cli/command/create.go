@@ -43,8 +43,8 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 	// createCmd.PersistentFlags().BoolVarP(&def, "default", "", false, "use default setting for this resource")
 	// TODO :: enable this once we have vim flow done and dusted!
 	// createCmd.PersistentFlags().StringVarP(&setting, "setting", "s", "", "resource settings")
-	createCmd.PersistentFlags().StringVarP(&ns, "namespace", "", "", "create a resource in this namespace")
-	createCmd.PersistentFlags().StringVarP(&app, "app", "", "", "create a resource for this app")
+	createCmd.PersistentFlags().StringVarP(&ns, "namespace", "", cfg.CwdSailorFile.Project.Namespace, "create a resource in this namespace")
+	createCmd.PersistentFlags().StringVarP(&app, "app", "", cfg.CwdSailorFile.Project.App, "create a resource for this app")
 
 	config := &cobra.Command{
 		Use:   "config",

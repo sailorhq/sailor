@@ -104,9 +104,9 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 
 	// misc file sync
 	if len(sf.Misc) > 0 {
-		for _, misc := range sf.Misc {
+		for name, misc := range sf.Misc {
 			resData, err := cfg.SailorClient.GetResource(sf.Project.Namespace,
-				sf.Project.App, "misc", misc.Name, cfg.Token, cfg.KeyPairs[projectKey])
+				sf.Project.App, "misc", name, cfg.Token, cfg.KeyPairs[projectKey])
 			if err != nil {
 				return err
 			}
