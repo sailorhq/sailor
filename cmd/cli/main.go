@@ -138,5 +138,24 @@ func loadConfig(overrideEnv string) (*command.CLIConfig, error) {
 		config.CwdSailorFile = types.SailorFile{}
 	}
 
+	// check if sailor.lock.json is there in current path
+	if f, _ := os.Stat("./sailor.lock"); f != nil {
+		b, err := os.ReadFile("./sailor.lock")
+		if err != nil {
+			return nil, err
+		}
+
+		var sf types.SailorLockFile
+		if err := json.Unmarshal(b, &sf); err != nil {
+			return nil, err
+		}
+
+		config.CwdSailorLockFile = sf
+	} else {
+		config.CwdSailorLockFile = types.SailorLockFile{
+			Environments: make(map[string]types.ResourceVersion),
+		}
+	}
+
 	return &config, nil
 }

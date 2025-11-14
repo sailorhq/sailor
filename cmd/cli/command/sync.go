@@ -16,6 +16,7 @@
 package command
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,6 +68,8 @@ func SyncCommand(cfg *CLIConfig) *cobra.Command {
 }
 
 func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) error {
+	// TODO :: we need to do md5 checksum check
+	var noticedAnUpdate = false
 	if sf.Config.File != "" {
 		resData, err := cfg.SailorClient.GetResource(sf.Project.Namespace,
 			sf.Project.App, "config", "", cfg.Token, cfg.KeyPairs[projectKey])
@@ -81,6 +84,26 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 
 		fmt.Println("synced config file:", replacedFilePath)
 		fmt.Println("version:", resData.Version)
+
+		// update lock file
+		if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
+			if envLock.Config.Version != resData.Version {
+				envLock.Config.Version = resData.Version
+				envLock.Config.Hash = fmt.Sprintf("%x", md5.Sum(resData.Data))
+
+				noticedAnUpdate = true
+			}
+		} else {
+			envLock = types.ResourceVersion{
+				Config: &types.LockVersion{
+					Version: resData.Version,
+					Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
+				},
+			}
+			cfg.CwdSailorLockFile.Environments[cfg.Env] = envLock
+
+			noticedAnUpdate = true
+		}
 	} else {
 		fmt.Println("config file path not specified, will not be synced...")
 	}
@@ -92,12 +115,34 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 		if err != nil {
 			return err
 		}
+
 		replacedFilePath := strings.ReplaceAll(sf.Secret.File, "$env", cfg.Env)
 		if err := os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
 			return err
 		}
+
 		fmt.Println("synced secret file:", replacedFilePath)
 		fmt.Println("version:", resData.Version)
+
+		// update lock file
+		if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
+			if envLock.Secret.Version != resData.Version {
+				envLock.Secret.Version = resData.Version
+				envLock.Secret.Hash = fmt.Sprintf("%x", md5.Sum(resData.Data))
+
+				noticedAnUpdate = true
+			}
+		} else {
+			envLock = types.ResourceVersion{
+				Secret: &types.LockVersion{
+					Version: resData.Version,
+					Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
+				},
+			}
+			cfg.CwdSailorLockFile.Environments[cfg.Env] = envLock
+
+			noticedAnUpdate = true
+		}
 	} else {
 		fmt.Println("secret file path not specified, will not be synced...")
 	}
@@ -110,15 +155,48 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 			if err != nil {
 				return err
 			}
+
 			replacedFilePath := strings.ReplaceAll(misc.File, "$env", cfg.Env)
 			if err := os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
 				return err
 			}
+
 			fmt.Println("synced misc file:", replacedFilePath)
 			fmt.Println("version:", resData.Version)
+
+			// update lock file
+			if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
+				if miscLock, ok := envLock.Misc[name]; ok && miscLock.Version != resData.Version {
+					miscLock.Version = resData.Version
+					miscLock.Hash = fmt.Sprintf("%x", md5.Sum(resData.Data))
+
+					noticedAnUpdate = true
+				}
+			} else {
+				envLock = types.ResourceVersion{
+					Misc: map[string]types.LockVersion{
+						name: {
+							Version: resData.Version,
+							Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
+						},
+					},
+				}
+				cfg.CwdSailorLockFile.Environments[cfg.Env] = envLock
+
+				noticedAnUpdate = true
+			}
 		}
 	} else {
 		fmt.Println("misc file paths not specified, will not be synced...")
+	}
+
+	if noticedAnUpdate {
+		lockbytes, err := json.MarshalIndent(cfg.CwdSailorLockFile, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile("./sailor.lock", lockbytes, 0644)
 	}
 
 	return nil

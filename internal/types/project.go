@@ -2,9 +2,9 @@ package types
 
 type SailorFile struct {
 	Project ProjectDetails          `json:"project"`
-	Config  ResourceFile            `json:"config"`
-	Secret  ResourceFile            `json:"secret"`
-	Misc    map[string]ResourceFile `json:"misc"`
+	Config  ResourceFile            `json:"config,omitempty"`
+	Secret  ResourceFile            `json:"secret,omitempty"`
+	Misc    map[string]ResourceFile `json:"misc,omitempty"`
 }
 
 type ProjectDetails struct {
@@ -22,8 +22,13 @@ type SailorLockFile struct {
 	Environments map[string]ResourceVersion `json:"envs"`
 }
 
+type LockVersion struct {
+	Version int    `json:"version"`
+	Hash    string `json:"hash,omitempty"`
+}
+
 type ResourceVersion struct {
-	Config string `json:"config"`
-	Secret string `json:"secret"`
-	Misc   string `json:"misc"`
+	Config *LockVersion           `json:"config,omitempty"`
+	Secret *LockVersion           `json:"secret,omitempty"`
+	Misc   map[string]LockVersion `json:"misc,omitempty"`
 }

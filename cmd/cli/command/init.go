@@ -62,13 +62,13 @@ func InitCommand(cfg *CLIConfig) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				if !bytes.Contains(gitignore, []byte("sailor-lock.json")) {
-					gitignore = append(gitignore, []byte("\n\n# sailor version tracking file\nsailor-lock.json")...)
-				}
+				if !bytes.Contains(gitignore, []byte("sailor.lock")) {
+					gitignore = append(gitignore, []byte("\n\n# sailor version tracking file\nsailor.lock")...)
 
-				// update gitignore file
-				if err := os.WriteFile(".gitignore", gitignore, 0644); err != nil {
-					return err
+					// update gitignore file
+					if err := os.WriteFile(".gitignore", gitignore, 0644); err != nil {
+						return err
+					}
 				}
 			}
 

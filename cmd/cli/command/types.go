@@ -52,4 +52,7 @@ type CLIConfig struct {
 
 	// CwdSailorFile is the sailor file in the current working directory
 	CwdSailorFile types.SailorFile `json:"-"`
+
+	// CwdSailorLockFile is the sailor lock file in the current working directory
+	CwdSailorLockFile types.SailorLockFile `json:"-"`
 }
