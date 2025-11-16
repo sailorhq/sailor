@@ -74,12 +74,14 @@ func loadConfig(overrideEnv string) (*command.CLIConfig, error) {
 	sailorRoot := filepath.Join(home, ".sailor")
 	if f, _ := os.Stat(sailorRoot); f == nil {
 		if err := os.Mkdir(sailorRoot, 0755); err != nil {
-			return nil, errors.New("error while creating sailor workspace")
+			return nil, errors.New("error while loading sailor workspace")
 		}
 	}
 
-	sailorConfig := filepath.Join(sailorRoot, "config")
 	var config command.CLIConfig
+	config.SailorRoot = sailorRoot
+
+	sailorConfig := filepath.Join(sailorRoot, "config")
 	if f, _ := os.Stat(sailorConfig); f != nil {
 
 		b, err := os.ReadFile(sailorConfig)
@@ -90,18 +92,19 @@ func loadConfig(overrideEnv string) (*command.CLIConfig, error) {
 		if err := json.Unmarshal(b, &config); err != nil {
 			return nil, err
 		}
-	} else {
-		fmt.Println("manifest not loaded do [ sailor apply --file ] or [ sailor apply --host ]")
-	}
 
-	config.SailorRoot = sailorRoot
-
-	if config.Env != "" {
-		for _, envConfig := range config.Manifest.Envs {
-			if strings.EqualFold(envConfig.Name, config.Env) {
-				config.SailorHost = envConfig.Host
+		if config.Env != "" {
+			for _, envConfig := range config.Manifest.Envs {
+				if strings.EqualFold(envConfig.Name, config.Env) {
+					config.SailorHost = envConfig.Host
+				}
 			}
 		}
+	} else {
+		fmt.Println("manifest not loaded do [ sailor apply --file ] or [ sailor apply --host ]")
+		fmt.Println("using default environment: local")
+		config.SailorHost = "http://localhost:7766"
+		config.Env = "local"
 	}
 
 	// this means that user has overriden the env with flag
@@ -112,6 +115,13 @@ func loadConfig(overrideEnv string) (*command.CLIConfig, error) {
 				config.SailorHost = envConfig.Host
 			}
 		}
+	}
+
+	if config.Manifest.Envs == nil {
+		fmt.Println("manifest not loaded do [ sailor apply --file ] or [ sailor apply --host ]")
+		fmt.Println("using default environment: local")
+		config.SailorHost = "http://localhost:7766"
+		config.Env = "local"
 	}
 
 	if config.SailorHost != "" {
