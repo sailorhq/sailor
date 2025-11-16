@@ -135,7 +135,7 @@ func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string, keyPair K
 	}
 	defer resp.Body.Close()
 
-	if resp.Header.Get("x-resource-version") == "" {
+	if resp.StatusCode == http.StatusOK && resp.Header.Get("x-resource-version") == "" {
 		return nil, errors.New("resource version not found in response header")
 	}
 
