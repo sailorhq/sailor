@@ -36,10 +36,11 @@ import (
 )
 
 type CreateDeploymentRequest struct {
-	Description string            `json:"desc"`
-	ConfigData  map[string]any    `json:"config_data"`
-	MiscData    string            `json:"misc_data"`
-	SecretData  map[string]string `json:"secret_data"`
+	Description  string            `json:"desc"`
+	ConfigData   map[string]any    `json:"config_data"`
+	MiscData     string            `json:"misc_data"`
+	SecretData   map[string]string `json:"secret_data"`
+	LocalVersion int               `json:"local_version"`
 }
 
 func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
@@ -200,6 +201,10 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			return deploymentBucket.Put(ver, depBytes)
 		} else {
 			last := bige.UInt32FromByte(ver)
+			if last != uint32(deployment.LocalVersion) {
+				return fmt.Errorf("local version is not up to date, current version is %d", last)
+			}
+
 			next := last + 1
 			version = next
 

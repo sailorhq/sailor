@@ -27,18 +27,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// deployResourceCommand creates a command for deploying a specific resource type
-func deployResourceCommand(cfg *CLIConfig, kind string, ns, app, name, file *string) *cobra.Command {
-	return &cobra.Command{
-		Use:   kind,
-		Short: "Helps you deploy a sailor " + kind,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return deployResource(cfg, kind, *ns, *app, *name, *file)
-		},
-	}
-}
-
 func DeployCommand(cfg *CLIConfig) *cobra.Command {
+	var createVersion int
 	var version string
 	var ns string
 	var app string
@@ -61,20 +51,12 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 	deployCmd.PersistentFlags().StringVarP(&app, "app", "", cfg.CwdSailorFile.Project.App, "resource for this app")
 	deployCmd.PersistentFlags().StringVarP(&name, "name", "", "", "name of the misc resource")
 
-	// Config subcommand
-	config := deployResourceCommand(cfg, "config", &ns, &app, &name, &file)
-
-	// Secret subcommand
-	secret := deployResourceCommand(cfg, "secret", &ns, &app, &name, &file)
-
-	// Misc subcommand
-	misc := deployResourceCommand(cfg, "misc", &ns, &app, &name, &file)
-
 	create := &cobra.Command{
 		Use:   "create",
 		Short: "Helps you create a deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if file == "" {
+			// if sailor file is not present and file flag is not provided
+			if file == "" && cfg.CwdSailorFile.Project.App == "" {
 				return errors.New("resource data file not provided")
 			}
 
@@ -98,6 +80,24 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 				desc, _ := reader.ReadString('\n')
 				if desc == "" {
 					return errors.New("deployment description is required")
+				}
+
+				// if there is no file flag is not provided, check if you have them in sailor file
+				if file == "" {
+					switch kind {
+					case "config":
+						if file = strings.ReplaceAll(cfg.CwdSailorFile.Config.File, "$env", cfg.Env); file == "" {
+							return errors.New("config file not provided")
+						}
+					case "secret":
+						if file = strings.ReplaceAll(cfg.CwdSailorFile.Secret.File, "$env", cfg.Env); file == "" {
+							return errors.New("secret file not provided")
+						}
+					case "misc":
+						if file = strings.ReplaceAll(cfg.CwdSailorFile.Misc[name].File, "$env", cfg.Env); file == "" {
+							return errors.New("misc file not provided")
+						}
+					}
 				}
 
 				// -- validations over --
@@ -125,7 +125,7 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 					data = string(b)
 				}
 
-				version, err := cfg.SailorClient.CreateDeployment(ns, app, kind, name, cfg.Token, strings.TrimSpace(desc), data)
+				version, err := cfg.SailorClient.CreateDeployment(ns, app, kind, name, cfg.Token, strings.TrimSpace(desc), createVersion, data)
 				if err != nil {
 					return err
 				}
@@ -140,6 +140,12 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 			return nil
 		},
 	}
+
+	var lockVersion = 0
+	if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
+		lockVersion = envLock.Config.Version
+	}
+	create.Flags().IntVarP(&createVersion, "version", "v", lockVersion, "current version of the config")
 
 	list := &cobra.Command{
 		Use:   "list",
@@ -201,6 +207,9 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 				}
 
 				kind := args[0]
+				if !slices.Contains([]string{"config", "misc", "secret"}, kind) {
+					return errors.New("not a valid kind of resource")
+				}
 				if err := cfg.SailorClient.Deploy(ns, app, kind, name, cfg.Token, version); err != nil {
 					return err
 				}
@@ -217,64 +226,8 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 	}
 	apply.Flags().StringVarP(&version, "version", "v", "", "deploy this specific version")
 
-	deployCmd.AddCommand(config)
-	deployCmd.AddCommand(secret)
-	deployCmd.AddCommand(misc)
 	deployCmd.AddCommand(create)
 	deployCmd.AddCommand(list)
 	deployCmd.AddCommand(apply)
 	return deployCmd
-}
-
-// Helper function for deploying resources
-func deployResource(cfg *CLIConfig, kind, ns, app, name, file string) error {
-	if file == "" {
-		return errors.New("resource data file not provided")
-	}
-
-	if ns == "" || app == "" {
-		return errors.New("namespace and app are required")
-	}
-
-	if kind == "misc" && name == "" {
-		return errors.New("resource name is required for misc kind")
-	}
-
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("description: ")
-	desc, _ := reader.ReadString('\n')
-	if desc == "" {
-		return errors.New("deployment description is required")
-	}
-
-	var data any
-	b, err := os.ReadFile(file)
-	if err != nil {
-		return err
-	}
-
-	switch kind {
-	case "config":
-		var d map[string]any
-		if err := json.Unmarshal(b, &d); err != nil {
-			return err
-		}
-		data = d
-	case "secret":
-		var d map[string]string
-		if err := json.Unmarshal(b, &d); err != nil {
-			return err
-		}
-		data = d
-	case "misc":
-		data = string(b)
-	}
-
-	version, err := cfg.SailorClient.CreateDeployment(ns, app, kind, name, cfg.Token, strings.TrimSpace(desc), data)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Deployment: %v created!\n", *version)
-	return nil
 }
