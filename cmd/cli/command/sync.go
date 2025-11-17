@@ -68,81 +68,37 @@ func SyncCommand(cfg *CLIConfig) *cobra.Command {
 }
 
 func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) error {
+	type SyncResource struct {
+		Path string
+		Name string
+		Kind string
+	}
+
+	var envResourceVersion types.ResourceVersion
+	if rv, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
+		envResourceVersion = rv
+	}
+
+	resourcesToSync := []SyncResource{}
 	// TODO :: we need to do md5 checksum check
 	var noticedAnUpdate = false
 	if sf.Config.File != "" {
-		resData, err := cfg.SailorClient.GetResource(sf.Project.Namespace,
-			sf.Project.App, "config", "", cfg.Token, cfg.KeyPairs[projectKey])
-		if err != nil {
-			return err
-		}
-
-		replacedFilePath := strings.ReplaceAll(sf.Config.File, "$env", cfg.Env)
-		if err = os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
-			return err
-		}
-
-		fmt.Println("synced config file:", replacedFilePath)
-		fmt.Println("version:", resData.Version)
-
-		// update lock file
-		if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
-			if envLock.Config.Version != resData.Version {
-				envLock.Config.Version = resData.Version
-				envLock.Config.Hash = fmt.Sprintf("%x", md5.Sum(resData.Data))
-
-				noticedAnUpdate = true
-			}
-		} else {
-			envLock = types.ResourceVersion{
-				Config: &types.LockVersion{
-					Version: resData.Version,
-					Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
-				},
-			}
-			cfg.CwdSailorLockFile.Environments[cfg.Env] = envLock
-
-			noticedAnUpdate = true
-		}
+		resourcesToSync = append(resourcesToSync, SyncResource{
+			Path: sf.Config.File,
+			Name: "",
+			Kind: "config",
+		})
 	} else {
 		fmt.Println("config file path not specified, will not be synced...")
 	}
 
 	// secret file sync
 	if sf.Secret.File != "" {
-		resData, err := cfg.SailorClient.GetResource(sf.Project.Namespace,
-			sf.Project.App, "secret", "", cfg.Token, cfg.KeyPairs[projectKey])
-		if err != nil {
-			return err
-		}
-
-		replacedFilePath := strings.ReplaceAll(sf.Secret.File, "$env", cfg.Env)
-		if err := os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
-			return err
-		}
-
-		fmt.Println("synced secret file:", replacedFilePath)
-		fmt.Println("version:", resData.Version)
-
-		// update lock file
-		if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
-			if envLock.Secret.Version != resData.Version {
-				envLock.Secret.Version = resData.Version
-				envLock.Secret.Hash = fmt.Sprintf("%x", md5.Sum(resData.Data))
-
-				noticedAnUpdate = true
-			}
-		} else {
-			envLock = types.ResourceVersion{
-				Secret: &types.LockVersion{
-					Version: resData.Version,
-					Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
-				},
-			}
-			cfg.CwdSailorLockFile.Environments[cfg.Env] = envLock
-
-			noticedAnUpdate = true
-		}
+		resourcesToSync = append(resourcesToSync, SyncResource{
+			Path: sf.Secret.File,
+			Name: "",
+			Kind: "secret",
+		})
 	} else {
 		fmt.Println("secret file path not specified, will not be synced...")
 	}
@@ -150,47 +106,78 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 	// misc file sync
 	if len(sf.Misc) > 0 {
 		for name, misc := range sf.Misc {
-			resData, err := cfg.SailorClient.GetResource(sf.Project.Namespace,
-				sf.Project.App, "misc", name, cfg.Token, cfg.KeyPairs[projectKey])
-			if err != nil {
-				return err
-			}
-
-			replacedFilePath := strings.ReplaceAll(misc.File, "$env", cfg.Env)
-			if err := os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
-				return err
-			}
-
-			fmt.Println("synced misc file:", replacedFilePath)
-			fmt.Println("version:", resData.Version)
-
-			// update lock file
-			if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
-				if miscLock, ok := envLock.Misc[name]; ok && miscLock.Version != resData.Version {
-					miscLock.Version = resData.Version
-					miscLock.Hash = fmt.Sprintf("%x", md5.Sum(resData.Data))
-
-					noticedAnUpdate = true
-				}
-			} else {
-				envLock = types.ResourceVersion{
-					Misc: map[string]types.LockVersion{
-						name: {
-							Version: resData.Version,
-							Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
-						},
-					},
-				}
-				cfg.CwdSailorLockFile.Environments[cfg.Env] = envLock
-
-				noticedAnUpdate = true
-			}
+			resourcesToSync = append(resourcesToSync, SyncResource{
+				Path: misc.File,
+				Name: name,
+				Kind: "misc",
+			})
 		}
 	} else {
 		fmt.Println("misc file paths not specified, will not be synced...")
 	}
 
+	for _, res := range resourcesToSync {
+		resData, err := cfg.SailorClient.GetResource(sf.Project.Namespace,
+			sf.Project.App, res.Kind, res.Name, cfg.Token, cfg.KeyPairs[projectKey])
+		if err != nil {
+			return err
+		}
+
+		replacedFilePath := strings.ReplaceAll(res.Path, "$env", cfg.Env)
+		if err = os.WriteFile(replacedFilePath, resData.Data, 0644); err != nil {
+			return err
+		}
+
+		fmt.Println("synced", res.Kind, "file:", replacedFilePath)
+		fmt.Println("version:", resData.Version)
+
+		switch res.Kind {
+		case "config":
+			if envResourceVersion.Config == nil {
+				envResourceVersion.Config = &types.LockVersion{
+					Version: resData.Version,
+					Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
+				}
+				noticedAnUpdate = true
+			} else if envResourceVersion.Config.Version != resData.Version {
+				envResourceVersion.Config.Version = resData.Version
+				envResourceVersion.Config.Hash = fmt.Sprintf("%x", md5.Sum(resData.Data))
+				noticedAnUpdate = true
+			}
+		case "secret":
+			if envResourceVersion.Secret == nil {
+				envResourceVersion.Secret = &types.LockVersion{
+					Version: resData.Version,
+					Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
+				}
+				noticedAnUpdate = true
+			} else if envResourceVersion.Secret.Version != resData.Version {
+				envResourceVersion.Secret.Version = resData.Version
+				envResourceVersion.Secret.Hash = fmt.Sprintf("%x", md5.Sum(resData.Data))
+				noticedAnUpdate = true
+			}
+		case "misc":
+			if len(envResourceVersion.Misc) == 0 {
+				envResourceVersion.Misc = make(map[string]types.LockVersion)
+				envResourceVersion.Misc[res.Name] = types.LockVersion{
+					Version: resData.Version,
+					Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
+				}
+				noticedAnUpdate = true
+			} else if envResourceVersion.Misc[res.Name].Version != resData.Version {
+				envResourceVersion.Misc[res.Name] = types.LockVersion{
+					Version: resData.Version,
+					Hash:    fmt.Sprintf("%x", md5.Sum(resData.Data)),
+				}
+				noticedAnUpdate = true
+			}
+		}
+	}
+
 	if noticedAnUpdate {
+		// update the lock file
+		cfg.CwdSailorLockFile.Environments[cfg.Env] = envResourceVersion
+
 		lockbytes, err := json.MarshalIndent(cfg.CwdSailorLockFile, "", "  ")
 		if err != nil {
 			return err
