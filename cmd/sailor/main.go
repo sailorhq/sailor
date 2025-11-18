@@ -28,6 +28,8 @@ import (
 
 // var staticConsoleFS embed.FS
 
+var Version string
+
 const (
 	RoleAdmin = "admin"
 	RoleUser  = "user"
@@ -199,6 +201,7 @@ func main() {
 	if port == "" {
 		port = ":7766"
 	}
+	core.Log.Info("[🐧] sailor core: ", zap.String("version", Version))
 	core.Log.Info("[🐧] starting core sailor server", zap.String("port", port))
 
 	if err := fasthttp.ListenAndServe(port, r.Handler); err != nil {
