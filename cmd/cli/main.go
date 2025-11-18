@@ -30,12 +30,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var Version string
+
 func main() {
 	var env string
+	var version bool
 	var rootCmd = &cobra.Command{
 		Use:   "sailor",
 		Short: "Sailor is a resource management and delivery system for cloud-native apps",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if version {
+				fmt.Println(Version)
+				return nil
+			}
 			return nil
 		},
 	}
@@ -46,6 +53,7 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&env, "env", "", "", "Helps set explicit environment")
+	rootCmd.PersistentFlags().BoolVarP(&version, "version", "", false, "Your Sailor CLI version")
 
 	fmt.Println("🐧 working on: ", cfg.Env)
 
