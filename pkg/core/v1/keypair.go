@@ -5,21 +5,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 )
 
-type AuditEvent struct {
-	Timestamp time.Time `json:"timestamp"`
-	Username  string    `json:"username"`
-	Namespace string    `json:"namespace,omitempty"`
-	App       string    `json:"app,omitempty"`
-	Action    string    `json:"action"`
-	Details   any       `json:"details,omitempty"`
-}
-
-func (c *CoreAPIClient) GetAuditLogEvents(limit int) (*[]AuditEvent, error) {
+func (c *CoreAPIClient) GetKeyPair(ns, app string) (*KeyPair, error) {
 	// Construct the URL
-	url := fmt.Sprintf("%s/api/v1/audit?n=%d", c.BaseURL, limit)
+	url := fmt.Sprintf("%s/api/v1/keypair/%s/%s", c.BaseURL, ns, app)
 
 	// Create the PUT request
 	req, err := http.NewRequest("GET", url, nil)
@@ -47,10 +37,10 @@ func (c *CoreAPIClient) GetAuditLogEvents(limit int) (*[]AuditEvent, error) {
 		return nil, serverMessageToErr(b)
 	}
 
-	var events []AuditEvent
-	if err := json.Unmarshal(b, &events); err != nil {
+	var keyPair KeyPair
+	if err := json.Unmarshal(b, &keyPair); err != nil {
 		return nil, err
 	}
 
-	return &events, nil
+	return &keyPair, nil
 }

@@ -73,7 +73,7 @@ func LoginCommand(cfg *CLIConfig) *cobra.Command {
 					return err
 				}
 
-				if err = updateTokenAndKeyPairs(loginResp.Token, loginResp.KeyPairs, cfg.SailorRoot); err != nil {
+				if err = updateToken(loginResp.Token, cfg.SailorRoot); err != nil {
 					return err
 				}
 
@@ -123,7 +123,7 @@ func basicLoginFlow(cfg *CLIConfig, isAdmin bool) error {
 		return err
 	}
 
-	if err := updateTokenAndKeyPairs(loginResp.Token, loginResp.KeyPairs, cfg.SailorRoot); err != nil {
+	if err := updateToken(loginResp.Token, cfg.SailorRoot); err != nil {
 		return err
 	}
 

@@ -97,6 +97,7 @@ func main() {
 	apiV1.GET("/auth/oidc", core.AuthOIDCHandler)
 	apiV1.ANY("/auth/callback", core.AuthCallbackHandler)
 	apiV1.GET("/auth/token", core.GetTokenHandler)
+	apiV1.GET("/keypair/{namespace}/{app}", core.ClientCallable(core.GetKeyPairHandler))
 
 	apiV1.POST("/auth/basic", core.AuthBasicHandler)
 	apiV1.POST("/auth/rbac", core.Authenticated(core.AuthRBACHandler, v1.RBACConstraints{
@@ -207,4 +208,7 @@ func main() {
 	if err := fasthttp.ListenAndServe(port, r.Handler); err != nil {
 		core.Log.Error("unable to start sailor core", zap.Error(err))
 	}
+
+	hooksK8sV1 := r.Group("/hooks/k8s")
+	hooksK8sV1.POST("/admission", core.K8sAdmissionHookHandler)
 }

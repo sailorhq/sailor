@@ -54,9 +54,7 @@ func SyncCommand(cfg *CLIConfig) *cobra.Command {
 				return err
 			}
 
-			projectKey := fmt.Sprintf("%s-%s", sf.Project.Namespace, sf.Project.App)
-
-			if err := syncResources(&sf, cfg, projectKey); err != nil {
+			if err := syncResources(&sf, cfg); err != nil {
 				return err
 			}
 
@@ -67,7 +65,7 @@ func SyncCommand(cfg *CLIConfig) *cobra.Command {
 	return syncCmd
 }
 
-func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) error {
+func syncResources(sf *types.SailorFile, cfg *CLIConfig) error {
 	type SyncResource struct {
 		Path string
 		Name string
@@ -118,7 +116,7 @@ func syncResources(sf *types.SailorFile, cfg *CLIConfig, projectKey string) erro
 
 	for _, res := range resourcesToSync {
 		resData, err := cfg.SailorClient.GetResource(sf.Project.Namespace,
-			sf.Project.App, res.Kind, res.Name, cfg.Token, cfg.KeyPairs[projectKey])
+			sf.Project.App, res.Kind, res.Name)
 		if err != nil {
 			return err
 		}

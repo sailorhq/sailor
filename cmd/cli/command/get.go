@@ -80,7 +80,7 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 					return errors.New("misc resource requires a name")
 				}
 
-				schema, err := cfg.SailorClient.GetSchema(ns, app, kind, name, cfg.Token)
+				schema, err := cfg.SailorClient.GetSchema(ns, app, kind, name)
 				if err != nil {
 					return err
 				}
@@ -195,7 +195,7 @@ func GetCommand(cfg *CLIConfig) *cobra.Command {
 		Use:   "audit",
 		Short: "Helps you fetch audit logs",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			events, err := cfg.SailorClient.GetAuditLogEvents(limit, cfg.Token)
+			events, err := cfg.SailorClient.GetAuditLogEvents(limit)
 			if err != nil {
 				return err
 			}
@@ -231,12 +231,7 @@ func getResource(cfg *CLIConfig, kind, ns, app, name, output string) error {
 		return errors.New("resource name is required for misc kind")
 	}
 
-	projectKey := fmt.Sprintf("%s-%s", ns, app)
-	if _, ok := cfg.KeyPairs[projectKey]; !ok {
-		return errors.New("access not available, re-login to get fresh access")
-	}
-
-	resData, err := cfg.SailorClient.GetResource(ns, app, kind, name, cfg.Token, cfg.KeyPairs[projectKey])
+	resData, err := cfg.SailorClient.GetResource(ns, app, kind, name)
 	if err != nil {
 		return err
 	}
@@ -247,7 +242,12 @@ func getResource(cfg *CLIConfig, kind, ns, app, name, output string) error {
 			return err
 		}
 
-		kek, err := vault.DeriveKEK(cfg.KeyPairs[projectKey].SecretKey, []byte(cfg.KeyPairs[projectKey].AccessKey))
+		kp, err := cfg.SailorClient.GetKeyPair(ns, app)
+		if err != nil {
+			return err
+		}
+
+		kek, err := vault.DeriveKEK(kp.SecretKey, []byte(kp.AccessKey))
 		if err != nil {
 			return err
 		}

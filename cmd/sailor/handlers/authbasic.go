@@ -19,7 +19,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -33,7 +32,6 @@ func (sc *SailorCore) AuthBasicHandler(ctx *fasthttp.RequestCtx) {
 	pass := ctx.Request.Header.Peek("x-pass")
 
 	var token string
-	var allowedApps []string
 	err := sc.dbconns[BUCKET_ADMIN].View(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))
 		userBytes := userBucket.Get([]byte(user))
@@ -59,12 +57,12 @@ func (sc *SailorCore) AuthBasicHandler(ctx *fasthttp.RequestCtx) {
 			"roles":        user.Roles,
 			"permissions":  user.Permissions,
 			"allowed_apps": user.AllowedApps,
+			"access_key":   sc.setting.AccessKey,
+			"secret_key":   sc.setting.SecretKey,
 		}, sc.setting.TokenKey)
 		if err != nil {
 			return errors.New("error while creating token")
 		}
-
-		allowedApps = user.AllowedApps
 
 		return nil
 	})
@@ -79,43 +77,6 @@ func (sc *SailorCore) AuthBasicHandler(ctx *fasthttp.RequestCtx) {
 
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	enc.Encode(v1.LoginResponse{
-		Token:    token,
-		KeyPairs: sc.getKeyPairs(allowedApps),
+		Token: token,
 	})
-}
-
-func (sc *SailorCore) getKeyPairs(allowedApps []string) map[string]v1.KeyPair {
-	var keyPairs = make(map[string]v1.KeyPair)
-	for _, app := range allowedApps {
-		// this is wildcard case
-		if strings.HasSuffix(app, "-*") {
-			for projectKey, conn := range sc.dbconns {
-				ns := strings.Split(app, "-")[0]
-				if strings.HasPrefix(projectKey, ns) {
-					conn.View(func(tx *bolt.Tx) error {
-						metaBucket := tx.Bucket([]byte(BUCKET_META))
-						keyPairs[projectKey] = v1.KeyPair{
-							AccessKey: string(metaBucket.Get([]byte(KEY_ACCESS_KEY))),
-							SecretKey: string(metaBucket.Get([]byte(KEY_SECRET_KEY))),
-						}
-						return nil
-					})
-				}
-			}
-		} else {
-			if conn, ok := sc.dbconns[app]; ok {
-				conn.View(func(tx *bolt.Tx) error {
-					metaBucket := tx.Bucket([]byte(BUCKET_META))
-					keyPairs[app] = v1.KeyPair{
-						AccessKey: string(metaBucket.Get([]byte(KEY_ACCESS_KEY))),
-						SecretKey: string(metaBucket.Get([]byte(KEY_SECRET_KEY))),
-					}
-
-					return nil
-				})
-			}
-		}
-	}
-
-	return keyPairs
 }

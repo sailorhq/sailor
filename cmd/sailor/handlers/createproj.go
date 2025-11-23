@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"path/filepath"
+	"regexp"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -49,13 +51,27 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	err := validateK8sObjectNamingConvention(params.Ns, "namespace")
+	if err != nil {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		return
+	}
+
+	err = validateK8sObjectNamingConvention(params.Ns, "app")
+	if err != nil {
+		ctx.SetStatusCode(http.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		return
+	}
+
 	if _, ok := sc.dbconns[params.ProjectKey]; ok {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: "project already exists"})
 		return
 	}
 
-	db, err := bolt.Open(fmt.Sprintf("./configs/%s.%s", params.ProjectKey, DB_EXT), 0600, nil)
+	db, err := bolt.Open(filepath.Join("./configs", fmt.Sprintf("%s%s", params.ProjectKey, DB_EXT)), 0600, nil)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
@@ -64,11 +80,8 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 
 	sc.dbconns[params.ProjectKey] = db
 
-	var accessKey string
-	var secretKey string
 	err = db.Update(func(tx *bolt.Tx) error {
-		var metaBucket *bolt.Bucket
-		metaBucket, err := tx.CreateBucket([]byte(BUCKET_META))
+		_, err = tx.CreateBucket([]byte(BUCKET_META))
 		if err != nil {
 			return err
 		}
@@ -83,26 +96,10 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
-		accessKey = generateUniqueKey("sailor", 16)
-		if err = metaBucket.Put([]byte(KEY_ACCESS_KEY), []byte(accessKey)); err != nil {
-			return err
-		}
-
-		secretKey = generateUniqueKey("secret", 32)
-		return metaBucket.Put([]byte(KEY_SECRET_KEY), []byte(secretKey))
+		return nil
 	})
 
-	adminDB := sc.dbconns[BUCKET_ADMIN]
-	adminDB.Update(func(tx *bolt.Tx) error {
-		projectBucket := tx.Bucket([]byte(BUCKET_PROJECTS))
-		projectBytes, err := json.Marshal(Project{Ns: params.Ns, App: params.App})
-		if err != nil {
-			return err
-		}
-		return projectBucket.Put([]byte(params.ProjectKey), projectBytes)
-	})
-
-	if err != nil {
+	if sc.SailorSail.CreateProject(params.Ns, params.App) != nil {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
@@ -117,9 +114,7 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 	})
 
 	enc.Encode(v1.ProjectResponse{
-		Key:       params.ProjectKey,
-		AccessKey: accessKey,
-		SecretKey: secretKey,
+		Key: params.ProjectKey,
 	})
 }
 
@@ -132,4 +127,14 @@ func generateUniqueKey(prefix string, length int) string {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
 	return fmt.Sprintf("%s-%s", prefix, string(b))
+}
+
+func validateK8sObjectNamingConvention(name string, paramName string) error {
+	if len(name) < 3 || len(name) > 63 {
+		return fmt.Errorf("%s must be between 3 and 63 characters", paramName)
+	}
+	if !regexp.MustCompile(`^[a-z0-9-]+$`).MatchString(name) {
+		return fmt.Errorf("%s must contain only lowercase letters, numbers, and hyphens", paramName)
+	}
+	return nil
 }

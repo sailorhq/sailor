@@ -19,9 +19,12 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -33,6 +36,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sailorhq/sailor/cmd/sailor/sail"
 	"github.com/sailorhq/sailor/internal/bige"
 	"github.com/sailorhq/sailor/internal/types"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
@@ -128,7 +132,7 @@ const (
 	KEY_S3 = "s3"
 
 	// db extension used by sailor
-	DB_EXT = "sail"
+	DB_EXT = ".sail"
 
 	// decoded sailor claims from request
 	SAILOR_CLAIMS_KEY = "__sailor_claims"
@@ -163,7 +167,6 @@ type User struct {
 }
 
 type SailorCore struct {
-	// TODO :: change value to socket type
 	dbconns map[string]*bolt.DB
 
 	versions map[string]string
@@ -173,6 +176,10 @@ type SailorCore struct {
 	setting *v1.SailorSetting
 
 	Log *zap.Logger
+
+	// TODO :: we need to abstract all sail operations behind this
+	// single interface
+	SailorSail sail.Sail
 }
 
 func initializeLogger() *zap.Logger {
@@ -196,13 +203,19 @@ func initializeLogger() *zap.Logger {
 
 func NewSailorCore() *SailorCore {
 	sc := SailorCore{
-		dbconns:  make(map[string]*bolt.DB),
-		versions: make(map[string]string),
-		Log:      initializeLogger(),
+		dbconns:    make(map[string]*bolt.DB),
+		versions:   make(map[string]string),
+		Log:        initializeLogger(),
+		SailorSail: &sail.CoreSail{},
 	}
 
 	if err := sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
 		sc.Log.Error("error while initializing admin sail", zap.Error(err))
+		return nil
+	}
+
+	if err := sc.initInternalDatabase(BUCKET_META); err != nil {
+		sc.Log.Error("error while initializing meta sail", zap.Error(err))
 		return nil
 	}
 
@@ -214,44 +227,7 @@ func NewSailorCore() *SailorCore {
 	}
 	sc.setting = ss
 
-	err = sc.dbconns[BUCKET_ADMIN].View(func(tx *bolt.Tx) error {
-		projectsBucket := tx.Bucket([]byte(BUCKET_PROJECTS))
-
-		projectsBucket.ForEach(func(k []byte, v []byte) error {
-			var project Project
-			if err := json.Unmarshal(v, &project); err != nil {
-				return err
-			}
-
-			projectKey := fmt.Sprintf("%s-%s", project.Ns, project.App)
-			projectDbPath := fmt.Sprintf("./configs/%s-%s.%s", project.Ns, project.App, DB_EXT)
-			db, err := bolt.Open(projectDbPath, 0600, nil)
-			if err != nil {
-				return err
-			}
-
-			sc.dbconns[projectKey] = db
-
-			sc.Log.Info("loaded project...", zap.String("name", projectKey))
-
-			// if err := backup.BackupState(projectKey, db); err != nil {
-			// 	return err
-			// }
-
-			// fmt.Println("uploaded state to s3 for: ", projectKey)
-
-			// db.View(func(tx *bolt.Tx) error {
-			// 	metaBucket := tx.Bucket([]byte(BUCKET_META))
-			// 	version := metaBucket.Get([]byte(KEY_DEPLOYED_VERSION))
-			// 	sc.versions[projectKey] = string(version)
-			// 	return nil
-			// })
-
-			return nil
-		})
-		return nil
-	})
-
+	err = sc.loadSailFiles()
 	if err != nil {
 		sc.Log.Error("error while loading sails", zap.Error(err))
 		return nil
@@ -281,8 +257,105 @@ func NewSailorCore() *SailorCore {
 	return &sc
 }
 
+func (sc *SailorCore) loadSailFiles() (err error) {
+	// TODO :: add ability to set folder from ENV variable
+	sailFolder := "./configs"
+
+	err = sc.dbconns[BUCKET_META].View(func(tx *bolt.Tx) error {
+		projectBucket := tx.Bucket([]byte(BUCKET_PROJECTS))
+		if projectBucket == nil {
+			return errors.New("projects bucket not found")
+		}
+
+		projerr := projectBucket.ForEach(func(k, _ []byte) error {
+			projectKey := string(k)
+			if err := sc.loadProject(sailFolder, projectKey); err != nil {
+				return err
+			}
+			sc.Log.Info("loaded project...", zap.String("name", projectKey))
+
+			return nil
+		})
+		if projerr != nil {
+			return projerr
+		}
+
+		sc.performProjectRecon(sailFolder)
+
+		return nil
+	})
+
+	return nil
+}
+
+func (sc *SailorCore) loadProject(sailFolder, projectKey string) error {
+	dbPath := filepath.Join(sailFolder, fmt.Sprintf("%s%s", projectKey, DB_EXT))
+
+	db, err := bolt.Open(dbPath, 0600, nil)
+	if err != nil {
+		sc.Log.Error("error while loading sail", zap.String("path", dbPath), zap.Error(err))
+		return err
+	}
+
+	sc.dbconns[projectKey] = db
+	return nil
+}
+
+// perfromProjectRecon performs a recon activity to check all the projects are loaded
+// and if any project is not loaded, it will do log and load it inside our _meta bucket
+func (sc *SailorCore) performProjectRecon(sailFolder string) {
+	sc.Log.Info("starting project recon...")
+
+	err := filepath.Walk(sailFolder, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() || filepath.Ext(path) != DB_EXT {
+			return nil
+		}
+
+		// ignore internal sail files
+		if strings.HasPrefix(info.Name(), "_") {
+			return nil
+		}
+
+		projectKey := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+		if _, ok := sc.dbconns[projectKey]; ok {
+			return nil
+		}
+
+		sc.Log.Info("project is being loaded during recon", zap.String("project", projectKey))
+
+		if err := sc.loadProject(sailFolder, projectKey); err != nil {
+			return err
+		}
+
+		sc.Log.Info("project is loaded during recon", zap.String("project", projectKey))
+
+		// in order to not stat and load during the next start of sailor core we will add it to
+		// _meta bucket
+		splitted := strings.SplitN(projectKey, "_", 2)
+		if len(splitted) != 2 {
+			sc.Log.Warn("project key is not in expected format", zap.String("project", projectKey))
+			return nil
+		}
+
+		if err := sc.SailorSail.CreateProject(splitted[0], splitted[1]); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		sc.Log.Error("error while reconing projects", zap.Error(err))
+	}
+
+	sc.Log.Info("recon process ended")
+}
+
 func (sc *SailorCore) initInternalDatabase(dbName string) error {
-	dbPath := fmt.Sprintf("./configs/%s.%s", dbName, DB_EXT)
+	dbPath := fmt.Sprintf("./configs/%s%s", dbName, DB_EXT)
 	if f, _ := os.Stat(dbPath); f == nil {
 		db, err := bolt.Open(dbPath, 0600, nil)
 		if err != nil {
@@ -308,19 +381,15 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 					return err
 				}
 				setting := v1.SailorSetting{
-					TokenKey: generateUniqueKey("token", 16),
+					AccessKey: generateUniqueKey("sailor", 16),
+					SecretKey: generateUniqueKey("secret", 32),
+					TokenKey:  generateUniqueKey("token", 16),
 				}
 				settingb, _ := json.Marshal(&setting)
 				if err := settingBucket.Put([]byte(KEY_SETTING), settingb); err != nil {
 					return err
 				}
 				sc.setting = &setting
-
-				// initialize projects bucket where all the projects will be stored
-				// for listing
-				if _, err := tx.CreateBucket([]byte(BUCKET_PROJECTS)); err != nil {
-					return err
-				}
 
 				// initialize user related things...
 				usersBucket, err := tx.CreateBucket([]byte(BUCKET_USERS))
@@ -342,13 +411,25 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 
 				return usersBucket.Put([]byte(user.Email), json)
 			})
+
+			// TODO :: there might be a better way
+			sc.SailorSail.(*sail.CoreSail).Admin = db
 		case BUCKET_AUDIT:
 			db.Update(func(tx *bolt.Tx) error {
 				_, err := tx.CreateBucketIfNotExists([]byte(BUCKET_AUDIT_TRAIL))
 				return err
 			})
+
+			// TODO :: there might be a better way
+			sc.SailorSail.(*sail.CoreSail).Audit = db
+		case BUCKET_META:
+			db.Update(func(tx *bolt.Tx) error {
+				_, err := tx.CreateBucketIfNotExists([]byte(BUCKET_PROJECTS))
+				return err
+			})
 		}
 
+		sc.SailorSail.(*sail.CoreSail).Meta = db
 		return nil
 	} else {
 		db, err := bolt.Open(dbPath, 0600, nil)
@@ -358,6 +439,16 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 		}
 
 		sc.dbconns[dbName] = db
+
+		// if sail files are already there load it inside our interface
+		switch dbName {
+		case BUCKET_ADMIN:
+			sc.SailorSail.(*sail.CoreSail).Admin = db
+		case BUCKET_AUDIT:
+			sc.SailorSail.(*sail.CoreSail).Audit = db
+		case BUCKET_META:
+			sc.SailorSail.(*sail.CoreSail).Meta = db
+		}
 	}
 
 	sc.Log.Info(fmt.Sprintf("initialized %s sail", dbName))
@@ -378,20 +469,14 @@ type SailorParams struct {
 	// authentication
 	Token string
 
-	// authorization
-	AccessKey string
-	SecretKey string
-
 	// deployment related
 	RequestedVersion string
 }
 
 func extractSailorParams(ctx *fasthttp.RequestCtx) SailorParams {
 	sp := SailorParams{
-		Body:      ctx.Request.Body(),
-		Token:     string(ctx.Request.Header.Peek("x-token")),
-		AccessKey: string(ctx.Request.Header.Peek("x-access-key")),
-		SecretKey: string(ctx.Request.Header.Peek("x-secret-key")),
+		Body:  ctx.Request.Body(),
+		Token: string(ctx.Request.Header.Peek("x-token")),
 	}
 
 	if ns, ok := ctx.UserValue("namespace").(string); ok {
@@ -403,7 +488,7 @@ func extractSailorParams(ctx *fasthttp.RequestCtx) SailorParams {
 	}
 
 	if sp.Ns != "" && sp.App != "" {
-		sp.ProjectKey = fmt.Sprintf("%s-%s", sp.Ns, sp.App)
+		sp.ProjectKey = fmt.Sprintf("%s_%s", sp.Ns, sp.App)
 	}
 
 	// kind is not available while creating a project

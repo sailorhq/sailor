@@ -34,7 +34,7 @@ type RBACRequest struct {
 	Deletion RBACConstraints `json:"del"`
 }
 
-func (c *CoreAPIClient) UpdateRBAC(rbacReq RBACRequest, user, token string) error {
+func (c *CoreAPIClient) UpdateRBAC(rbacReq RBACRequest, user string) error {
 	// Construct the URL
 	url := fmt.Sprintf("%s/api/v1/auth/rbac?user=%s", c.BaseURL, user)
 
@@ -50,7 +50,7 @@ func (c *CoreAPIClient) UpdateRBAC(rbacReq RBACRequest, user, token string) erro
 	}
 
 	// Set headers
-	req.Header.Set("x-token", token)
+	req.Header.Set("x-token", c.Token)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Make the request

@@ -105,10 +105,10 @@ func TestCreateProject(t *testing.T) {
 			defer server.Close()
 
 			// Create client with test server URL
-			client := v1.CoreV1(server.URL)
+			client := v1.CoreV1(server.URL, tt.token)
 
 			// Make the request
-			resp, err := client.CreateProject(tt.namespace, tt.app, tt.token)
+			resp, err := client.CreateProject(tt.namespace, tt.app)
 
 			// Check error expectation
 			if tt.expectError && err == nil {
@@ -120,8 +120,8 @@ func TestCreateProject(t *testing.T) {
 
 			// If we got a response, check the status code
 			if resp != nil {
-				if resp.Key != fmt.Sprintf("%s-%s", tt.namespace, tt.app) {
-					t.Errorf("Expected project key %s, got %s", fmt.Sprintf("%s-%s", tt.namespace, tt.app), resp.Key)
+				if resp.Key != fmt.Sprintf("%s_%s", tt.namespace, tt.app) {
+					t.Errorf("Expected project key %s, got %s", fmt.Sprintf("%s_%s", tt.namespace, tt.app), resp.Key)
 				}
 			}
 		})

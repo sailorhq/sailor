@@ -23,12 +23,10 @@ import (
 )
 
 type ProjectResponse struct {
-	Key       string `json:"key"`
-	AccessKey string `json:"access_key"`
-	SecretKey string `json:"secret_key"`
+	Key string `json:"key"`
 }
 
-func (c *CoreAPIClient) CreateProject(namespace, app, token string) (*ProjectResponse, error) {
+func (c *CoreAPIClient) CreateProject(namespace, app string) (*ProjectResponse, error) {
 	// Construct the URL
 	url := fmt.Sprintf("%s/api/v1/project/%s/%s", c.BaseURL, namespace, app)
 
@@ -39,7 +37,7 @@ func (c *CoreAPIClient) CreateProject(namespace, app, token string) (*ProjectRes
 	}
 
 	// Set headers
-	req.Header.Set("x-token", token)
+	req.Header.Set("x-token", c.Token)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Make the request

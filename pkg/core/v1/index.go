@@ -28,14 +28,16 @@ type HTTPClient interface {
 type CoreAPIClient struct {
 	BaseURL string
 	Client  HTTPClient
+	Token   string
 }
 
 // CoreV1 creates a new API client instance
-func CoreV1(baseURL string) *CoreAPIClient {
+func CoreV1(baseURL string, token string) *CoreAPIClient {
 	return &CoreAPIClient{
 		BaseURL: baseURL,
 		Client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+		Token: token,
 	}
 }

@@ -21,10 +21,12 @@ type Webhook struct {
 	OnOIDCSuccess string `json:"on_oidc_success"`
 }
 type SailorSetting struct {
-	OIDC     *OIDCSetting   `json:"oidc"`
-	TokenKey string         `json:"-"`
-	Webhook  Webhook        `json:"webhook"`
-	Manifest SailorManifest `json:"manifest"`
+	OIDC      *OIDCSetting   `json:"oidc"`
+	TokenKey  string         `json:"-"`
+	AccessKey string         `json:"accessKey"`
+	SecretKey string         `json:"secretKey"`
+	Webhook   Webhook        `json:"webhook"`
+	Manifest  SailorManifest `json:"manifest"`
 }
 
 func (c *CoreAPIClient) GetSailorSetting(token string) (*SailorSetting, error) {

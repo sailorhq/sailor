@@ -23,7 +23,7 @@ import (
 	"net/http"
 )
 
-func (c *CoreAPIClient) ChangePassword(user, pass, token string) error {
+func (c *CoreAPIClient) ChangePassword(user, pass string) error {
 	// Construct the URL
 	url := fmt.Sprintf("%s/api/v1/setting/passwd", c.BaseURL)
 
@@ -34,7 +34,7 @@ func (c *CoreAPIClient) ChangePassword(user, pass, token string) error {
 	}
 
 	// Set headers
-	req.Header.Set("x-token", token)
+	req.Header.Set("x-token", c.Token)
 	req.Header.Set("x-user", user)
 	req.Header.Set("x-pass", pass)
 	req.Header.Set("Content-Type", "application/json")

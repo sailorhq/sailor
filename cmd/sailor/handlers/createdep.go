@@ -140,10 +140,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			case KindConfig:
 				b, err = json.Marshal(&deployment.ConfigData)
 			case KindSecret:
-				metaBucket := tx.Bucket([]byte(BUCKET_META))
-				secretKey := metaBucket.Get([]byte(KEY_SECRET_KEY))
-				accessKey := metaBucket.Get([]byte(KEY_ACCESS_KEY))
-				kek, err := vault.DeriveKEK(string(secretKey), accessKey)
+				kek, err := vault.DeriveKEK(sc.setting.SecretKey, []byte(sc.setting.AccessKey))
 				if err != nil {
 					return err
 				}

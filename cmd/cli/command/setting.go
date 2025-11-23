@@ -120,7 +120,7 @@ func SettingCommand(cfg *CLIConfig) *cobra.Command {
 			}
 
 			pass := string(bytePassword)
-			if err := cfg.SailorClient.ChangePassword(user, pass, cfg.Token); err != nil {
+			if err := cfg.SailorClient.ChangePassword(user, pass); err != nil {
 				return err
 			}
 

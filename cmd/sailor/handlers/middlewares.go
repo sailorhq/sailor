@@ -16,7 +16,6 @@
 package handlers
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"slices"
@@ -25,7 +24,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
-	bolt "go.etcd.io/bbolt"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/json"
 )
@@ -73,7 +71,18 @@ func (sc *SailorCore) Authenticated(next fasthttp.RequestHandler, pnr v1.RBACCon
 				zap.String("from_ip", ctx.RemoteIP().String()))
 
 			ctx.SetStatusCode(fasthttp.StatusForbidden)
-			enc.Encode(ResponseMessage{"unknown token"})
+			enc.Encode(ResponseMessage{"invalid token #1"})
+			return
+		}
+
+		if accessKey, ok := mc["access_key"].(string); ok && accessKey != sc.setting.AccessKey {
+			// we will skip RBAC validations if we have an access key
+			sc.Log.Warn("a token with invalid access key was used",
+				zap.String("access_key", accessKey),
+				zap.String("from_ip", ctx.RemoteIP().String()))
+
+			ctx.SetStatusCode(fasthttp.StatusForbidden)
+			enc.Encode(ResponseMessage{"invalid token #2"})
 			return
 		}
 
@@ -170,24 +179,14 @@ func validateRBAC(claims jwt.MapClaims, key string, target []string) bool {
 
 func (sc *SailorCore) ClientCallable(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		// we identified that a token is passed, this is passed only when a client like CLI
-		// or dashboard asks for resource, we check if the token is valid and user is
-		// allowed to access this namespace and app
-		params := extractSailorParams(ctx)
-		if params.ProjectKey != "" && params.Token != "" {
-			sc.Authenticated(next, v1.RBACConstraints{
-				Roles:       []string{"user"}, // TODO :: pick from constant
-				AllowedApps: []string{params.ProjectKey, fmt.Sprintf("%s-*", params.Ns)},
-			})(ctx)
-			return
-		}
-
 		enc := json.NewEncoder(ctx)
+		params := extractSailorParams(ctx)
+
 		if params.ProjectKey == "" {
-			// this case will be handled by the main API handler
-			// we cannot check for access-key and secret-key without
-			// projectKey
-			next(ctx)
+			ctx.SetStatusCode(http.StatusForbidden)
+			enc.Encode(map[string]any{
+				"message": "unable to identify sailor project",
+			})
 			return
 		}
 
@@ -196,21 +195,12 @@ func (sc *SailorCore) ClientCallable(next fasthttp.RequestHandler) fasthttp.Requ
 			return
 		}
 
-		var accessKey []byte
-		sc.dbconns[params.ProjectKey].View(func(tx *bolt.Tx) error {
-			metaBucket := tx.Bucket([]byte(BUCKET_META))
-			accessKey = metaBucket.Get([]byte(KEY_ACCESS_KEY))
-			return nil
-		})
-
-		if !bytes.Equal([]byte(params.AccessKey), accessKey) {
-			ctx.SetStatusCode(http.StatusForbidden)
-			enc.Encode(map[string]any{
-				"message": "not allowed to access this resource",
-			})
-			return
-		}
-
-		next(ctx)
+		// we identified that a token is passed, this is passed only when a client like CLI
+		// or dashboard asks for resource, we check if the token is valid and user is
+		// allowed to access this namespace and app
+		sc.Authenticated(next, v1.RBACConstraints{
+			Roles:       []string{"user"}, // TODO :: pick from constant
+			AllowedApps: []string{params.ProjectKey, fmt.Sprintf("%s-*", params.Ns)},
+		})(ctx)
 	}
 }

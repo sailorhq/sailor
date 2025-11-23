@@ -69,7 +69,7 @@ func RBACCommand(cfg *CLIConfig) *cobra.Command {
 					return errors.New("nothing to update.")
 				}
 
-				if err := cfg.SailorClient.UpdateRBAC(rbacReq, user, cfg.Token); err != nil {
+				if err := cfg.SailorClient.UpdateRBAC(rbacReq, user); err != nil {
 					return err
 				}
 
@@ -110,7 +110,7 @@ func RBACCommand(cfg *CLIConfig) *cobra.Command {
 					return errors.New("nothing to update.")
 				}
 
-				if err := cfg.SailorClient.UpdateRBAC(rbacReq, user, cfg.Token); err != nil {
+				if err := cfg.SailorClient.UpdateRBAC(rbacReq, user); err != nil {
 					return err
 				}
 

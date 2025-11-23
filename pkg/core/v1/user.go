@@ -28,7 +28,7 @@ type CreateUserResponse struct {
 	Pass string `json:"pass"`
 }
 
-func (c *CoreAPIClient) CreateUser(user, token string) (*CreateUserResponse, error) {
+func (c *CoreAPIClient) CreateUser(user string) (*CreateUserResponse, error) {
 	// Construct the URL
 	url := fmt.Sprintf("%s/api/v1/auth/user", c.BaseURL)
 
@@ -44,7 +44,7 @@ func (c *CoreAPIClient) CreateUser(user, token string) (*CreateUserResponse, err
 	}
 
 	// Set headers
-	req.Header.Set("x-token", token)
+	req.Header.Set("x-token", c.Token)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Make the request

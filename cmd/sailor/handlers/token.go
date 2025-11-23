@@ -50,7 +50,6 @@ func (sc *SailorCore) GetTokenHandler(ctx *fasthttp.RequestCtx) {
 
 	var token string
 	var err error
-	var allowedApps []string
 	err = sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(BUCKET_USERS))
 		if userBucket == nil {
@@ -74,7 +73,6 @@ func (sc *SailorCore) GetTokenHandler(ctx *fasthttp.RequestCtx) {
 		}
 
 		token = user.Token
-		allowedApps = user.AllowedApps
 
 		user.Token = ""
 		user.Fingerprint = ""
@@ -97,7 +95,6 @@ func (sc *SailorCore) GetTokenHandler(ctx *fasthttp.RequestCtx) {
 
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	enc.Encode(v1.LoginResponse{
-		Token:    token,
-		KeyPairs: sc.getKeyPairs(allowedApps),
+		Token: token,
 	})
 }

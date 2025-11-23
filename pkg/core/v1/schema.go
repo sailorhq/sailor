@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func (c *CoreAPIClient) GetSchema(ns, app, kind, name, token string) (*map[string]any, error) {
+func (c *CoreAPIClient) GetSchema(ns, app, kind, name string) (*map[string]any, error) {
 	// Construct the URL
 	var url string
 
@@ -30,7 +30,7 @@ func (c *CoreAPIClient) GetSchema(ns, app, kind, name, token string) (*map[strin
 	}
 
 	// Set headers
-	req.Header.Set("x-token", token)
+	req.Header.Set("x-token", c.Token)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Make the request
@@ -57,7 +57,7 @@ func (c *CoreAPIClient) GetSchema(ns, app, kind, name, token string) (*map[strin
 	return &schema, nil
 }
 
-func (c *CoreAPIClient) UpdateSchema(schema map[string]any, ns, app, kind, name, token string) error {
+func (c *CoreAPIClient) UpdateSchema(schema map[string]any, ns, app, kind, name string) error {
 	// Construct the URL
 	var url string
 
@@ -83,7 +83,7 @@ func (c *CoreAPIClient) UpdateSchema(schema map[string]any, ns, app, kind, name,
 	}
 
 	// Set headers
-	req.Header.Set("x-token", token)
+	req.Header.Set("x-token", c.Token)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Make the request

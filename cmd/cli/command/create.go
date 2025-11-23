@@ -125,14 +125,12 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		Short: "Helps you create a sailor project | admin",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ns != "" && app != "" {
-				projResp, err := cfg.SailorClient.CreateProject(ns, app, cfg.Token)
+				projResp, err := cfg.SailorClient.CreateProject(ns, app)
 				if err != nil {
 					return err
 				}
 
 				fmt.Println("Project Created: ", projResp.Key)
-				fmt.Println("Access Key: ", projResp.AccessKey)
-				fmt.Println("Secret Key: ", projResp.SecretKey)
 				return nil
 			}
 
@@ -150,7 +148,7 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 			fmt.Print("sailor user: ")
 			fmt.Scan(&user)
 
-			cur, err := cfg.SailorClient.CreateUser(user, cfg.Token)
+			cur, err := cfg.SailorClient.CreateUser(user)
 			if err != nil {
 				return err
 			}

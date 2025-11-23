@@ -82,7 +82,7 @@ func (c *CoreAPIClient) GetDeployment(ns, app, kind, name, token, version string
 	return &depResp, nil
 }
 
-func (c *CoreAPIClient) CreateDeployment(ns, app, kind, name, token, desc string, localVersion int, data any) (*any, error) {
+func (c *CoreAPIClient) CreateDeployment(ns, app, kind, name, desc string, localVersion int, data any) (*any, error) {
 	// Construct the URL
 	var url string
 	dataKey := fmt.Sprintf("%s_data", kind)
@@ -112,7 +112,7 @@ func (c *CoreAPIClient) CreateDeployment(ns, app, kind, name, token, desc string
 	}
 
 	// Set headers
-	req.Header.Set("x-token", token)
+	req.Header.Set("x-token", c.Token)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Make the request

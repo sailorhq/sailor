@@ -32,9 +32,8 @@ type KeyPair struct {
 }
 
 type LoginResponse struct {
-	Token       string             `json:"token"`
-	KeyPairs    map[string]KeyPair `json:"key_pairs"`
-	Fingerprint string             `json:"fp"`
+	Token       string `json:"token"`
+	Fingerprint string `json:"fp"`
 }
 
 func (c *CoreAPIClient) LoginBasic(user, pass string) (*LoginResponse, error) {

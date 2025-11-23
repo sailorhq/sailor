@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/sailorhq/sailor/pkg/vault"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -84,7 +85,8 @@ func (sc *SailorCore) GetResourceHandler(ctx *fasthttp.RequestCtx) {
 		enc.Encode(data)
 		return
 	case KindSecret:
-		if params.AccessKey == "" || params.SecretKey == "" {
+		claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
+		if sk, ok := claims["secret_key"].(string); !ok || sk == "" {
 			ctx.SetStatusCode(http.StatusBadRequest)
 			enc.Encode(ResponseMessage{"key pair not provided"})
 			return

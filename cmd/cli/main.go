@@ -133,7 +133,7 @@ func loadConfig(overrideEnv string) (*command.CLIConfig, error) {
 	}
 
 	if config.SailorHost != "" {
-		config.SailorClient = v1.CoreV1(config.SailorHost)
+		config.SailorClient = v1.CoreV1(config.SailorHost, config.Token)
 	}
 
 	// check if sailor.json is there in current path

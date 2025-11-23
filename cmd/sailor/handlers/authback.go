@@ -144,6 +144,8 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 			claims["roles"] = user.Roles
 			claims["permissions"] = user.Permissions
 			claims["allowed_apps"] = user.AllowedApps
+			claims["access_key"] = sc.setting.AccessKey
+			claims["secret_key"] = sc.setting.SecretKey
 
 			var err error
 			sailorToken, err = jwtFromClaims(getMapClaims(claims), sc.setting.TokenKey)
@@ -156,6 +158,8 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 			claims["iss"] = "sailor"
 			claims["sub"] = "sailor-oidc"
 			claims["aud"] = "sailor"
+			claims["access_key"] = sc.setting.AccessKey
+			claims["secret_key"] = sc.setting.SecretKey
 			sailorToken, err = jwtFromClaims(getMapClaims(claims), sc.setting.TokenKey)
 			if err != nil {
 				return errors.New("error while generating token")

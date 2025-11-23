@@ -133,17 +133,15 @@ func updateManifest(manifest *v1.SailorManifest, basePath string) error {
 	return UpdateConfig(readCfg, basePath)
 }
 
-func updateTokenAndKeyPairs(token string, keyPairs map[string]v1.KeyPair, basePath string) error {
+func updateToken(token string, basePath string) error {
 	readCfg, _ := GetConfig(basePath)
 	if readCfg == nil {
 		return UpdateConfig(&CLIConfig{
-			Token:    token,
-			KeyPairs: keyPairs,
+			Token: token,
 		}, basePath)
 	}
 
 	readCfg.Token = token
-	readCfg.KeyPairs = keyPairs
 	return UpdateConfig(readCfg, basePath)
 }
 

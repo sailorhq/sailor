@@ -28,7 +28,7 @@ import (
 )
 
 func DeployCommand(cfg *CLIConfig) *cobra.Command {
-	var createVersion int
+	var createVersion int = 0
 	var version string
 	var ns string
 	var app string
@@ -110,22 +110,33 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 
 				switch kind {
 				case "config":
+					if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
+						createVersion = envLock.Config.Version
+					}
 					var d map[string]any
 					if err := json.Unmarshal(b, &d); err != nil {
 						return err
 					}
 					data = d
 				case "secret":
+					if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
+						createVersion = envLock.Secret.Version
+					}
 					var d map[string]string
 					if err := json.Unmarshal(b, &d); err != nil {
 						return err
 					}
 					data = d
 				case "misc":
+					if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
+						if misc, mok := envLock.Misc[name]; mok {
+							createVersion = misc.Version
+						}
+					}
 					data = string(b)
 				}
 
-				version, err := cfg.SailorClient.CreateDeployment(ns, app, kind, name, cfg.Token, strings.TrimSpace(desc), createVersion, data)
+				version, err := cfg.SailorClient.CreateDeployment(ns, app, kind, name, strings.TrimSpace(desc), createVersion, data)
 				if err != nil {
 					return err
 				}
@@ -140,12 +151,7 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 			return nil
 		},
 	}
-
-	var lockVersion = 0
-	if envLock, ok := cfg.CwdSailorLockFile.Environments[cfg.Env]; ok {
-		lockVersion = envLock.Config.Version
-	}
-	create.Flags().IntVarP(&createVersion, "version", "v", lockVersion, "current version of the config")
+	create.Flags().IntVarP(&createVersion, "version", "v", 0, "current version of the config")
 
 	list := &cobra.Command{
 		Use:   "list",

@@ -102,7 +102,7 @@ func (c *CoreAPIClient) CreateResource(ns, app, token, name string, kind string,
 // GetResource gets a resource inside sailor instance
 //
 // TODO :: kind to be of type ResourceKind and token should be the last parameter
-func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string, keyPair KeyPair) (*ResourceData, error) {
+func (c *CoreAPIClient) GetResource(ns, app, kind, name string) (*ResourceData, error) {
 	// Construct the URL
 	var url string
 
@@ -123,9 +123,7 @@ func (c *CoreAPIClient) GetResource(ns, app, kind, name, token string, keyPair K
 	}
 
 	// Set headers
-	req.Header.Set("x-access-key", keyPair.AccessKey)
-	req.Header.Set("x-secret-key", keyPair.SecretKey)
-	req.Header.Set("x-token", token)
+	req.Header.Set("x-token", c.Token)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Make the request
