@@ -279,11 +279,10 @@ func (sc *SailorCore) loadSailFiles() (err error) {
 		if projerr != nil {
 			return projerr
 		}
-
-		sc.performProjectRecon(sailFolder)
-
 		return nil
 	})
+
+	sc.performProjectRecon(sailFolder)
 
 	return nil
 }
