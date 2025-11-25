@@ -16,7 +16,10 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/sailorhq/sailor/cmd/sailor/handlers"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
@@ -26,7 +29,8 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// var staticConsoleFS embed.FS
+//go:embed ui
+var staticConsoleFS embed.FS
 
 var Version string
 
@@ -196,6 +200,11 @@ func main() {
 	})
 	apiV1.GET("/audit", getAuditLogHandler)
 
+	// setup console routes
+	if err := setupConsole(r); err != nil {
+		core.Log.Error("unable to setup console routes, console will not work", zap.Error(err))
+	}
+
 	// it is best to take SAILOR_PORT through ENV because people have their own
 	// deployment flow
 	port := os.Getenv("SAILOR_PORT")
@@ -211,4 +220,64 @@ func main() {
 
 	hooksK8sV1 := r.Group("/hooks/k8s")
 	hooksK8sV1.POST("/admission", core.K8sAdmissionHookHandler)
+}
+
+func setupConsole(r *router.Router) error {
+	// setup console routes
+	consoleFS, err := fs.Sub(staticConsoleFS, ".")
+	if err != nil {
+		return err
+	}
+
+	// Create a custom FS handler for embedded filesystem
+	fasthttpFs := &fasthttp.FS{
+		Root:               "",
+		FS:                 consoleFS,
+		IndexNames:         []string{"index.html"},
+		GenerateIndexPages: false,
+		Compress:           true,
+		AcceptByteRange:    true,
+	}
+	fsHandler := fasthttpFs.NewRequestHandler()
+
+	// Root redirect
+	r.GET("/", func(ctx *fasthttp.RequestCtx) {
+		ctx.Redirect("/console", fasthttp.StatusFound)
+	})
+
+	// Console routes - catch all paths under /console
+	r.GET("/console/{filepath:*}", func(ctx *fasthttp.RequestCtx) {
+		path := string(ctx.Path())
+
+		// Remove the /console prefix for file lookup
+		requestPath := strings.TrimPrefix(path, "/console")
+		if requestPath == "" {
+			requestPath = "/ui/index.html"
+		}
+
+		// Check if file exists
+		filePath := strings.TrimPrefix(requestPath, "/")
+		if filePath == "" {
+			filePath = "ui/index.html"
+		}
+
+		if _, err := fs.Stat(consoleFS, filePath); err == nil {
+			// File exists, serve it directly by modifying the path
+			ctx.Request.URI().SetPath(requestPath)
+			fsHandler(ctx)
+			return
+		}
+
+		// File doesn't exist, serve index.html for SPA routing
+		ctx.Request.URI().SetPath("ui/index.html")
+		fsHandler(ctx)
+	})
+
+	// Also handle /console without trailing slash
+	// r.GET("/console", func(ctx *fasthttp.RequestCtx) {
+	// 	ctx.Request.URI().SetPath("/index.html")
+	// 	fsHandler(ctx)
+	// })
+
+	return nil
 }

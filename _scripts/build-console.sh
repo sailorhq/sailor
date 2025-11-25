@@ -3,7 +3,7 @@
 echo "Building React console with /console/ base path..."
 
 # Navigate to admin directory
-cd ../console
+cd ../../console
 
 # Install dependencies if needed
 if [ ! -d "node_modules" ]; then
@@ -23,7 +23,8 @@ bun run build
 echo "Copying built files to console directory..."
 cd ../sailor
 rm -rf cmd/sailor/ui
-cp -r admin/dist cmd/sailor/ui
+mkdir cmd/sailor/ui
+cp -r ../console/dist/* cmd/sailor/ui
 
 echo "Build complete! The console is now ready to be embedded."
 echo "Make sure to rebuild the Go application to include the new console files."
