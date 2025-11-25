@@ -52,8 +52,8 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
+	var currSetting v1.SailorSetting
 	err := sc.dbconns[BUCKET_ADMIN].Update(func(tx *bolt.Tx) error {
-		var currSetting v1.SailorSetting
 		currSettingBytes := tx.Bucket([]byte(BUCKET_SETTING)).Get([]byte(KEY_SETTING))
 		if err := json.Unmarshal(currSettingBytes, &currSetting); err != nil {
 			return nil
@@ -75,7 +75,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	// we update the sailor settings inside our own core memory lookup
-	sc.setting = &ss
+	sc.setting = &currSetting
 
 	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
 	go sc.addAuditEvent(&v1.AuditEvent{
