@@ -72,6 +72,8 @@ func (rk ResourceKind) ResourceKey(name string) string {
 }
 
 const (
+	SAILS_FOLDER_PATH = "./sails"
+
 	// -- ADMIN --
 	BUCKET_ADMIN = "_admin"
 
@@ -209,6 +211,13 @@ func NewSailorCore() *SailorCore {
 		SailorSail: &sail.CoreSail{},
 	}
 
+	if f, _ := os.Stat(SAILS_FOLDER_PATH); f == nil {
+		sc.Log.Info("sails folder not found, creating it...")
+		if err := os.Mkdir(SAILS_FOLDER_PATH, 0755); err != nil {
+			sc.Log.Fatal("unable to create sails/ folder, sailor cannot run without it, please create it manually", zap.Error(err))
+		}
+	}
+
 	if err := sc.initInternalDatabase(BUCKET_ADMIN); err != nil {
 		sc.Log.Error("error while initializing admin sail", zap.Error(err))
 		return nil
@@ -259,7 +268,6 @@ func NewSailorCore() *SailorCore {
 
 func (sc *SailorCore) loadSailFiles() (err error) {
 	// TODO :: add ability to set folder from ENV variable
-	sailFolder := "./configs"
 
 	err = sc.dbconns[BUCKET_META].View(func(tx *bolt.Tx) error {
 		projectBucket := tx.Bucket([]byte(BUCKET_PROJECTS))
@@ -269,7 +277,7 @@ func (sc *SailorCore) loadSailFiles() (err error) {
 
 		projerr := projectBucket.ForEach(func(k, _ []byte) error {
 			projectKey := string(k)
-			if err := sc.loadProject(sailFolder, projectKey); err != nil {
+			if err := sc.loadProject(SAILS_FOLDER_PATH, projectKey); err != nil {
 				return err
 			}
 			sc.Log.Info("loaded project...", zap.String("name", projectKey))
@@ -282,7 +290,7 @@ func (sc *SailorCore) loadSailFiles() (err error) {
 		return nil
 	})
 
-	sc.performProjectRecon(sailFolder)
+	sc.performProjectRecon(SAILS_FOLDER_PATH)
 
 	return nil
 }
@@ -354,7 +362,7 @@ func (sc *SailorCore) performProjectRecon(sailFolder string) {
 }
 
 func (sc *SailorCore) initInternalDatabase(dbName string) error {
-	dbPath := fmt.Sprintf("./configs/%s%s", dbName, DB_EXT)
+	dbPath := fmt.Sprintf("./sails/%s%s", dbName, DB_EXT)
 	if f, _ := os.Stat(dbPath); f == nil {
 		db, err := bolt.Open(dbPath, 0600, nil)
 		if err != nil {

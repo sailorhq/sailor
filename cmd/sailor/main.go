@@ -48,7 +48,6 @@ const (
 )
 
 func main() {
-
 	core := handlers.NewSailorCore()
 
 	if core == nil {

@@ -53,15 +53,15 @@ WORKDIR /app
 # Copy the binary from the builder stage
 COPY --from=go-builder /app/sailor .
 
-# Create the configs directory
-RUN mkdir -p /app/configs && \
+# Create the sails directory
+RUN mkdir -p /app/sails && \
     chown -R sailor:sailor /app
 
 # Switch to the non-root user
 USER sailor
 
-# Create a volume for the configs directory
-VOLUME ["/app/configs"]
+# Create a volume for the sails directory
+VOLUME ["/app/sails"]
 
 # Expose port 7766
 EXPOSE 7766
