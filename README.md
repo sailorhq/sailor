@@ -2,7 +2,7 @@
 
 > Configuration Management for Cloud Native Workloads
 
-[![Docs](https://img.shields.io/badge/docs-sailorhq.dev-yellow)](https://sailorhq.dev/docs/)
+[![Docs](https://img.shields.io/badge/docs-sailorhq.dev-yellow)](https://sailorhq.dev/)
 
 <p align="center">
     <img width="200" src="https://github.com/sailorhq/sailor/blob/main/assets/sailor.png?raw=true">
