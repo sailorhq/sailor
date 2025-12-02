@@ -2,6 +2,8 @@
 
 > Configuration Management for Cloud Native Workloads
 
+[![Docs](https://img.shields.io/badge/docs-sailorhq.dev-yellow)](https://sailorhq.dev/docs/)
+
 <p align="center">
     <img width="200" src="https://github.com/sailorhq/sailor/blob/main/assets/sailor.png?raw=true">
 </p>
@@ -12,7 +14,7 @@ environments and teams.
 
 Modern cloud-native applications often drown in configuration sprawl. **Sailor**
 helps you take the helm with a developer-friendly service to manage, audit, and
-apply configurations for your containerized applications — effortlessly.
+apply configurations for your containerized applications effortlessly.
 
 ## 🚀 Features
 
@@ -29,8 +31,22 @@ apply configurations for your containerized applications — effortlessly.
 > reached GA (General Availability). The status of this project is currently in
 > battle testing mode.
 
+We require developers and early adopters to help us test and improve Sailor. If
+you're interested in contributing or explaining your company's use-case, please
+join our [Discord](https://discord.gg/mk4GUApPrb) community!
+
 ### Supported Consumers
 
 | Language | Support | Link                                  |
 | -------- | ------- | ------------------------------------- |
 | Go       | ✅      | https://github.com/sailorhq/sailor-go |
+
+### Platforms
+
+| Platform | Build | Verified |
+| -------- | ----- | -------- |
+| Linux    | ✅    | ⚠️       |
+| macOS    | ✅    | ⚠️       |
+| Windows  | ✅    | ❌       |
+
+> If Sailor becomes part of your workflow, consider sponsoring on GitHub 💖.”
