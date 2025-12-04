@@ -28,7 +28,7 @@ func BackupRawSails(bucket, region, accessKey, secretKey string) error {
 
 	// TODO :: configs folder should be fetched from environment variable, because docker can volume
 	// mount custom folders
-	zipFileBytes, err := zipDir("./configs")
+	zipFileBytes, err := zipDir("./sails")
 	if err != nil {
 		return err
 	}

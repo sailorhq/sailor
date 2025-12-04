@@ -71,7 +71,7 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	db, err := bolt.Open(filepath.Join("./configs", fmt.Sprintf("%s%s", params.ProjectKey, DB_EXT)), 0600, nil)
+	db, err := bolt.Open(filepath.Join(SAILS_FOLDER_PATH, fmt.Sprintf("%s%s", params.ProjectKey, DB_EXT)), 0600, nil)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
