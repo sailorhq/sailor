@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.70
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.83.0
 	github.com/coreos/go-oidc v2.3.0+incompatible
+	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fasthttp/router v1.5.4
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/golang-jwt/jwt/v5 v5.2.2

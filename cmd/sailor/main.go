@@ -195,6 +195,9 @@ func main() {
 	})
 	apiV1.GET("/audit", getAuditLogHandler)
 
+	hooksK8sV1 := r.Group("/hooks/k8s")
+	hooksK8sV1.POST("/admission", core.K8sAdmissionHookHandler)
+
 	// it is best to take SAILOR_PORT through ENV because people have their own
 	// deployment flow
 	port := os.Getenv("SAILOR_PORT")
@@ -207,7 +210,4 @@ func main() {
 	if err := fasthttp.ListenAndServe(port, r.Handler); err != nil {
 		core.Log.Error("unable to start sailor core", zap.Error(err))
 	}
-
-	hooksK8sV1 := r.Group("/hooks/k8s")
-	hooksK8sV1.POST("/admission", core.K8sAdmissionHookHandler)
 }
