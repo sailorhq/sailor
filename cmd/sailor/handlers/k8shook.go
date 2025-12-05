@@ -75,10 +75,11 @@ func (sc *SailorCore) createSailorPatch(pod *corev1.Pod) ([]byte, error) {
 	addConfigVolume := true
 	addSecretVolume := true
 	for _, v := range pod.Spec.Volumes {
-		if v.Name == "sailor-config-volume" {
+		// TODO :: get these names from contants
+		switch v.Name {
+		case "sailor-config-volume":
 			addConfigVolume = false
-		}
-		if v.Name == "sailor-secret-volume" {
+		case "sailor-secret-volume":
 			addSecretVolume = false
 		}
 	}
