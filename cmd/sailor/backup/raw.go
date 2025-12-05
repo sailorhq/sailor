@@ -37,7 +37,7 @@ func BackupRawSails(bucket, region, accessKey, secretKey string) error {
 		return fmt.Errorf("config folder is empty or the zipped content len is: %d", 0)
 	}
 
-	return uploadToS3(zipFileBytes, bucket, region, accessKey, secretKey, filePath)
+	return UploadToS3(zipFileBytes, bucket, region, accessKey, secretKey, filePath)
 }
 
 func getFileName() string {

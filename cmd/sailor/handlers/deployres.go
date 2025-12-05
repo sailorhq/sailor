@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sailorhq/sailor/cmd/sailor/backup"
 	"github.com/sailorhq/sailor/internal/bige"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
@@ -118,6 +119,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		// if k8s is marked true .. if k8s deployment fails then we will
 		// rollback all the operations under tx and return error to the user
 		resourceName := fmt.Sprintf("%s-%s", params.App, resourceKey)
+		var builtRes BuiltResource
 		if resource.Setting.Deploy.K8s {
 			// create k8s labels for marking sailor resource
 			k8sLabels := map[string]string{
@@ -129,6 +131,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 			switch params.Kind {
 			case KindConfig, KindMisc:
 				contentKey := fmt.Sprintf("_%s", resourceKey)
+				builtRes = buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
@@ -136,7 +139,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						Labels:    k8sLabels,
 					},
 					Data: map[string]string{
-						contentKey: buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer).Content,
+						contentKey: builtRes.Content,
 					},
 				}
 
@@ -164,7 +167,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 						return err
 					}
 				} else {
-					sc.Log.Error("k8s client uninitialized, cannot deploy config to k8s",
+					sc.Log.Error("K8s client uninitialized, cannot deploy config to K8s",
 						zap.String("ns", params.Ns),
 						zap.String("app", params.App),
 						zap.String("resource", resourceKey),
@@ -172,7 +175,7 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 				}
 			case KindSecret:
 				contentKey := fmt.Sprintf("_%s", resourceKey)
-				builtRes := buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
+				builtRes = buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
@@ -214,6 +217,19 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 				}
 			}
 		}
+
+		// once everything is done with updating the resource we now try to backup our resource
+		// to s3 if the setting is provided
+		if resource.Setting.Deploy.S3 {
+			// this means that the k8s deployment is not enabled for this resource, but s3 deployment
+			// is enabled, hence the resource is not built yet
+			if builtRes.Content == "" {
+				builtRes = buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
+			}
+			if err := sc.deployToS3(&builtRes, &params, resourceKey); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 
@@ -236,4 +252,28 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 	})
 
 	enc.Encode(ResponseMessage{Message: "ok"})
+}
+
+func (sc *SailorCore) deployToS3(builtRes *BuiltResource, params *SailorParams, resourceKey string) error {
+	if sc.setting.S3 != nil {
+		filePath := fmt.Sprintf("%s/%s-%s.sailor.fall", sc.setting.S3.FolderPath, params.App, resourceKey)
+		err := backup.UploadToS3([]byte(builtRes.Content),
+			sc.setting.S3.Bucket, sc.setting.S3.Region, sc.setting.S3.AccessKey, sc.setting.S3.SecretKey, filePath)
+		if err != nil {
+			sc.Log.Error("error while deploying resource to S3",
+				zap.String("ns", params.Ns),
+				zap.String("app", params.App),
+				zap.String("resource", resourceKey),
+				zap.Error(err),
+			)
+			return err
+		}
+	} else {
+		sc.Log.Error("S3 deployment stopped, S3 settings not found in sailor",
+			zap.String("ns", params.Ns),
+			zap.String("app", params.App),
+			zap.String("resource", resourceKey))
+	}
+
+	return nil
 }
