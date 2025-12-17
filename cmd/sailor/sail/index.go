@@ -23,7 +23,10 @@ type CoreSail struct {
 
 func (cs *CoreSail) CreateProject(ns, app string) error {
 	return cs.Meta.Update(func(tx *bolt.Tx) error {
-		projectBucket := tx.Bucket([]byte(constants.BUCKET_PROJECTS))
+		projectBucket, err := tx.CreateBucketIfNotExists([]byte(constants.BUCKET_PROJECTS))
+		if err != nil {
+			return err
+		}
 		projectBytes, err := json.Marshal(types.Project{Ns: ns, App: app})
 		if err != nil {
 			return err
