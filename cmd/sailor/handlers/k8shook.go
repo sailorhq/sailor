@@ -1,12 +1,11 @@
 package handlers
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
-	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/valyala/fasthttp"
+	"github.com/wI2L/jsondiff"
 	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -50,11 +49,9 @@ func (sc *SailorCore) K8sAdmissionHookHandler(ctx *fasthttp.RequestCtx) {
 					Message: "error creating sailor patch",
 				}
 			} else {
-				admissionResp.Response.PatchType = func() *admissionv1.PatchType {
-					pt := admissionv1.PatchTypeJSONPatch
-					return &pt
-				}()
-				admissionResp.Response.Patch = []byte(base64.StdEncoding.EncodeToString(patch))
+				jsonPatch := admissionv1.PatchTypeJSONPatch
+				admissionResp.Response.PatchType = &jsonPatch
+				admissionResp.Response.Patch = patch
 			}
 		}
 	}
@@ -65,11 +62,6 @@ func (sc *SailorCore) K8sAdmissionHookHandler(ctx *fasthttp.RequestCtx) {
 }
 
 func (sc *SailorCore) createSailorPatch(pod *corev1.Pod) ([]byte, error) {
-	originalJSON, err := json.Marshal(pod)
-	if err != nil {
-		return nil, err
-	}
-
 	mutatedPod := pod.DeepCopy()
 
 	addConfigVolume := true
@@ -160,19 +152,18 @@ func (sc *SailorCore) createSailorPatch(pod *corev1.Pod) ([]byte, error) {
 	}
 
 	// in the end we add a label that sailor injection was successful inside the pod
-	mutatedPod.ObjectMeta.Labels["sailor"] = "injected=true"
+	mutatedPod.ObjectMeta.Labels["sailorhq.dev/admission"] = "ok"
 	// --- END CORE MUTATION LOGIC ---
 
-	mutatedJSON, err := json.Marshal(mutatedPod)
+	patch, err := jsondiff.Compare(pod, mutatedPod)
 	if err != nil {
 		return nil, err
 	}
 
-	// Calculate the difference between the two objects
-	patch, err := jsonpatch.CreateMergePatch(originalJSON, mutatedJSON)
+	finalPatchBytes, err := json.Marshal(patch)
 	if err != nil {
 		return nil, err
 	}
 
-	return patch, nil
+	return finalPatchBytes, nil
 }

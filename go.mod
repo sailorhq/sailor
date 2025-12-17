@@ -10,7 +10,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.70
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.83.0
 	github.com/coreos/go-oidc v2.3.0+incompatible
-	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fasthttp/router v1.5.4
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -19,6 +18,7 @@ require (
 	github.com/sergi/go-diff v1.4.0
 	github.com/spf13/cobra v1.8.1
 	github.com/valyala/fasthttp v1.63.0
+	github.com/wI2L/jsondiff v0.7.0
 	go.etcd.io/bbolt v1.4.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.39.0
@@ -72,6 +72,10 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20240704082632-aef3928b8a38 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
