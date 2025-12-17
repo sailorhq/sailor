@@ -27,6 +27,7 @@ import (
 
 type DeploySetting struct {
 	K8s bool `json:"k8s"`
+	S3  bool `json:"s3"`
 }
 
 type SchemaSetting struct {

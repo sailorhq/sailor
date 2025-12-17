@@ -57,7 +57,7 @@ func BackupState(projectKey string, appDbConn *bolt.DB, bucket, region, accessKe
 	if err != nil {
 		return err
 	}
-	return uploadToS3(b, bucket, region, accessKey, secretKey, stateFilePath)
+	return UploadToS3(b, bucket, region, accessKey, secretKey, stateFilePath)
 }
 
 // HACK :: buildconfig should be at a common place, first of all do we need build config

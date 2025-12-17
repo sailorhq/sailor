@@ -27,6 +27,15 @@ type SailorSetting struct {
 	SecretKey string         `json:"secretKey"`
 	Webhook   Webhook        `json:"webhook"`
 	Manifest  SailorManifest `json:"manifest"`
+	S3        *S3Setting     `json:"s3"`
+}
+
+type S3Setting struct {
+	Bucket     string `json:"bucket"`
+	Region     string `json:"region"`
+	AccessKey  string `json:"accessKey"`
+	SecretKey  string `json:"secretKey"`
+	FolderPath string `json:"folderPath"`
 }
 
 func (c *CoreAPIClient) GetSailorSetting(token string) (*SailorSetting, error) {

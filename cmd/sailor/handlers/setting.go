@@ -17,7 +17,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"net/http"
 	"slices"
 	"time"
 
@@ -32,7 +31,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 
 	var ss v1.SailorSetting
 	if err := json.Unmarshal(ctx.Request.Body(), &ss); err != nil {
-		ctx.SetStatusCode(http.StatusBadRequest)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
@@ -40,14 +39,22 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 	if ss.OIDC != nil {
 		if ss.OIDC.ClientID == "" || ss.OIDC.ClientSecret == "" ||
 			ss.OIDC.IssuerURL == "" || ss.OIDC.RedirectURL == "" || len(ss.OIDC.Scopes) == 0 {
-			ctx.SetStatusCode(http.StatusBadRequest)
+			ctx.SetStatusCode(fasthttp.StatusBadRequest)
 			enc.Encode(ResponseMessage{Message: "oidc validations failed, some required fields are empty"})
 			return
 		}
 
 		if !slices.Contains(ss.OIDC.Scopes, "email") {
-			ctx.SetStatusCode(http.StatusBadRequest)
+			ctx.SetStatusCode(fasthttp.StatusBadRequest)
 			enc.Encode(ResponseMessage{Message: "oidc:scopes must contain email"})
+			return
+		}
+	}
+
+	if ss.S3 != nil {
+		if ss.S3.Bucket == "" || ss.S3.Region == "" || ss.S3.AccessKey == "" || ss.S3.SecretKey == "" {
+			ctx.SetStatusCode(fasthttp.StatusBadRequest)
+			enc.Encode(ResponseMessage{Message: "s3 setting validation failed, some required fields are not provided"})
 			return
 		}
 	}
@@ -61,6 +68,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 
 		currSetting.OIDC = ss.OIDC
 		currSetting.Webhook = ss.Webhook
+		currSetting.S3 = ss.S3
 		b, err := json.Marshal(&currSetting)
 		if err != nil {
 			return err
@@ -69,7 +77,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 	})
 
 	if err != nil {
-		ctx.SetStatusCode(http.StatusInternalServerError)
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}

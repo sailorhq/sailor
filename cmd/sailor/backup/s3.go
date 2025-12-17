@@ -25,7 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func uploadToS3(data []byte, bucket, region, accessKey, secretKey, filePath string) error {
+func UploadToS3(data []byte, bucket, region, accessKey, secretKey, filePath string) error {
 	// Create a custom AWS config with credentials
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
@@ -35,6 +35,9 @@ func uploadToS3(data []byte, bucket, region, accessKey, secretKey, filePath stri
 		return err
 	}
 
+	// FIXME: we are creating a new s3 client for each upload, while deploying a resource or backing it up
+	// it would be a lot better to take in `*s3.Client` which is initialized during startup if s3 settings
+	// are present
 	// Create S3 client
 	s3Client := s3.NewFromConfig(cfg)
 
