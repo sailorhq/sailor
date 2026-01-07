@@ -28,6 +28,7 @@ type SailorSetting struct {
 	Webhook   Webhook        `json:"webhook"`
 	Manifest  SailorManifest `json:"manifest"`
 	S3        *S3Setting     `json:"s3"`
+	HostURL   string         `json:"hostURL"`
 }
 
 type S3Setting struct {

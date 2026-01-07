@@ -69,6 +69,11 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 		currSetting.OIDC = ss.OIDC
 		currSetting.Webhook = ss.Webhook
 		currSetting.S3 = ss.S3
+
+		if ss.HostURL != "" {
+			currSetting.HostURL = ss.HostURL
+		}
+
 		b, err := json.Marshal(&currSetting)
 		if err != nil {
 			return err
