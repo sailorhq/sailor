@@ -38,6 +38,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sailorhq/sailor/cmd/sailor/sail"
 	"github.com/sailorhq/sailor/internal/bige"
+	"github.com/sailorhq/sailor/internal/signal"
 	"github.com/sailorhq/sailor/internal/types"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
@@ -114,6 +115,9 @@ const (
 	// BUCKET_RESOURCE contains all the resources present in a project
 	BUCKET_RESOURCE = "resource"
 
+	// BUCKET_RELEASE contains all the release tags provided while creating a deployment
+	BUCKET_RELEASE = "release"
+
 	// BUCKET_DEPLOYMENT contains buckets for each resource
 	// 		- config
 	// 		- secret
@@ -182,6 +186,8 @@ type SailorCore struct {
 	// TODO :: we need to abstract all sail operations behind this
 	// single interface
 	SailorSail sail.Sail
+
+	plugman *signal.PlugManager
 }
 
 func initializeLogger() *zap.Logger {
@@ -204,11 +210,15 @@ func initializeLogger() *zap.Logger {
 }
 
 func NewSailorCore() *SailorCore {
+	log := initializeLogger()
 	sc := SailorCore{
-		dbconns:    make(map[string]*bolt.DB),
-		versions:   make(map[string]string),
-		Log:        initializeLogger(),
-		SailorSail: &sail.CoreSail{},
+		dbconns:  make(map[string]*bolt.DB),
+		versions: make(map[string]string),
+		Log:      log,
+		SailorSail: &sail.CoreSail{
+			ProjectMap: make(map[string]*bolt.DB),
+		},
+		plugman: signal.NewPlugManager(log),
 	}
 
 	if f, _ := os.Stat(SAILS_FOLDER_PATH); f == nil {
@@ -258,9 +268,13 @@ func NewSailorCore() *SailorCore {
 		}
 
 		sc.kube = clientset
+
+		// Load all plugs from sailor settings
+		sc.plugman.Load(ss.Rxs, sc.kube)
 	} else {
 		sc.Log.Warn("cannot get cluster config, is sailor running inside kubernetes?", zap.String("error", err.Error()))
 		sc.Log.Warn("deploying resources to kubernetes will not work")
+		sc.Log.Warn("unable to start plug sidecars without kubernetes client")
 	}
 
 	return &sc
@@ -305,6 +319,7 @@ func (sc *SailorCore) loadProject(sailFolder, projectKey string) error {
 	}
 
 	sc.dbconns[projectKey] = db
+	sc.SailorSail.(*sail.CoreSail).ProjectMap[projectKey] = db
 	return nil
 }
 
@@ -629,4 +644,8 @@ func getMapClaims(fromClaims map[string]any) jwt.MapClaims {
 		mc[k] = v
 	}
 	return mc
+}
+
+func createSailorURI(ns, app, ak, sk, host string) string {
+	return fmt.Sprintf("sailor://%s:%s@%s/%s/%s", ak, sk, host, ns, app)
 }

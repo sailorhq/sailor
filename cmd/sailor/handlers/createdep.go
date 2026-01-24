@@ -24,6 +24,7 @@ import (
 	"time"
 
 	bolt "go.etcd.io/bbolt"
+	"go.uber.org/zap"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sailorhq/sailor/internal/bige"
@@ -41,6 +42,7 @@ type CreateDeploymentRequest struct {
 	MiscData     string            `json:"misc_data"`
 	SecretData   map[string]string `json:"secret_data"`
 	LocalVersion int               `json:"local_version"`
+	PinVersion   string            `json:"pin_version"`
 }
 
 func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
@@ -195,7 +197,9 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			if err != nil {
 				return err
 			}
-			return deploymentBucket.Put(ver, depBytes)
+			if err = deploymentBucket.Put(ver, depBytes); err != nil {
+				return err
+			}
 		} else {
 			last := bige.UInt32FromByte(ver)
 			if last != uint32(deployment.LocalVersion) {
@@ -224,13 +228,38 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 			if err != nil {
 				return err
 			}
-			return deploymentBucket.Put(bige.ByteFromUInt32(next), depBytes)
+			if err = deploymentBucket.Put(bige.ByteFromUInt32(next), depBytes); err != nil {
+				return err
+			}
 		}
+
+		// if pin version is present with this config deployment we will add it to pin -> config version mapping bucket
+		if deployment.PinVersion != "" {
+			var (
+				releaseBucket *bolt.Bucket
+				kindBucket    *bolt.Bucket
+			)
+
+			if releaseBucket, err = tx.CreateBucketIfNotExists([]byte(BUCKET_RELEASE)); err != nil {
+				return err
+			}
+
+			if kindBucket, err = releaseBucket.CreateBucketIfNotExists([]byte(params.Kind)); err != nil {
+				return err
+			}
+
+			return kindBucket.Put([]byte(deployment.PinVersion), bige.ByteFromUInt32(version))
+		}
+
+		return nil
 	})
 
 	if err != nil {
-		ctx.SetStatusCode(http.StatusBadRequest)
-		enc.Encode(ResponseMessage{Message: err.Error()})
+		sc.Log.Error("error while creating a deployment",
+			zap.String("project", params.ProjectKey),
+			zap.Error(err))
+		ctx.SetStatusCode(http.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: "unable to create a deployment at the moment, contact your sailor admin."})
 		return
 	}
 

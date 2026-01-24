@@ -16,7 +16,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -24,15 +23,11 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/sailorhq/sailor/cmd/sailor/backup"
+	plugrpc "github.com/sailorhq/plug/sdk/proto"
 	"github.com/sailorhq/sailor/internal/bige"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
-	"go.uber.org/zap"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type DeployResourceRequest struct {
@@ -115,121 +110,24 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
-		// here we will get the resource setting and do k8s deployment
-		// if k8s is marked true .. if k8s deployment fails then we will
-		// rollback all the operations under tx and return error to the user
-		resourceName := fmt.Sprintf("%s-%s", params.App, resourceKey)
-		var builtRes BuiltResource
-		if resource.Setting.Deploy.K8s {
-			// create k8s labels for marking sailor resource
-			k8sLabels := map[string]string{
-				"modifiedAt": fmt.Sprint(time.Now().Unix()),
-				"owner":      "sailor",
-				"project":    params.ProjectKey,
-			}
+		// start by deploying to plugs first
+		// TODO: check if we need this
+		// resourceName := fmt.Sprintf("%s-%s", params.App, resourceKey)
+		var builtRes = buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
 
-			switch params.Kind {
-			case KindConfig, KindMisc:
-				contentKey := fmt.Sprintf("_%s", resourceKey)
-				builtRes = buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
-				cm := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: params.Ns,
-						Labels:    k8sLabels,
-					},
-					Data: map[string]string{
-						contentKey: builtRes.Content,
-					},
-				}
-
-				if sc.kube != nil {
-					kubeConfigMap := sc.kube.CoreV1().ConfigMaps(params.Ns)
-					var err error
-
-					_, err = kubeConfigMap.Get(context.TODO(), resourceName, metav1.GetOptions{})
-					// this means that kubernetes cannot get any resource
-					if err != nil {
-						sc.Log.Info("creating a new k8s config resource", zap.String("name", resourceName))
-						_, err = kubeConfigMap.Create(context.TODO(), cm, metav1.CreateOptions{})
-					} else {
-						sc.Log.Info("updating a new k8s config resource", zap.String("name", resourceName))
-						_, err = kubeConfigMap.Update(ctx, cm, metav1.UpdateOptions{})
-					}
-
-					if err != nil {
-						sc.Log.Error("error while deploying configmap",
-							zap.String("ns", params.Ns),
-							zap.String("app", params.App),
-							zap.String("resource", resourceKey),
-							zap.Error(err),
-						)
-						return err
-					}
-				} else {
-					sc.Log.Error("K8s client uninitialized, cannot deploy config to K8s",
-						zap.String("ns", params.Ns),
-						zap.String("app", params.App),
-						zap.String("resource", resourceKey),
-					)
-				}
-			case KindSecret:
-				contentKey := fmt.Sprintf("_%s", resourceKey)
-				builtRes = buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
-				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: params.Ns,
-						Labels:    k8sLabels,
-					},
-					Data: map[string][]byte{
-						contentKey: []byte(builtRes.Content),
-					},
-					Type: corev1.SecretType(fmt.Sprintf("sailor/%s", resourceKey)),
-				}
-
-				if sc.kube != nil {
-					kubeSecrets := sc.kube.CoreV1().Secrets(params.Ns)
-
-					_, err := kubeSecrets.Get(context.TODO(), resourceName, metav1.GetOptions{})
-					if err != nil {
-						sc.Log.Info("creating a new k8s secret resource", zap.String("name", resourceName))
-						_, err = kubeSecrets.Create(context.TODO(), secret, metav1.CreateOptions{})
-					} else {
-						sc.Log.Info("updating a new k8s secret resource", zap.String("name", resourceName))
-						_, err = kubeSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{})
-					}
-					if err != nil {
-						sc.Log.Error("error while deploying configmap",
-							zap.String("ns", params.Ns),
-							zap.String("app", params.App),
-							zap.String("resource", resourceKey),
-							zap.Error(err),
-						)
-						return err
-					}
-				} else {
-					sc.Log.Error("k8s client uninitialized, cannot deploy config to k8s",
-						zap.String("ns", params.Ns),
-						zap.String("app", params.App),
-						zap.String("resource", resourceKey),
-					)
-				}
-			}
+		sigerr := sc.plugman.FireDeploy(&plugrpc.DeployRequest{
+			Ns:          params.Ns,
+			App:         params.App,
+			Kind:        string(params.Kind),
+			ResourceKey: resourceKey,
+			Version:     uint32(intver),
+			Content:     []byte(builtRes.Content),
+		})
+		// sigerr is not nil only when the FailurePolicy is "Fail"
+		if sigerr != nil {
+			return sigerr
 		}
 
-		// once everything is done with updating the resource we now try to backup our resource
-		// to s3 if the setting is provided
-		if resource.Setting.Deploy.S3 {
-			// this means that the k8s deployment is not enabled for this resource, but s3 deployment
-			// is enabled, hence the resource is not built yet
-			if builtRes.Content == "" {
-				builtRes = buildResource(sc.dbconns[params.ProjectKey], resourceKey, versionKey, false, bigeVer)
-			}
-			if err := sc.deployToS3(&builtRes, &params, resourceKey); err != nil {
-				return err
-			}
-		}
 		return nil
 	})
 
@@ -252,28 +150,4 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 	})
 
 	enc.Encode(ResponseMessage{Message: "ok"})
-}
-
-func (sc *SailorCore) deployToS3(builtRes *BuiltResource, params *SailorParams, resourceKey string) error {
-	if sc.setting.S3 != nil {
-		filePath := fmt.Sprintf("%s/%s-%s.sailor.fall", sc.setting.S3.FolderPath, params.App, resourceKey)
-		err := backup.UploadToS3([]byte(builtRes.Content),
-			sc.setting.S3.Bucket, sc.setting.S3.Region, sc.setting.S3.AccessKey, sc.setting.S3.SecretKey, filePath)
-		if err != nil {
-			sc.Log.Error("error while deploying resource to S3",
-				zap.String("ns", params.Ns),
-				zap.String("app", params.App),
-				zap.String("resource", resourceKey),
-				zap.Error(err),
-			)
-			return err
-		}
-	} else {
-		sc.Log.Error("S3 deployment stopped, S3 settings not found in sailor",
-			zap.String("ns", params.Ns),
-			zap.String("app", params.App),
-			zap.String("resource", resourceKey))
-	}
-
-	return nil
 }
