@@ -49,11 +49,12 @@ func (sc *SailorCore) GetDeploymentHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	var version string
-	if params.RequestedVersion == "" {
+	switch params.RequestedVersion {
+	case "":
 		version = "all"
-	} else if params.RequestedVersion == "latest" {
+	case "latest":
 		version = "latest"
-	} else {
+	default:
 		// try parsing into a version number
 		if _, err := strconv.Atoi(params.RequestedVersion); err != nil {
 			ctx.SetStatusCode(fasthttp.StatusBadRequest)
@@ -70,7 +71,8 @@ func (sc *SailorCore) GetDeploymentHandler(ctx *fasthttp.RequestCtx) {
 		deploymentBucket := tx.Bucket([]byte(BUCKET_DEPLOYMENT)).Bucket([]byte(resourceKey))
 		metaBucket := tx.Bucket([]byte(BUCKET_META))
 
-		if version == "all" {
+		switch version {
+		case "all":
 			cur := deploymentBucket.Cursor()
 			for k, depBytes := cur.Last(); k != nil; k, depBytes = cur.Prev() {
 				var dep v1.Deployment
@@ -80,7 +82,7 @@ func (sc *SailorCore) GetDeploymentHandler(ctx *fasthttp.RequestCtx) {
 
 				depResp.Deployments = append(depResp.Deployments, dep)
 			}
-		} else if version == "latest" {
+		case "latest":
 			versionKey := fmt.Sprintf("%s_version", resourceKey)
 			latest := metaBucket.Get([]byte(versionKey))
 			depBytes := deploymentBucket.Get(latest)
@@ -93,7 +95,7 @@ func (sc *SailorCore) GetDeploymentHandler(ctx *fasthttp.RequestCtx) {
 				return err
 			}
 			depResp.Deployments = append(depResp.Deployments, dep)
-		} else {
+		default:
 			depBytes := deploymentBucket.Get([]byte(version))
 			if depBytes == nil {
 				return fmt.Errorf("%s not found", version)

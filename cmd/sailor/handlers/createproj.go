@@ -91,6 +91,11 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 			return err
 		}
 
+		_, err := tx.CreateBucket([]byte(BUCKET_RELEASE))
+		if err != nil {
+			return err
+		}
+
 		_, err = tx.CreateBucket([]byte(BUCKET_RESOURCE))
 		if err != nil {
 			return err

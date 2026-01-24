@@ -56,6 +56,12 @@ func (sc *SailorCore) UpdateManifestHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	// set the updated manifest inside our in-memory lookup
+	// FIXME :: i think it does not matter to fetch settings from boltdb everytime because it's
+	// fast and we don't go on updating manifests every second, so just remove settings and manifest
+	// from the SailorCore struct!!
+	sc.setting.Manifest = manifest
+
 	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
 	go sc.addAuditEvent(&v1.AuditEvent{
 		Username:  claims["email"].(string),
