@@ -34,6 +34,7 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 	var app string
 	var name string
 	var file string
+	var pinVersion string
 	deployCmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Helps you create and deploy a sailor resource",
@@ -136,12 +137,15 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 					data = string(b)
 				}
 
-				version, err := cfg.SailorClient.CreateDeployment(ns, app, kind, name, strings.TrimSpace(desc), createVersion, data)
+				version, err := cfg.SailorClient.CreateDeployment(ns, app, kind, name, strings.TrimSpace(desc), pinVersion, createVersion, data)
 				if err != nil {
 					return err
 				}
 
 				fmt.Printf("Deployment: %v created!\n", *version)
+				if pinVersion != "" {
+					fmt.Printf("> This deployment is pinned to release-tag: %s \n", pinVersion)
+				}
 
 				return nil
 			}
@@ -152,6 +156,7 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 		},
 	}
 	create.Flags().IntVarP(&createVersion, "version", "v", 0, "current version of the config")
+	create.Flags().StringVarP(&pinVersion, "pin", "", "", "pin this deployment with a release-tag")
 
 	list := &cobra.Command{
 		Use:   "list",

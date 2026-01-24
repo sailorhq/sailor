@@ -82,7 +82,7 @@ func (c *CoreAPIClient) GetDeployment(ns, app, kind, name, token, version string
 	return &depResp, nil
 }
 
-func (c *CoreAPIClient) CreateDeployment(ns, app, kind, name, desc string, localVersion int, data any) (*any, error) {
+func (c *CoreAPIClient) CreateDeployment(ns, app, kind, name, desc, pinVersion string, localVersion int, data any) (*any, error) {
 	// Construct the URL
 	var url string
 	dataKey := fmt.Sprintf("%s_data", kind)
@@ -100,6 +100,7 @@ func (c *CoreAPIClient) CreateDeployment(ns, app, kind, name, desc string, local
 		dataKey:         data,
 		"desc":          desc,
 		"local_version": localVersion,
+		"pin_version":   pinVersion,
 	})
 	if err != nil {
 		return nil, err
