@@ -121,6 +121,9 @@ func main() {
 		Roles:       []string{RoleAdmin, RoleUser},
 		Permissions: []string{PermissionSuperAdmin, PermissionCreateProject},
 	}))
+	apiV1.GET("/projects", core.Authenticated(core.GetProjects, v1.RBACConstraints{
+		Roles: []string{RoleAdmin, RoleUser},
+	}))
 
 	// RESOURCE
 	//
