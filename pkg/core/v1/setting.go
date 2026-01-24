@@ -17,18 +17,15 @@ type OIDCSetting struct {
 	RedirectURL  string   `json:"redirect_url"`
 }
 
-type Webhook struct {
-	OnOIDCSuccess string `json:"on_oidc_success"`
-}
 type SailorSetting struct {
 	OIDC      *OIDCSetting   `json:"oidc"`
 	TokenKey  string         `json:"-"`
 	AccessKey string         `json:"accessKey"`
 	SecretKey string         `json:"secretKey"`
-	Webhook   Webhook        `json:"webhook"`
 	Manifest  SailorManifest `json:"manifest"`
 	S3        *S3Setting     `json:"s3"`
 	HostURL   string         `json:"hostURL"`
+	Rxs       []RxSetting    `json:"rxs"`
 }
 
 type S3Setting struct {
@@ -37,6 +34,20 @@ type S3Setting struct {
 	AccessKey  string `json:"accessKey"`
 	SecretKey  string `json:"secretKey"`
 	FolderPath string `json:"folderPath"`
+}
+
+type SignalFailurePolicy struct {
+	OnDeploy string `json:"onDeploy"`
+}
+type PlugFailurePolicy struct {
+	Signal SignalFailurePolicy `json:"signal"`
+}
+type RxSetting struct {
+	Name          string            `json:"name"`
+	Port          string            `json:"port"`
+	Enabled       bool              `json:"enabled"`
+	FailurePolicy PlugFailurePolicy `json:"failurePolicy"`
+	BootConfig    map[string]any    `json:"bootConfig"`
 }
 
 func (c *CoreAPIClient) GetSailorSetting(token string) (*SailorSetting, error) {

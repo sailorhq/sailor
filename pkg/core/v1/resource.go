@@ -35,8 +35,16 @@ type SchemaSetting struct {
 }
 
 type ResourceSetting struct {
-	Deploy DeploySetting `json:"deploy"`
-	Schema SchemaSetting `json:"schema"`
+	Lang    string          `json:"lang"`
+	Schema  SchemaSetting   `json:"schema"`
+	Signals []SignalSetting `json:"signals"`
+}
+
+type SignalSetting struct {
+	Name         string `json:"name"`
+	Create       bool   `json:"create"`
+	DeployCreate bool   `json:"deployCreate"`
+	Deploy       bool   `json:"deploy"`
 }
 
 type SailorResource struct {
@@ -47,6 +55,7 @@ type SailorResource struct {
 type ResourceData struct {
 	Version int    `json:"version"`
 	Data    []byte `json:"data"`
+	Kind    string `json:"kind"` // config, secret, misc
 }
 
 // CreateResource creates a resource inside sailor instance
