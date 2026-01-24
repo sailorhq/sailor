@@ -52,7 +52,6 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ns != "" && app != "" {
 				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, "", "config", v1.ResourceSetting{
-					Deploy: v1.DeploySetting{K8s: false},
 					Schema: v1.SchemaSetting{Strict: false},
 				})
 				if err != nil {
@@ -74,7 +73,6 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ns != "" && app != "" {
 				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, "", "secret", v1.ResourceSetting{
-					Deploy: v1.DeploySetting{K8s: false},
 					Schema: v1.SchemaSetting{Strict: false},
 				})
 				if err != nil {
@@ -103,7 +101,6 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 
 			if ns != "" && app != "" {
 				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, resourceName, "misc", v1.ResourceSetting{
-					Deploy: v1.DeploySetting{K8s: false},
 					Schema: v1.SchemaSetting{Strict: false},
 				})
 				if err != nil {

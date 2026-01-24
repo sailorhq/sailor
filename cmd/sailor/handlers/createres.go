@@ -67,7 +67,6 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 	// if setting is not present add default setting
 	if resource.Setting == nil {
 		resource.Setting = &v1.ResourceSetting{
-			Deploy: v1.DeploySetting{K8s: false},
 			Schema: v1.SchemaSetting{
 				Strict: false,
 			},
