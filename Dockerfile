@@ -17,7 +17,7 @@
 # RUN bun run build
 
 # Use the official Go image as the base image for building the Go app
-FROM golang:1.24.5-alpine AS go-builder
+FROM golang:1.25.6-alpine AS go-builder
 
 # Set the working directory
 WORKDIR /app
