@@ -3,6 +3,7 @@ package signal
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	plugrpc "github.com/sailorhq/plug/sdk/proto"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
@@ -52,6 +53,7 @@ type PlugManager struct {
 func NewPlugManager(log *zap.Logger) *PlugManager {
 	return &PlugManager{
 		ActivePlugCtlMap: make(map[string]plugrpc.RxClient),
+		ActiveSettingMap: make(map[string]v1.RxSetting),
 		Log:              log,
 	}
 }
@@ -95,6 +97,8 @@ func (p *PlugManager) Load(plugs []v1.RxSetting, kube *kubernetes.Clientset) {
 			p.Log.Warn(noFunctionalityMsg)
 			continue
 		}
+
+		p.Log.Info(fmt.Sprintf("plug %s has been locked and loaded", rx.Name), zap.String("rx_port", rx.Port))
 
 		p.ActivePlugCtlMap[rx.Name] = client
 		p.ActiveSettingMap[rx.Name] = rx // TODO: check if we can use reference here
