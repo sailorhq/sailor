@@ -10,7 +10,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -46,8 +45,6 @@ type PlugManager struct {
 	// ActiveSettingMap contains only active plug settings
 	ActiveSettingMap map[string]v1.RxSetting
 	Log              *zap.Logger
-
-	kube *kubernetes.Clientset
 }
 
 func NewPlugManager(log *zap.Logger) *PlugManager {
@@ -58,9 +55,7 @@ func NewPlugManager(log *zap.Logger) *PlugManager {
 	}
 }
 
-func (p *PlugManager) Load(plugs []v1.RxSetting, kube *kubernetes.Clientset) {
-	p.kube = kube
-
+func (p *PlugManager) Load(plugs []v1.RxSetting) {
 	for _, rx := range plugs {
 		noFunctionalityMsg := "any functionality from this plug will not work"
 		if !rx.Enabled {

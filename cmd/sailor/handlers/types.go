@@ -29,9 +29,6 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -177,8 +174,6 @@ type SailorCore struct {
 
 	versions map[string]string
 
-	kube *kubernetes.Clientset
-
 	setting *v1.SailorSetting
 
 	Log *zap.Logger
@@ -258,24 +253,8 @@ func NewSailorCore() *SailorCore {
 		return nil
 	}
 
-	// Load in-cluster config
-	config, err := rest.InClusterConfig()
-	if err == nil {
-		clientset, err := kubernetes.NewForConfig(config)
-		if err != nil {
-			sc.Log.Warn("error while initializing kubernetes client", zap.String("error", err.Error()))
-			return nil
-		}
-
-		sc.kube = clientset
-
-		// Load all plugs from sailor settings
-		sc.plugman.Load(ss.Rxs, sc.kube)
-	} else {
-		sc.Log.Warn("cannot get cluster config, is sailor running inside kubernetes?", zap.String("error", err.Error()))
-		sc.Log.Warn("deploying resources to kubernetes will not work")
-		sc.Log.Warn("unable to start plug sidecars without kubernetes client")
-	}
+	// load all plugs
+	sc.plugman.Load(ss.Rxs)
 
 	return &sc
 }
