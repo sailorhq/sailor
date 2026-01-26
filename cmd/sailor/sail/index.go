@@ -56,7 +56,7 @@ func (cs *CoreSail) GetProjects() (projs []types.Project, err error) {
 		}
 
 		pc := projectBucket.Cursor()
-		for k, projectBytes := pc.First(); k != nil; _, projectBytes = pc.Next() {
+		for k, projectBytes := pc.First(); k != nil; k, projectBytes = pc.Next() {
 			var p types.Project
 			if unmerr := json.Unmarshal(projectBytes, &p); unmerr != nil {
 				continue
