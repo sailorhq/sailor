@@ -27,7 +27,12 @@ func RegisterProjectRoutes(apiV1 *router.Group, core *handlers.SailorCore) {
 		Roles:       []string{RoleAdmin, RoleUser},
 		Permissions: []string{PermissionSuperAdmin, PermissionCreateProject},
 	}))
+
 	apiV1.GET("/projects", core.Authenticated(core.GetProjects, v1.RBACConstraints{
+		Roles: []string{RoleAdmin, RoleUser},
+	}))
+
+	apiV1.GET("/project/{projectKey}/resources", core.Authenticated(core.GetResourceList, v1.RBACConstraints{
 		Roles: []string{RoleAdmin, RoleUser},
 	}))
 }
