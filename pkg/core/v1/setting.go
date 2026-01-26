@@ -18,14 +18,19 @@ type OIDCSetting struct {
 }
 
 type SailorSetting struct {
-	OIDC      *OIDCSetting   `json:"oidc"`
-	TokenKey  string         `json:"-"`
-	AccessKey string         `json:"accessKey"`
-	SecretKey string         `json:"secretKey"`
-	Manifest  SailorManifest `json:"manifest"`
-	S3        *S3Setting     `json:"s3"`
-	HostURL   string         `json:"hostURL"`
-	Rxs       []RxSetting    `json:"rxs"`
+	OIDC      *OIDCSetting    `json:"oidc"`
+	TokenKey  string          `json:"-"`
+	AccessKey string          `json:"accessKey"`
+	SecretKey string          `json:"secretKey"`
+	Manifest  SailorManifest  `json:"manifest"`
+	S3        *S3Setting      `json:"s3"`
+	HostURL   string          `json:"hostURL"`
+	Rxs       []RxSetting     `json:"rxs"`
+	Console   *ConsoleSetting `json:"console"`
+}
+
+type ConsoleSetting struct {
+	Hosts []string `json:"hosts"`
 }
 
 type S3Setting struct {

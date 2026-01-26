@@ -63,7 +63,15 @@ func main() {
 	core.Log.Info("[🐧] sailor core: ", zap.String("version", Version))
 	core.Log.Info("[🐧] starting core sailor server", zap.String("port", port))
 
-	if err := fasthttp.ListenAndServe(port, r.Handler); err != nil {
+	var coreHandler fasthttp.RequestHandler = r.Handler
+	consoleHosts := core.GetConsoleHosts()
+	if len(consoleHosts) > 0 {
+		// we need to add CORS for console hosts
+		core.Log.Info("enabling CORS for console hosts", zap.Strings("hosts", consoleHosts))
+		coreHandler = core.WithCors(r.Handler)
+	}
+
+	if err := fasthttp.ListenAndServe(port, coreHandler); err != nil {
 		core.Log.Error("unable to start sailor core", zap.Error(err))
 	}
 }

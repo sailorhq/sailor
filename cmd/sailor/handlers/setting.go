@@ -69,6 +69,7 @@ func (sc *SailorCore) SailorSettingHandler(ctx *fasthttp.RequestCtx) {
 		currSetting.OIDC = ss.OIDC
 		currSetting.S3 = ss.S3
 		currSetting.Rxs = ss.Rxs
+		currSetting.Console = ss.Console
 
 		if ss.HostURL != "" {
 			currSetting.HostURL = ss.HostURL

@@ -457,6 +457,13 @@ func (sc *SailorCore) initInternalDatabase(dbName string) error {
 	return nil
 }
 
+func (sc *SailorCore) GetConsoleHosts() []string {
+	if sc.setting.Console != nil {
+		return sc.setting.Console.Hosts
+	}
+	return []string{}
+}
+
 type SailorParams struct {
 	ProjectKey string
 	Ns         string
