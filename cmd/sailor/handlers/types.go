@@ -120,7 +120,8 @@ const (
 	// 		- secret
 	// 		- {key}-misc
 	// and each sub-bucket will contain list of deployments per resource
-	BUCKET_DEPLOYMENT = "deployments"
+	BUCKET_DEPLOYMENT             = "deployments"
+	FMT_BUCKET_DEPLOYMENT_HISTORY = "ver.%s_history"
 
 	// --- AUDIT ---
 	// BUCKET_AUDIT contains audit trail of each action taken

@@ -25,6 +25,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	plugrpc "github.com/sailorhq/plug/sdk/proto"
 	"github.com/sailorhq/sailor/internal/bige"
+	"github.com/sailorhq/sailor/internal/types"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 	bolt "go.etcd.io/bbolt"
@@ -84,6 +85,8 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
+
 	err = sc.dbconns[params.ProjectKey].Update(func(tx *bolt.Tx) error {
 		resourceKey := params.Kind.ResourceKey(params.ResourceName)
 		versionKey := fmt.Sprintf("%s_version", resourceKey)
@@ -128,7 +131,21 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 			return sigerr
 		}
 
-		return nil
+		// add to deployment history bucket
+		depHistory, err := tx.CreateBucketIfNotExists(fmt.Appendf(nil, FMT_BUCKET_DEPLOYMENT_HISTORY, deployment.Version))
+		if err != nil {
+			return err
+		}
+		histbytes, err := json.Marshal(types.DeploymentHistory{
+			Version:    deployment.Version,
+			DeployedBy: claims["email"].(string),
+			DeployedAt: time.Now().Format(time.RFC3339),
+		})
+		if err != nil {
+			return err
+		}
+
+		return depHistory.Put(bige.ByteFromInt64(time.Now().Unix()), histbytes)
 	})
 
 	if err != nil {
@@ -137,7 +154,6 @@ func (sc *SailorCore) DeployResourceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
 	go sc.addAuditEvent(&v1.AuditEvent{
 		Namespace: params.Ns,
 		App:       params.App,

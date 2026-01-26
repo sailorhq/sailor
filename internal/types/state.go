@@ -42,6 +42,12 @@ type Deployment struct {
 	Data        []byte `json:"data"`
 }
 
+type DeploymentHistory struct {
+	Version    string `json:"version"`
+	DeployedBy string `json:"deployed_by"`
+	DeployedAt string `json:"deployed_at"`
+}
+
 type Secret struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`

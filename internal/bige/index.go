@@ -11,6 +11,12 @@ func ByteFromUInt32(num uint32) []byte {
 	return buf.Bytes()
 }
 
+func ByteFromInt64(num int64) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, &num)
+	return buf.Bytes()
+}
+
 func UInt32FromByte(data []byte) uint32 {
 	var num uint32
 	binary.Read(bytes.NewBuffer(data), binary.BigEndian, &num)
