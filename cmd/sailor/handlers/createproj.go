@@ -27,6 +27,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sailorhq/sailor/cmd/sailor/sail"
 	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
 )
@@ -108,6 +109,8 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
+	// TODO: sail interface should have .SetProjectConnection(project, db)
+	sc.SailorSail.(*sail.CoreSail).ProjectMap[params.ProjectKey] = db
 
 	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
 	go sc.addAuditEvent(&v1.AuditEvent{
