@@ -32,6 +32,7 @@ type Deployment struct {
 	Version     string `json:"version"`
 	Description string `json:"description"`
 	CreatedAt   string `json:"created_at"`
+	CreatedBy   string `json:"created_by"`
 }
 
 func (c *CoreAPIClient) GetDeployment(ns, app, kind, name, token, version string) (*DeploymentResponse, error) {
