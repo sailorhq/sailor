@@ -18,6 +18,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -97,6 +98,40 @@ func (sc *SailorCore) AuthRBACHandler(ctx *fasthttp.RequestCtx) {
 	enc.Encode(ResponseMessage{Message: "ok"})
 }
 
+func (sc *SailorCore) GetRBACHandler(ctx *fasthttp.RequestCtx) {
+	enc := json.NewEncoder(ctx)
+
+	claims := ctx.UserValue("__sailor_claims").(jwt.MapClaims)
+
+	var rbac v1.RBACConstraints
+	var (
+		constraints []any
+		ok          bool
+	)
+	if constraints, ok = claims["roles"].([]any); !ok {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "invalid token #5"})
+		return
+	}
+	rbac.Roles = anyToStringSlice(constraints)
+
+	if constraints, ok = claims["permissions"].([]any); !ok {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "invalid token #6"})
+		return
+	}
+	rbac.Permissions = anyToStringSlice(constraints)
+
+	if constraints, ok = claims["allowed_apps"].([]any); !ok {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "invalid token #7"})
+		return
+	}
+	rbac.AllowedApps = anyToStringSlice(constraints)
+
+	enc.Encode(rbac)
+}
+
 func updateRBACConstraints(current v1.RBACConstraints, patch v1.RBACRequest) v1.RBACConstraints {
 	// addition
 	for _, pr := range patch.Addition.Roles {
@@ -146,4 +181,23 @@ func removeRBACElement(slice []string, target string) []string {
 	}
 
 	return slice
+}
+
+func anyToStringSlice(data []any) []string {
+	// Create a new string slice with the same length as the original slice
+	stringSlice := make([]string, len(data))
+
+	for i, v := range data {
+		// Type assertion: this will panic if v is not a string
+		s, ok := v.(string)
+		if !ok {
+			// Handle the error, e.g., return an error or a default value
+			fmt.Printf("Element at index %d is not a string, it is a %T\n", i, v)
+			// Depending on requirements, you might want to return an error from this function
+			continue
+		}
+		stringSlice[i] = s
+	}
+
+	return stringSlice
 }

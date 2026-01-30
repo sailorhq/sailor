@@ -33,6 +33,9 @@ func RegisterAuthRoutes(apiV1 *router.Group, core *handlers.SailorCore) {
 		Roles:       []string{RoleAdmin},
 		Permissions: []string{PermissionSuperAdmin},
 	}))
+	apiV1.GET("/auth/rbac", core.Authenticated(core.GetRBACHandler, v1.RBACConstraints{
+		Roles: []string{RoleAdmin, RoleUser},
+	}))
 
 	apiV1.PUT("/auth/user", core.Authenticated(core.CreateUserHandler, v1.RBACConstraints{
 		Roles:       []string{RoleAdmin},
