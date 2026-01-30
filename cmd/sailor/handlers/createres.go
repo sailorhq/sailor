@@ -67,9 +67,7 @@ func (sc *SailorCore) CreateResourceHandler(ctx *fasthttp.RequestCtx) {
 	// if setting is not present add default setting
 	if resource.Setting == nil {
 		resource.Setting = &v1.ResourceSetting{
-			Schema: v1.SchemaSetting{
-				Strict: false,
-			},
+			Lang: "text",
 		}
 	}
 

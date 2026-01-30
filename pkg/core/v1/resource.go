@@ -30,21 +30,16 @@ type DeploySetting struct {
 	S3  bool `json:"s3"`
 }
 
-type SchemaSetting struct {
-	Strict bool `json:"strict"`
-}
-
 type ResourceSetting struct {
-	Lang    string          `json:"lang"`
-	Schema  SchemaSetting   `json:"schema"`
-	Signals []SignalSetting `json:"signals"`
+	Lang    string                   `json:"lang"`
+	Signals map[string]SignalSetting `json:"signals"` // map of plug name and it's signal settings
 }
 
 type SignalSetting struct {
-	Name         string `json:"name"`
-	Create       bool   `json:"create"`
-	DeployCreate bool   `json:"deployCreate"`
-	Deploy       bool   `json:"deploy"`
+	ProjectCreate  bool `json:"project_create"`
+	ResourceCreate bool `json:"resource_create"`
+	DeployCreate   bool `json:"deploy_create"`
+	Deploy         bool `json:"deploy"`
 }
 
 type SailorResource struct {

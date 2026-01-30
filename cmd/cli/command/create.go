@@ -27,6 +27,7 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 	// var setting string
 	var ns string
 	var app string
+	var lang string
 	// var def bool
 	createCmd := &cobra.Command{
 		Use:   "create",
@@ -45,6 +46,7 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 	// createCmd.PersistentFlags().StringVarP(&setting, "setting", "s", "", "resource settings")
 	createCmd.PersistentFlags().StringVarP(&ns, "namespace", "", cfg.CwdSailorFile.Project.Namespace, "create a resource in this namespace")
 	createCmd.PersistentFlags().StringVarP(&app, "app", "", cfg.CwdSailorFile.Project.App, "create a resource for this app")
+	createCmd.PersistentFlags().StringVarP(&lang, "lang", "l", "text", "create a resource with this language")
 
 	config := &cobra.Command{
 		Use:   "config",
@@ -52,7 +54,7 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ns != "" && app != "" {
 				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, "", "config", v1.ResourceSetting{
-					Schema: v1.SchemaSetting{Strict: false},
+					Lang: lang,
 				})
 				if err != nil {
 					return err
@@ -73,7 +75,7 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ns != "" && app != "" {
 				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, "", "secret", v1.ResourceSetting{
-					Schema: v1.SchemaSetting{Strict: false},
+					Lang: lang,
 				})
 				if err != nil {
 					return err
@@ -101,7 +103,7 @@ func CreateCommand(cfg *CLIConfig) *cobra.Command {
 
 			if ns != "" && app != "" {
 				err := cfg.SailorClient.CreateResource(ns, app, cfg.Token, resourceName, "misc", v1.ResourceSetting{
-					Schema: v1.SchemaSetting{Strict: false},
+					Lang: lang,
 				})
 				if err != nil {
 					return err

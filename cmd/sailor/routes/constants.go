@@ -32,4 +32,5 @@ const (
 	PermissionEditSetting      = "edit_setting"
 	PermissionViewSchema       = "view_schema"
 	PermissionEditSchema       = "edit_schema"
+	PermissionEditSignal       = "edit_signal"
 )

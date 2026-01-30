@@ -119,7 +119,7 @@ func (sc *SailorCore) CreateDeploymentHandler(ctx *fasthttp.RequestCtx) {
 
 		// TODO :: make schema work for secrets as well
 		// if strict schema validation is enabled then we check it!
-		if resource.Setting.Schema.Strict && params.Kind.IsConfig() {
+		if len(resource.Schema) > 0 && params.Kind.IsConfig() {
 			if err := hasRuleForAllKeys(deployment.ConfigData, resource.Schema, "$root"); err != nil {
 				return err
 			}
