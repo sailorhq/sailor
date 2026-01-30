@@ -44,4 +44,9 @@ func RegisterSettingRoutes(apiV1 *router.Group, core *handlers.SailorCore) {
 		Roles:       []string{RoleAdmin},
 		Permissions: []string{PermissionSuperAdmin},
 	}))
+
+	apiV1.GET("/setting/plug", core.Authenticated(core.GetSailorPlugsHandler, v1.RBACConstraints{
+		Roles:       []string{RoleAdmin, RoleUser},
+		Permissions: []string{PermissionEditSignal},
+	}))
 }
