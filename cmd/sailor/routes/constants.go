@@ -27,6 +27,7 @@ const (
 	PermissionCreateProject    = "create_proj"
 	PermissionCreateResource   = "create_res"
 	PermissionCreateDeployment = "create_dep"
+	PermissionsViewDeploy      = "view_deploy"
 	PermissionDeploy           = "deploy"
 	PermissionViewSetting      = "view_setting"
 	PermissionEditSetting      = "edit_setting"

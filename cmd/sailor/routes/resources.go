@@ -46,7 +46,7 @@ func RegisterResourceRoutes(apiV1 *router.Group, core *handlers.SailorCore) {
 	// Get deployment
 	getDeploymentHandler := core.Authenticated(core.GetDeploymentHandler, v1.RBACConstraints{
 		Roles:       []string{RoleUser},
-		Permissions: []string{PermissionCreateDeployment},
+		Permissions: []string{PermissionsViewDeploy},
 	})
 	apiV1.GET("/resource/{namespace}/{app}/{kind}/deployment", getDeploymentHandler)
 	apiV1.GET("/resource/{namespace}/{app}/{kind}/{name}/deployment", getDeploymentHandler)
