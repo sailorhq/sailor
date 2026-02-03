@@ -122,7 +122,7 @@ func (sc *SailorCore) GetRBACHandler(ctx *fasthttp.RequestCtx) {
 	}
 	rbac.Permissions = anyToStringSlice(constraints)
 
-	if constraints, ok = claims["allowed_apps"].([]any); !ok {
+	if constraints, ok = claims["allowed_apps"].([]any); !ok && !slices.Contains(rbac.Roles, "admin") {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "invalid token #7"})
 		return
