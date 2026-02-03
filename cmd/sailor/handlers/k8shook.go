@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	plugrpc "github.com/sailorhq/plug/sdk/proto"
 	"github.com/sailorhq/sailor/cmd/sailor/sail"
 	"github.com/sailorhq/sailor/internal/bige"
 	"github.com/sailorhq/sailor/internal/constants"
+
 	"github.com/valyala/fasthttp"
 	"github.com/wI2L/jsondiff"
 	"go.uber.org/zap"
@@ -105,10 +107,10 @@ func (sc *SailorCore) createSailorPatch(pod *corev1.Pod) ([]byte, error) {
 	var (
 		err                  error
 		containerToOperateOn string
-		// ns                   string
-		projectKey   string
-		csail        = sc.SailorSail.(*sail.CoreSail)
-		resourceKeys []string
+		ns                   string
+		projectKey           string
+		csail                = sc.SailorSail.(*sail.CoreSail)
+		resourceKeys         []string
 	)
 	// --- CORE MUTATION LOGIC ---
 	for i := range mutatedPod.Spec.Containers {
@@ -121,6 +123,7 @@ func (sc *SailorCore) createSailorPatch(pod *corev1.Pod) ([]byte, error) {
 
 		// ns = mutatedPod.Namespace
 		containerToOperateOn = mutatedPod.Spec.Containers[i].Name
+		ns = mutatedPod.Namespace
 		projectKey = csail.Core_CreateProjectKey(mutatedPod.Namespace, containerToOperateOn)
 
 		// if HostURL is set in sailor settings, we do not need to set any other environment variable other than
@@ -236,11 +239,24 @@ func (sc *SailorCore) createSailorPatch(pod *corev1.Pod) ([]byte, error) {
 					continue
 				}
 
-				// TODO :: use content from the return values!
-				// use it after creating a plugin system!!
-				csail.BuildResource(
-					projectKey, rk, fmt.Sprintf("%s_version", rk), false, bige.ByteFromUInt32(configVer))
+				content, _ := csail.BuildResource(
+					projectKey,
+					rk,
+					fmt.Sprintf("%s_version", rk),
+					false,
+					bige.ByteFromUInt32(configVer))
 
+				err = sc.plugman.FireDeploy(&plugrpc.DeployRequest{
+					Ns:          ns,
+					App:         containerToOperateOn,
+					Kind:        rk,
+					ResourceKey: rk,
+					Version:     configVer,
+					Content:     []byte(content),
+				})
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 
