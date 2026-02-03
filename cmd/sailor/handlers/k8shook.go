@@ -246,10 +246,15 @@ func (sc *SailorCore) createSailorPatch(pod *corev1.Pod) ([]byte, error) {
 					false,
 					bige.ByteFromUInt32(configVer))
 
+				kind := rk
+				if rk != KindConfig && rk != KindSecret {
+					kind = KindMisc
+				}
+
 				err = sc.plugman.FireDeploy(&plugrpc.DeployRequest{
 					Ns:          ns,
 					App:         containerToOperateOn,
-					Kind:        rk,
+					Kind:        kind,
 					ResourceKey: rk,
 					Version:     configVer,
 					Content:     []byte(content),
