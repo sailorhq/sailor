@@ -108,12 +108,33 @@ func (p *PlugManager) FireDeploy(req *plugrpc.DeployRequest) error {
 			return err
 		}
 		if !resp.Ack.Ok && p.ActiveSettingMap[name].FailurePolicy.Signal.OnDeploy == FailurePolicyFail {
-			p.Log.Error("plug OnDeploy failed with error",
+			p.Log.Error("plug [OnDeploy] failed with error",
 				zap.String("rx_name", name),
 				zap.String("err", resp.Ack.Message))
 			return errors.New(resp.Ack.Message)
 		}
 	}
 
+	return nil
+}
+
+func (p *PlugManager) FireProjectCreate(req *plugrpc.ProjectCreateRequest) error {
+	// we loop through all the active plugs
+	for name, ctl := range p.ActivePlugCtlMap {
+		resp, err := ctl.OnProjectCreateSignal(context.TODO(), req)
+		if err != nil && p.ActiveSettingMap[name].FailurePolicy.Signal.OnDeploy == FailurePolicyFail {
+			return err
+		}
+		if !resp.Ok && p.ActiveSettingMap[name].FailurePolicy.Signal.OnDeploy == FailurePolicyFail {
+			p.Log.Error("plug [OnProjectCreate] failed with error",
+				zap.String("rx_name", name),
+				zap.String("err", resp.Message))
+			return errors.New(resp.Message)
+		} else {
+			p.Log.Warn("plug [OnProjectCreate] failed with error",
+				zap.String("rx_name", name),
+				zap.String("err", resp.Message))
+		}
+	}
 	return nil
 }

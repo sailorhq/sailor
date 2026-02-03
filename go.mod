@@ -13,7 +13,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	github.com/sailorhq/plug/sdk v0.0.5
+	github.com/sailorhq/plug/sdk v0.0.8
 	github.com/sergi/go-diff v1.4.0
 	github.com/spf13/cobra v1.8.1
 	github.com/valyala/fasthttp v1.63.0

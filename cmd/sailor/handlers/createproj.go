@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"time"
 
+	plugrpc "github.com/sailorhq/plug/sdk/proto"
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -106,9 +107,21 @@ func (sc *SailorCore) CreateProjectHandler(ctx *fasthttp.RequestCtx) {
 	})
 
 	if sc.SailorSail.CreateProject(params.Ns, params.App) != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
 		return
 	}
+
+	sigerr := sc.plugman.FireProjectCreate(&plugrpc.ProjectCreateRequest{
+		Ns:  params.Ns,
+		App: params.App,
+	})
+	if sigerr != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: sigerr.Error()})
+		return
+	}
+
 	// TODO: sail interface should have .SetProjectConnection(project, db)
 	sc.SailorSail.(*sail.CoreSail).ProjectMap[params.ProjectKey] = db
 
