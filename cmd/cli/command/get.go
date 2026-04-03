@@ -273,8 +273,18 @@ func getResource(cfg *CLIConfig, kind, ns, app, name, output string) error {
 	}
 
 	if output != "" {
+		if err := os.WriteFile(output, resData.Data, 0755); err != nil {
+			return err
+		}
 		fmt.Println("resource written to:", output)
-		return os.WriteFile(output, resData.Data, 0755)
+
+		// After getting a resource and writing to a file, we should sync to update the lock file
+		if cfg.CwdSailorFile.Project.App != "" {
+			if err := syncResources(&cfg.CwdSailorFile, cfg); err != nil {
+				fmt.Printf("Warning: failed to sync resources after get: %v\n", err)
+			}
+		}
+		return nil
 	}
 
 	fmt.Println(string(resData.Data))

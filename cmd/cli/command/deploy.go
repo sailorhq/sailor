@@ -227,6 +227,13 @@ func DeployCommand(cfg *CLIConfig) *cobra.Command {
 
 				fmt.Printf("Deployed: ver.%s\n", version)
 
+				// After deployment, we should sync resources to update local files and lock file
+				if cfg.CwdSailorFile.Project.App != "" {
+					if err := syncResources(&cfg.CwdSailorFile, cfg); err != nil {
+						fmt.Printf("Warning: failed to sync resources after deploy: %v\n", err)
+					}
+				}
+
 				return nil
 			}
 
