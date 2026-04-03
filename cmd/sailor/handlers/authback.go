@@ -38,7 +38,7 @@ func (sc *SailorCore) AuthCallbackHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
+	ss, err := sc.SailorSail.GetSailorSetting()
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})

@@ -235,7 +235,7 @@ func NewSailorCore() *SailorCore {
 	}
 
 	sc.Log.Info("trying to get sailor settings")
-	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
+	ss, err := sc.SailorSail.GetSailorSetting()
 	if err != nil {
 		// sailor exits here... because tokenkey is required for authentication
 		sc.Log.Fatal("unable to load settings", zap.Error(err))

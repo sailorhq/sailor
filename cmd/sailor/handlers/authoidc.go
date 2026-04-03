@@ -16,13 +16,10 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/coreos/go-oidc"
-	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	"github.com/valyala/fasthttp"
-	bolt "go.etcd.io/bbolt"
 	"golang.org/x/oauth2"
 	"k8s.io/apimachinery/pkg/util/json"
 )
@@ -37,7 +34,7 @@ func (sc *SailorCore) AuthOIDCHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
+	ss, err := sc.SailorSail.GetSailorSetting()
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
@@ -67,26 +64,4 @@ func (sc *SailorCore) AuthOIDCHandler(ctx *fasthttp.RequestCtx) {
 
 	// TODO :: think about the state which should be passed as part of OIDC request
 	ctx.Redirect(oauth2Config.AuthCodeURL(string(fingerprint)), http.StatusFound)
-}
-
-func getSailorSetting(adminDB *bolt.DB) (*v1.SailorSetting, error) {
-	var ss v1.SailorSetting
-	err := adminDB.View(func(tx *bolt.Tx) error {
-		settingBytes := tx.Bucket([]byte(BUCKET_SETTING)).Get([]byte(KEY_SETTING))
-		if settingBytes == nil {
-			return errors.New("sailor settings not found.")
-		}
-
-		if err := json.Unmarshal(settingBytes, &ss); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &ss, nil
 }

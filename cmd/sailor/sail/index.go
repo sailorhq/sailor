@@ -9,11 +9,13 @@ import (
 	"github.com/sailorhq/sailor/internal/bige"
 	"github.com/sailorhq/sailor/internal/constants"
 	"github.com/sailorhq/sailor/internal/types"
+	v1 "github.com/sailorhq/sailor/pkg/core/v1"
 	diffmod "github.com/sergi/go-diff/diffmatchpatch"
 	bolt "go.etcd.io/bbolt"
 )
 
 type Sail interface {
+	GetSailorSetting() (*v1.SailorSetting, error)
 	CreateProject(ns, app string) error
 	GetProjects() ([]types.Project, error)
 	GetCurrentDeployedVersion(projectKey, kind string) uint32
@@ -32,6 +34,28 @@ type CoreSail struct {
 	Audit *bolt.DB
 
 	ProjectMap map[string]*bolt.DB
+}
+
+func (cs *CoreSail) GetSailorSetting() (*v1.SailorSetting, error) {
+	var ss v1.SailorSetting
+	err := cs.Admin.View(func(tx *bolt.Tx) error {
+		settingBytes := tx.Bucket([]byte(constants.BUCKET_SETTING)).Get([]byte(constants.KEY_SETTING))
+		if settingBytes == nil {
+			return errors.New("sailor settings not found.")
+		}
+
+		if err := json.Unmarshal(settingBytes, &ss); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ss, nil
 }
 
 func (cs *CoreSail) CreateProject(ns, app string) error {
