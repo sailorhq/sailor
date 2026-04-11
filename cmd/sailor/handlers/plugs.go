@@ -50,6 +50,12 @@ func (sc *SailorCore) PostProjectCreateSignalHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	if req.Ns == "" || req.App == "" {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "missing required fields"})
+		return
+	}
+
 	if err := sc.plugman.FireProjectCreate(&req); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 		enc.Encode(ResponseMessage{Message: err.Error()})
@@ -66,6 +72,12 @@ func (sc *SailorCore) PostDeploySignalHandler(ctx *fasthttp.RequestCtx) {
 	if err := json.Unmarshal(ctx.Request.Body(), &req); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		enc.Encode(ResponseMessage{Message: "invalid request body"})
+		return
+	}
+
+	if req.Ns == "" || req.App == "" || req.Kind == "" || req.ResourceKey == "" || req.Version == 0 || len(req.Content) == 0 {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "missing required fields"})
 		return
 	}
 

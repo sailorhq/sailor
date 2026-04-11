@@ -23,6 +23,28 @@ func TestPostProjectCreateSignalHandler(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
+			name: "missing required fields (app)",
+			body: func() []byte {
+				req := plugrpc.ProjectCreateRequest{
+					Ns: "test-ns",
+				}
+				b, _ := json.Marshal(req)
+				return b
+			}(),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "missing required fields (ns)",
+			body: func() []byte {
+				req := plugrpc.ProjectCreateRequest{
+					App: "test-app",
+				}
+				b, _ := json.Marshal(req)
+				return b
+			}(),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
 			name: "valid json body",
 			body: func() []byte {
 				req := plugrpc.ProjectCreateRequest{
@@ -66,11 +88,45 @@ func TestPostDeploySignalHandler(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
+			name: "missing required fields (missing content)",
+			body: func() []byte {
+				req := plugrpc.DeployRequest{
+					Ns:          "test-ns",
+					App:         "test-app",
+					Kind:        "deployment",
+					ResourceKey: "res-123",
+					Version:     1,
+				}
+				b, _ := json.Marshal(req)
+				return b
+			}(),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "missing required fields (missing version)",
+			body: func() []byte {
+				req := plugrpc.DeployRequest{
+					Ns:          "test-ns",
+					App:         "test-app",
+					Kind:        "deployment",
+					ResourceKey: "res-123",
+					Content:     []byte("test"),
+				}
+				b, _ := json.Marshal(req)
+				return b
+			}(),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
 			name: "valid json body",
 			body: func() []byte {
 				req := plugrpc.DeployRequest{
-					Ns:  "test-ns",
-					App: "test-app",
+					Ns:          "test-ns",
+					App:         "test-app",
+					Kind:        "deployment",
+					ResourceKey: "res-123",
+					Version:     1,
+					Content:     []byte("test"),
 				}
 				b, _ := json.Marshal(req)
 				return b
