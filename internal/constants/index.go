@@ -13,6 +13,14 @@ const (
 	// sailor instance, this bucket lives inside [BUCKET_ADMIN]
 	BUCKET_PROJECTS = "projects"
 
+	// BUCKET_SETTING is collection of sailor wide settings this
+	// buckect lives inside [BUCKET_ADMIN]
+	BUCKET_SETTING = "settings"
+
+	// KEY_SETTING is used to save sailor wide settings this
+	// key lives inside [BUCKET_ADMIN]
+	KEY_SETTING = "settings"
+
 	// BUCKET_RESOURCE contains all the resources present in a project
 	BUCKET_RESOURCE = "resource"
 

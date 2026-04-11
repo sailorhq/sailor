@@ -24,7 +24,7 @@ import (
 func (sc *SailorCore) GetManifestHandler(ctx *fasthttp.RequestCtx) {
 	enc := json.NewEncoder(ctx)
 	enc.SetEscapeHTML(false)
-	ss, err := getSailorSetting(sc.dbconns[BUCKET_ADMIN])
+	ss, err := sc.SailorSail.GetSailorSetting()
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 		enc.Encode(ResponseMessage{"sailor settings not found"})
