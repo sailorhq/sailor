@@ -49,4 +49,14 @@ func RegisterSettingRoutes(apiV1 *router.Group, core *handlers.SailorCore) {
 		Roles:       []string{RoleAdmin, RoleUser},
 		Permissions: []string{PermissionEditSignal},
 	}))
+
+	apiV1.POST("/plug/signal/project/create", core.Authenticated(core.PostProjectCreateSignalHandler, v1.RBACConstraints{
+		Roles:       []string{RoleAdmin},
+		Permissions: []string{PermissionSuperAdmin},
+	}))
+
+	apiV1.POST("/plug/signal/resource/deploy", core.Authenticated(core.PostDeploySignalHandler, v1.RBACConstraints{
+		Roles:       []string{RoleAdmin},
+		Permissions: []string{PermissionSuperAdmin},
+	}))
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/valyala/fasthttp"
+	plugrpc "github.com/sailorhq/plug/sdk/proto"
 )
 
 type PlugResponse struct {
@@ -37,4 +38,54 @@ func (sc *SailorCore) GetSailorPlugsHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	enc.Encode(response)
+}
+
+func (sc *SailorCore) PostProjectCreateSignalHandler(ctx *fasthttp.RequestCtx) {
+	enc := json.NewEncoder(ctx)
+
+	var req plugrpc.ProjectCreateRequest
+	if err := json.Unmarshal(ctx.Request.Body(), &req); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "invalid request body"})
+		return
+	}
+
+	if req.Ns == "" || req.App == "" {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "missing required fields"})
+		return
+	}
+
+	if err := sc.plugman.FireProjectCreate(&req); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		return
+	}
+
+	ctx.SetStatusCode(fasthttp.StatusNoContent)
+}
+
+func (sc *SailorCore) PostDeploySignalHandler(ctx *fasthttp.RequestCtx) {
+	enc := json.NewEncoder(ctx)
+
+	var req plugrpc.DeployRequest
+	if err := json.Unmarshal(ctx.Request.Body(), &req); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "invalid request body"})
+		return
+	}
+
+	if req.Ns == "" || req.App == "" || req.Kind == "" || req.ResourceKey == "" || req.Version == 0 || len(req.Content) == 0 {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		enc.Encode(ResponseMessage{Message: "missing required fields"})
+		return
+	}
+
+	if err := sc.plugman.FireDeploy(&req); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		enc.Encode(ResponseMessage{Message: err.Error()})
+		return
+	}
+
+	ctx.SetStatusCode(fasthttp.StatusNoContent)
 }
